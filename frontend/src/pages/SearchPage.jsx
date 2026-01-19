@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Search as SearchIcon, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
@@ -7,20 +8,31 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useUsers } from '@/hooks/useUsers';
 import { usePosts } from '@/hooks/usePosts';
 import { PostCard } from '@/components/PostCard';
+import { TrendingWidget } from '@/components/TrendingWidget';
 import { Link } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export default function SearchPage() {
-  const [query, setQuery] = useState('');
-  const [searchType, setSearchType] = useState('users');
+  const [searchParams] = useSearchParams();
+  const [query, setQuery] = useState(searchParams.get('q') || '');
+  const [searchType, setSearchType] = useState('trending');
   const [users, setUsers] = useState([]);
   const [posts, setPosts] = useState([]);
   const { searchUsers, loading: usersLoading } = useUsers();
   const { searchPosts, loading: postsLoading } = usePosts();
 
+  // Handle incoming query from URL (e.g., clicking hashtag)
+  useEffect(() => {
+    const urlQuery = searchParams.get('q');
+    if (urlQuery) {
+      setQuery(urlQuery);
+      setSearchType('posts');
+    }
+  }, [searchParams]);
+
   useEffect(() => {
     const search = async () => {
-      if (!query.trim()) {
+      if (!query.trim() || searchType === 'trending') {
         setUsers([]);
         setPosts([]);
         return;
@@ -57,7 +69,12 @@ export default function SearchPage() {
           <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/40" />
           <Input
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value);
+              if (e.target.value.trim() && searchType === 'trending') {
+                setSearchType('posts');
+              }
+            }}
             placeholder="Search BLVX..."
             className="pl-10 pr-10 bg-white/5 border-white/20 focus:border-white rounded-sm"
             data-testid="search-input"
@@ -67,7 +84,10 @@ export default function SearchPage() {
               variant="ghost"
               size="icon"
               className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-white/40 hover:text-white"
-              onClick={() => setQuery('')}
+              onClick={() => {
+                setQuery('');
+                setSearchType('trending');
+              }}
             >
               <X className="h-4 w-4" />
             </Button>
@@ -78,6 +98,13 @@ export default function SearchPage() {
       {/* Search Type Tabs */}
       <Tabs value={searchType} onValueChange={setSearchType} className="w-full">
         <TabsList className="w-full bg-transparent border-b border-white/10 rounded-none h-auto p-0">
+          <TabsTrigger 
+            value="trending" 
+            className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-white data-[state=active]:bg-transparent py-3"
+            data-testid="search-trending-tab"
+          >
+            The Word
+          </TabsTrigger>
           <TabsTrigger 
             value="users" 
             className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-white data-[state=active]:bg-transparent py-3"
@@ -93,6 +120,13 @@ export default function SearchPage() {
             Posts
           </TabsTrigger>
         </TabsList>
+
+        {/* The Word (Trending) - Mobile View */}
+        <TabsContent value="trending" className="mt-0">
+          <div className="p-4">
+            <TrendingWidget />
+          </div>
+        </TabsContent>
 
         <TabsContent value="users" className="mt-0">
           {loading ? (
