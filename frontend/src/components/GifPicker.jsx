@@ -19,6 +19,7 @@ export const GifPicker = ({ open, onClose, onSelect }) => {
     if (open && trendingGifs.length === 0) {
       fetchTrending();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const fetchTrending = async () => {
