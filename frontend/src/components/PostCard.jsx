@@ -231,6 +231,13 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
               </div>
             )}
 
+            {/* Rich Link Preview (for Spark posts with reference URLs) */}
+            {post.reference_url && (
+              <div className="mb-3" onClick={(e) => e.stopPropagation()}>
+                <LinkPreviewCard url={post.reference_url} />
+              </div>
+            )}
+
             {/* Quoted post */}
             {post.quote_post && (
               <div 
