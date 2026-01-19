@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, Response, WebSocket, WebSocketDisconnect
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, Response, BackgroundTasks
 from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -7,13 +7,14 @@ import os
 import logging
 import httpx
 from pathlib import Path
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional, Dict
 import uuid
 from datetime import datetime, timezone, timedelta
-import json
 import secrets
 import string
+import hashlib
+import re
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -41,9 +42,6 @@ stoop_router = APIRouter(prefix="/stoop", tags=["The Stoop"])
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
-# WebSocket connections for The GC
-active_connections: Dict[str, List[WebSocket]] = {}
-
 # ========================
 # MODELS
 # ========================
@@ -56,6 +54,7 @@ class UserBase(BaseModel):
     username: Optional[str] = None
     bio: Optional[str] = None
     verified: bool = False
+    email_verified: bool = False
     reputation_score: int = 100
     plates_remaining: int = 3
     is_day_one: bool = False
@@ -71,16 +70,29 @@ class UserUpdate(BaseModel):
     picture: Optional[str] = None
     name: Optional[str] = None
 
+class EmailSignup(BaseModel):
+    email: EmailStr
+    password: str
+    name: str
+
+class EmailLogin(BaseModel):
+    email: EmailStr
+    password: str
+
+class VerifyEmail(BaseModel):
+    email: EmailStr
+    code: str
+
 class PostBase(BaseModel):
     post_id: str
     user_id: str
     content: str
     media_url: Optional[str] = None
-    media_type: Optional[str] = None  # image, video
-    post_type: str = "original"  # original, reply, repost, quote, pov
+    media_type: Optional[str] = None
+    post_type: str = "original"
     parent_post_id: Optional[str] = None
     quote_post_id: Optional[str] = None
-    visibility: str = "block"  # block (public) or cookout (private)
+    visibility: str = "block"
     reply_count: int = 0
     repost_count: int = 0
     like_count: int = 0
@@ -95,11 +107,6 @@ class PostCreate(BaseModel):
     quote_post_id: Optional[str] = None
     visibility: str = "block"
 
-class PostWithUser(PostBase):
-    user: Optional[UserBase] = None
-    parent_post: Optional["PostWithUser"] = None
-    quote_post: Optional["PostWithUser"] = None
-
 class NotificationBase(BaseModel):
     notification_id: str
     user_id: str
@@ -110,64 +117,49 @@ class NotificationBase(BaseModel):
     read: bool = False
     created_at: datetime
 
-class VouchPlate(BaseModel):
-    plate_id: str
-    code: str
-    created_by: str
-    used_by: Optional[str] = None
-    used_at: Optional[datetime] = None
-    created_at: datetime
-
-class GCBase(BaseModel):
-    gc_id: str
-    name: str
-    created_by: str
-    members: List[str]
-    is_active: bool = True
-    created_at: datetime
-
 class GCCreate(BaseModel):
     name: str
     member_ids: List[str]
-
-class GCMessage(BaseModel):
-    message_id: str
-    gc_id: str
-    user_id: str
-    content: str
-    post_id: Optional[str] = None  # For "Live Drop" feature
-    created_at: datetime
-
-class SidebarBase(BaseModel):
-    sidebar_id: str
-    user_1: str
-    user_2: str
-    source_gc_id: Optional[str] = None
-    source_message_id: Optional[str] = None
-    created_at: datetime
-
-class StoopBase(BaseModel):
-    stoop_id: str
-    title: str
-    host_id: str
-    pinned_post_id: Optional[str] = None
-    speakers: List[str]
-    listeners: List[str]
-    is_live: bool = True
-    created_at: datetime
 
 class StoopCreate(BaseModel):
     title: str
     pinned_post_id: Optional[str] = None
 
 class BonitaRequest(BaseModel):
-    mode: str  # conversation, vibe_check, tone_rewrite
+    mode: str
     content: str
-    context: Optional[str] = None  # block or cookout
+    context: Optional[str] = None
 
 class BonitaResponse(BaseModel):
     response: str
     mode: str
+
+# ========================
+# PASSWORD HELPERS
+# ========================
+
+def hash_password(password: str) -> str:
+    """Hash password with salt"""
+    salt = secrets.token_hex(16)
+    hashed = hashlib.pbkdf2_hmac('sha256', password.encode(), salt.encode(), 100000)
+    return f"{salt}:{hashed.hex()}"
+
+def verify_password(password: str, stored_hash: str) -> bool:
+    """Verify password against stored hash"""
+    try:
+        salt, hashed = stored_hash.split(':')
+        new_hash = hashlib.pbkdf2_hmac('sha256', password.encode(), salt.encode(), 100000)
+        return new_hash.hex() == hashed
+    except:
+        return False
+
+def generate_verification_code() -> str:
+    """Generate 6-digit verification code"""
+    return ''.join(secrets.choice(string.digits) for _ in range(6))
+
+def generate_session_token() -> str:
+    """Generate secure session token"""
+    return f"session_{secrets.token_urlsafe(32)}"
 
 # ========================
 # AUTH HELPERS
@@ -205,6 +197,13 @@ async def get_current_user(request: Request) -> UserBase:
     if isinstance(user.get("created_at"), str):
         user["created_at"] = datetime.fromisoformat(user["created_at"])
     
+    # Set defaults for optional fields
+    user.setdefault("email_verified", True)  # Default for existing users
+    user.setdefault("reputation_score", 100)
+    user.setdefault("plates_remaining", 3)
+    user.setdefault("is_day_one", False)
+    user.setdefault("vouched_by", None)
+    
     return UserBase(**user)
 
 async def get_optional_user(request: Request) -> Optional[UserBase]:
@@ -214,29 +213,207 @@ async def get_optional_user(request: Request) -> Optional[UserBase]:
     except HTTPException:
         return None
 
+async def create_session(user_id: str, response: Response) -> str:
+    """Create a new session for a user"""
+    session_token = generate_session_token()
+    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+    
+    await db.user_sessions.delete_many({"user_id": user_id})
+    await db.user_sessions.insert_one({
+        "user_id": user_id,
+        "session_token": session_token,
+        "expires_at": expires_at.isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    response.set_cookie(
+        key="session_token",
+        value=session_token,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        path="/",
+        max_age=7 * 24 * 60 * 60
+    )
+    
+    return session_token
+
 # ========================
 # AUTH ROUTES
 # ========================
 
+@auth_router.post("/signup")
+async def email_signup(data: EmailSignup, response: Response):
+    """Sign up with email and password"""
+    # Validate password
+    if len(data.password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+    
+    # Check if email already exists
+    existing = await db.users.find_one({"email": data.email.lower()})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email already registered")
+    
+    # Generate username from email
+    username = data.email.split("@")[0].lower()
+    username = re.sub(r'[^a-z0-9_]', '', username)[:15]
+    base_username = username
+    counter = 1
+    while await db.users.find_one({"username": username}):
+        username = f"{base_username}{counter}"
+        counter += 1
+    
+    # Generate verification code
+    verification_code = generate_verification_code()
+    
+    user_id = f"user_{uuid.uuid4().hex[:12]}"
+    
+    new_user = {
+        "user_id": user_id,
+        "email": data.email.lower(),
+        "password_hash": hash_password(data.password),
+        "name": data.name,
+        "picture": "",
+        "username": username,
+        "bio": "",
+        "verified": False,
+        "email_verified": False,
+        "reputation_score": 100,
+        "plates_remaining": 3,
+        "is_day_one": False,
+        "followers_count": 0,
+        "following_count": 0,
+        "posts_count": 0,
+        "vouched_by": None,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.users.insert_one(new_user)
+    
+    # Store verification code
+    await db.verification_codes.delete_many({"email": data.email.lower()})
+    await db.verification_codes.insert_one({
+        "email": data.email.lower(),
+        "code": verification_code,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "expires_at": (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat()
+    })
+    
+    logger.info(f"Verification code for {data.email}: {verification_code}")
+    
+    # Create session even before verification (but user will have limited access)
+    await create_session(user_id, response)
+    
+    user = await db.users.find_one({"user_id": user_id}, {"_id": 0, "password_hash": 0})
+    if isinstance(user.get("created_at"), str):
+        user["created_at"] = datetime.fromisoformat(user["created_at"])
+    
+    return {
+        "user": user,
+        "verification_required": True,
+        "message": f"Verification code: {verification_code} (In production, this would be sent via email)"
+    }
+
+@auth_router.post("/login")
+async def email_login(data: EmailLogin, response: Response):
+    """Login with email and password"""
+    user = await db.users.find_one({"email": data.email.lower()})
+    
+    if not user:
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    if not user.get("password_hash"):
+        raise HTTPException(status_code=401, detail="This account uses Google sign-in")
+    
+    if not verify_password(data.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    
+    await create_session(user["user_id"], response)
+    
+    # Return user without password
+    user_data = {k: v for k, v in user.items() if k not in ["_id", "password_hash"]}
+    if isinstance(user_data.get("created_at"), str):
+        user_data["created_at"] = datetime.fromisoformat(user_data["created_at"])
+    
+    return user_data
+
+@auth_router.post("/verify-email")
+async def verify_email(data: VerifyEmail, response: Response):
+    """Verify email with code"""
+    verification = await db.verification_codes.find_one({
+        "email": data.email.lower(),
+        "code": data.code
+    })
+    
+    if not verification:
+        raise HTTPException(status_code=400, detail="Invalid verification code")
+    
+    expires_at = datetime.fromisoformat(verification["expires_at"])
+    if expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+        raise HTTPException(status_code=400, detail="Verification code expired")
+    
+    # Mark email as verified
+    await db.users.update_one(
+        {"email": data.email.lower()},
+        {"$set": {"email_verified": True}}
+    )
+    
+    # Delete used code
+    await db.verification_codes.delete_many({"email": data.email.lower()})
+    
+    user = await db.users.find_one({"email": data.email.lower()}, {"_id": 0, "password_hash": 0})
+    if isinstance(user.get("created_at"), str):
+        user["created_at"] = datetime.fromisoformat(user["created_at"])
+    
+    return {"message": "Email verified successfully", "user": user}
+
+@auth_router.post("/resend-verification")
+async def resend_verification(email: EmailStr):
+    """Resend verification code"""
+    user = await db.users.find_one({"email": email.lower()})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if user.get("email_verified"):
+        raise HTTPException(status_code=400, detail="Email already verified")
+    
+    verification_code = generate_verification_code()
+    
+    await db.verification_codes.delete_many({"email": email.lower()})
+    await db.verification_codes.insert_one({
+        "email": email.lower(),
+        "code": verification_code,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "expires_at": (datetime.now(timezone.utc) + timedelta(hours=24)).isoformat()
+    })
+    
+    logger.info(f"New verification code for {email}: {verification_code}")
+    
+    return {
+        "message": f"Verification code: {verification_code} (In production, this would be sent via email)"
+    }
+
 @auth_router.get("/session")
 async def exchange_session(session_id: str, response: Response):
-    """Exchange Emergent session_id for user data and set cookie"""
+    """Exchange Emergent session_id for user data and set cookie (Google OAuth)"""
     try:
-        async with httpx.AsyncClient() as http_client:
+        async with httpx.AsyncClient(timeout=30.0) as http_client:
             resp = await http_client.get(
                 "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
                 headers={"X-Session-ID": session_id}
             )
+            logger.info(f"Emergent auth response status: {resp.status_code}")
             if resp.status_code != 200:
+                logger.error(f"Emergent auth error: {resp.text}")
                 raise HTTPException(status_code=401, detail="Invalid session")
             
             data = resp.json()
+            logger.info(f"Emergent auth data received for: {data.get('email')}")
     except httpx.RequestError as e:
-        logger.error(f"Auth error: {e}")
+        logger.error(f"Auth request error: {e}")
         raise HTTPException(status_code=500, detail="Authentication service error")
     
     user_id = f"user_{uuid.uuid4().hex[:12]}"
-    session_token = data.get("session_token", f"session_{uuid.uuid4().hex}")
     
     existing_user = await db.users.find_one({"email": data["email"]}, {"_id": 0})
     
@@ -246,11 +423,13 @@ async def exchange_session(session_id: str, response: Response):
             {"email": data["email"]},
             {"$set": {
                 "name": data.get("name", existing_user.get("name")),
-                "picture": data.get("picture", existing_user.get("picture"))
+                "picture": data.get("picture", existing_user.get("picture")),
+                "email_verified": True  # Google emails are verified
             }}
         )
     else:
-        username = data["email"].split("@")[0].lower().replace(".", "_")[:15]
+        username = data["email"].split("@")[0].lower()
+        username = re.sub(r'[^a-z0-9_]', '', username)[:15]
         base_username = username
         counter = 1
         while await db.users.find_one({"username": username}):
@@ -265,6 +444,7 @@ async def exchange_session(session_id: str, response: Response):
             "username": username,
             "bio": "",
             "verified": False,
+            "email_verified": True,  # Google emails are verified
             "reputation_score": 100,
             "plates_remaining": 3,
             "is_day_one": False,
@@ -276,29 +456,13 @@ async def exchange_session(session_id: str, response: Response):
         }
         await db.users.insert_one(new_user)
     
-    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
-    await db.user_sessions.delete_many({"user_id": user_id})
-    await db.user_sessions.insert_one({
-        "user_id": user_id,
-        "session_token": session_token,
-        "expires_at": expires_at.isoformat(),
-        "created_at": datetime.now(timezone.utc).isoformat()
-    })
+    await create_session(user_id, response)
     
-    user = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+    user = await db.users.find_one({"user_id": user_id}, {"_id": 0, "password_hash": 0})
     if isinstance(user.get("created_at"), str):
         user["created_at"] = datetime.fromisoformat(user["created_at"])
     
-    response.set_cookie(
-        key="session_token",
-        value=session_token,
-        httponly=True,
-        secure=True,
-        samesite="none",
-        path="/",
-        max_age=7 * 24 * 60 * 60
-    )
-    
+    logger.info(f"User authenticated: {user.get('email')}")
     return user
 
 @auth_router.get("/me")
@@ -388,7 +552,6 @@ async def redeem_plate(code: str, user: UserBase = Depends(get_current_user)):
         {"$set": {"vouched_by": plate["created_by"], "is_day_one": True}}
     )
     
-    # Give the voucher reputation boost
     await db.users.update_one(
         {"user_id": plate["created_by"]},
         {"$inc": {"reputation_score": 5}}
@@ -403,12 +566,18 @@ async def redeem_plate(code: str, user: UserBase = Depends(get_current_user)):
 @users_router.get("/profile/{username}")
 async def get_user_profile(username: str):
     """Get user profile by username"""
-    user = await db.users.find_one({"username": username}, {"_id": 0})
+    user = await db.users.find_one({"username": username}, {"_id": 0, "password_hash": 0})
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
     
     if isinstance(user.get("created_at"), str):
         user["created_at"] = datetime.fromisoformat(user["created_at"])
+    
+    user.setdefault("email_verified", True)
+    user.setdefault("reputation_score", 100)
+    user.setdefault("plates_remaining", 3)
+    user.setdefault("is_day_one", False)
+    user.setdefault("vouched_by", None)
     
     return UserBase(**user)
 
@@ -425,15 +594,21 @@ async def update_profile(update: UserUpdate, user: UserBase = Depends(get_curren
     if update_data:
         await db.users.update_one({"user_id": user.user_id}, {"$set": update_data})
     
-    updated_user = await db.users.find_one({"user_id": user.user_id}, {"_id": 0})
+    updated_user = await db.users.find_one({"user_id": user.user_id}, {"_id": 0, "password_hash": 0})
     if isinstance(updated_user.get("created_at"), str):
         updated_user["created_at"] = datetime.fromisoformat(updated_user["created_at"])
+    
+    updated_user.setdefault("email_verified", True)
+    updated_user.setdefault("reputation_score", 100)
+    updated_user.setdefault("plates_remaining", 3)
+    updated_user.setdefault("is_day_one", False)
+    updated_user.setdefault("vouched_by", None)
     
     return UserBase(**updated_user)
 
 @users_router.post("/follow/{user_id}")
 async def follow_user(user_id: str, current_user: UserBase = Depends(get_current_user)):
-    """Follow a user (become mutuals for Cookout access)"""
+    """Follow a user"""
     if user_id == current_user.user_id:
         raise HTTPException(status_code=400, detail="Cannot follow yourself")
     
@@ -490,7 +665,7 @@ async def check_following(user_id: str, current_user: UserBase = Depends(get_cur
 
 @users_router.get("/mutuals/{user_id}")
 async def check_mutuals(user_id: str, current_user: UserBase = Depends(get_current_user)):
-    """Check if users are mutual followers (for Cookout access)"""
+    """Check if users are mutual followers"""
     follows_them = await db.follows.find_one({
         "follower_id": current_user.user_id,
         "following_id": user_id
@@ -509,14 +684,21 @@ async def search_users(q: str, limit: int = 20):
             {"username": {"$regex": q, "$options": "i"}},
             {"name": {"$regex": q, "$options": "i"}}
         ]},
-        {"_id": 0}
+        {"_id": 0, "password_hash": 0}
     ).limit(limit).to_list(limit)
     
+    result = []
     for user in users:
         if isinstance(user.get("created_at"), str):
             user["created_at"] = datetime.fromisoformat(user["created_at"])
+        user.setdefault("email_verified", True)
+        user.setdefault("reputation_score", 100)
+        user.setdefault("plates_remaining", 3)
+        user.setdefault("is_day_one", False)
+        user.setdefault("vouched_by", None)
+        result.append(UserBase(**user))
     
-    return [UserBase(**u) for u in users]
+    return result
 
 # ========================
 # POST ROUTES
@@ -524,7 +706,7 @@ async def search_users(q: str, limit: int = 20):
 
 async def get_post_with_user(post: dict) -> dict:
     """Enrich post with user data"""
-    user = await db.users.find_one({"user_id": post["user_id"]}, {"_id": 0})
+    user = await db.users.find_one({"user_id": post["user_id"]}, {"_id": 0, "password_hash": 0})
     if user and isinstance(user.get("created_at"), str):
         user["created_at"] = datetime.fromisoformat(user["created_at"])
     
@@ -535,7 +717,7 @@ async def get_post_with_user(post: dict) -> dict:
         if parent:
             if isinstance(parent.get("created_at"), str):
                 parent["created_at"] = datetime.fromisoformat(parent["created_at"])
-            parent_user = await db.users.find_one({"user_id": parent["user_id"]}, {"_id": 0})
+            parent_user = await db.users.find_one({"user_id": parent["user_id"]}, {"_id": 0, "password_hash": 0})
             if parent_user and isinstance(parent_user.get("created_at"), str):
                 parent_user["created_at"] = datetime.fromisoformat(parent_user["created_at"])
             parent["user"] = parent_user
@@ -546,7 +728,7 @@ async def get_post_with_user(post: dict) -> dict:
         if quote:
             if isinstance(quote.get("created_at"), str):
                 quote["created_at"] = datetime.fromisoformat(quote["created_at"])
-            quote_user = await db.users.find_one({"user_id": quote["user_id"]}, {"_id": 0})
+            quote_user = await db.users.find_one({"user_id": quote["user_id"]}, {"_id": 0, "password_hash": 0})
             if quote_user and isinstance(quote_user.get("created_at"), str):
                 quote_user["created_at"] = datetime.fromisoformat(quote_user["created_at"])
             quote["user"] = quote_user
@@ -617,12 +799,8 @@ async def create_post(post: PostCreate, user: UserBase = Depends(get_current_use
     return enriched
 
 @posts_router.get("/feed")
-async def get_feed(
-    limit: int = 20,
-    before: Optional[str] = None,
-    user: UserBase = Depends(get_current_user)
-):
-    """Get chronological feed (The Block - posts from followed users)"""
+async def get_feed(limit: int = 20, before: Optional[str] = None, user: UserBase = Depends(get_current_user)):
+    """Get chronological feed (The Block)"""
     following = await db.follows.find(
         {"follower_id": user.user_id},
         {"_id": 0, "following_id": 1}
@@ -649,7 +827,6 @@ async def get_feed(
         if isinstance(post.get("created_at"), str):
             post["created_at"] = datetime.fromisoformat(post["created_at"])
         
-        # Check Cookout access for each post
         if post["visibility"] == "cookout" and post["user_id"] != user.user_id:
             if not await can_view_cookout(user.user_id, post["user_id"]):
                 continue
@@ -688,7 +865,6 @@ async def get_user_posts(username: str, limit: int = 20, before: Optional[str] =
     
     query = {"user_id": user["user_id"]}
     
-    # Filter by visibility
     if current_user:
         if current_user.user_id != user["user_id"]:
             can_see_cookout = await can_view_cookout(current_user.user_id, user["user_id"])
@@ -723,7 +899,7 @@ async def get_post(post_id: str, request: Request = None):
     
     current_user = await get_optional_user(request)
     
-    if post["visibility"] == "cookout":
+    if post.get("visibility") == "cookout":
         if not current_user:
             raise HTTPException(status_code=403, detail="Login required")
         if current_user.user_id != post["user_id"]:
@@ -735,7 +911,7 @@ async def get_post(post_id: str, request: Request = None):
 
 @posts_router.get("/{post_id}/thread")
 async def get_thread(post_id: str, request: Request = None):
-    """Get a post and all its replies (thread)"""
+    """Get a post and all its replies"""
     post = await db.posts.find_one({"post_id": post_id}, {"_id": 0})
     if not post:
         raise HTTPException(status_code=404, detail="Post not found")
@@ -820,7 +996,7 @@ async def delete_post(post_id: str, user: UserBase = Depends(get_current_user)):
 
 @posts_router.get("/search/content")
 async def search_posts(q: str, limit: int = 20):
-    """Search posts by content (The Block only)"""
+    """Search posts by content"""
     posts = await db.posts.find(
         {"content": {"$regex": q, "$options": "i"}, "visibility": "block"},
         {"_id": 0}
@@ -870,7 +1046,7 @@ async def get_notifications(limit: int = 50, user: UserBase = Depends(get_curren
         if isinstance(notif.get("created_at"), str):
             notif["created_at"] = datetime.fromisoformat(notif["created_at"])
         
-        from_user = await db.users.find_one({"user_id": notif["from_user_id"]}, {"_id": 0})
+        from_user = await db.users.find_one({"user_id": notif["from_user_id"]}, {"_id": 0, "password_hash": 0})
         if from_user and isinstance(from_user.get("created_at"), str):
             from_user["created_at"] = datetime.fromisoformat(from_user["created_at"])
         notif["from_user"] = from_user
@@ -907,9 +1083,6 @@ async def get_unread_count(user: UserBase = Depends(get_current_user)):
 @gc_router.post("/create")
 async def create_gc(gc: GCCreate, user: UserBase = Depends(get_current_user)):
     """Create a new Group Chat"""
-    if len(gc.member_ids) < 2:
-        raise HTTPException(status_code=400, detail="GC needs at least 3 people (including you)")
-    
     all_members = list(set([user.user_id] + gc.member_ids))
     
     gc_data = {
@@ -946,7 +1119,6 @@ async def get_gc(gc_id: str, user: UserBase = Depends(get_current_user)):
     if user.user_id not in gc["members"]:
         raise HTTPException(status_code=403, detail="Not a member of this GC")
     
-    # Get member details
     members = await db.users.find(
         {"user_id": {"$in": gc["members"]}},
         {"_id": 0, "user_id": 1, "name": 1, "username": 1, "picture": 1}
@@ -968,10 +1140,12 @@ async def get_gc_messages(gc_id: str, limit: int = 50, user: UserBase = Depends(
         {"_id": 0}
     ).sort("created_at", -1).limit(limit).to_list(limit)
     
-    # Enrich with user data
     for msg in messages:
-        msg_user = await db.users.find_one({"user_id": msg["user_id"]}, {"_id": 0, "name": 1, "username": 1, "picture": 1})
-        msg["user"] = msg_user
+        if msg["user_id"] == "bonita":
+            msg["user"] = {"name": "Bonita", "username": "bonita", "picture": ""}
+        else:
+            msg_user = await db.users.find_one({"user_id": msg["user_id"]}, {"_id": 0, "name": 1, "username": 1, "picture": 1})
+            msg["user"] = msg_user
         
         if msg.get("post_id"):
             post = await db.posts.find_one({"post_id": msg["post_id"]}, {"_id": 0})
@@ -984,7 +1158,7 @@ async def get_gc_messages(gc_id: str, limit: int = 50, user: UserBase = Depends(
 
 @gc_router.post("/{gc_id}/message")
 async def send_gc_message(gc_id: str, content: str, post_id: Optional[str] = None, user: UserBase = Depends(get_current_user)):
-    """Send a message to a GC (including Live Drop)"""
+    """Send a message to a GC"""
     gc = await db.gcs.find_one({"gc_id": gc_id})
     if not gc or user.user_id not in gc["members"]:
         raise HTTPException(status_code=403, detail="Not a member of this GC")
@@ -994,14 +1168,13 @@ async def send_gc_message(gc_id: str, content: str, post_id: Optional[str] = Non
         "gc_id": gc_id,
         "user_id": user.user_id,
         "content": content,
-        "post_id": post_id,  # For Live Drop
+        "post_id": post_id,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
     await db.gc_messages.insert_one(message)
     message.pop("_id", None)
     
-    # Notify other members
     for member_id in gc["members"]:
         if member_id != user.user_id:
             await create_notification(member_id, "gc_message", user.user_id, post_id, gc_id)
@@ -1010,12 +1183,11 @@ async def send_gc_message(gc_id: str, content: str, post_id: Optional[str] = Non
 
 @gc_router.post("/{gc_id}/bonita")
 async def ask_bonita_in_gc(gc_id: str, question: str, user: UserBase = Depends(get_current_user)):
-    """Tag @Bonita in the GC for fact-checking or context"""
+    """Tag @Bonita in the GC"""
     gc = await db.gcs.find_one({"gc_id": gc_id})
     if not gc or user.user_id not in gc["members"]:
         raise HTTPException(status_code=403, detail="Not a member of this GC")
     
-    # Get recent context
     recent_messages = await db.gc_messages.find(
         {"gc_id": gc_id},
         {"_id": 0}
@@ -1025,7 +1197,6 @@ async def ask_bonita_in_gc(gc_id: str, question: str, user: UserBase = Depends(g
     
     bonita_response = await call_bonita(f"Context from The GC:\n{context}\n\nQuestion: {question}", "conversation", "cookout")
     
-    # Post Bonita's response as a message
     message = {
         "message_id": f"msg_{uuid.uuid4().hex[:12]}",
         "gc_id": gc_id,
@@ -1046,11 +1217,10 @@ async def ask_bonita_in_gc(gc_id: str, question: str, user: UserBase = Depends(g
 
 @api_router.post("/sidebar/create")
 async def create_sidebar(other_user_id: str, source_gc_id: Optional[str] = None, source_message_id: Optional[str] = None, user: UserBase = Depends(get_current_user)):
-    """Create or get a sidebar (1-on-1 DM) with another user"""
+    """Create or get a sidebar"""
     if other_user_id == user.user_id:
         raise HTTPException(status_code=400, detail="Cannot create sidebar with yourself")
     
-    # Check if sidebar already exists
     existing = await db.sidebars.find_one({
         "$or": [
             {"user_1": user.user_id, "user_2": other_user_id},
@@ -1083,7 +1253,6 @@ async def get_my_sidebars(user: UserBase = Depends(get_current_user)):
         {"_id": 0}
     ).to_list(100)
     
-    # Get other user details for each sidebar
     for sb in sidebars:
         other_id = sb["user_2"] if sb["user_1"] == user.user_id else sb["user_1"]
         other_user = await db.users.find_one({"user_id": other_id}, {"_id": 0, "user_id": 1, "name": 1, "username": 1, "picture": 1})
@@ -1128,7 +1297,6 @@ async def send_sidebar_message(sidebar_id: str, content: str, user: UserBase = D
     await db.sidebar_messages.insert_one(message)
     message.pop("_id", None)
     
-    # Notify other user
     other_id = sidebar["user_2"] if sidebar["user_1"] == user.user_id else sidebar["user_1"]
     await create_notification(other_id, "sidebar_message", user.user_id, None)
     
@@ -1140,7 +1308,7 @@ async def send_sidebar_message(sidebar_id: str, content: str, user: UserBase = D
 
 @stoop_router.post("/create")
 async def create_stoop(stoop: StoopCreate, user: UserBase = Depends(get_current_user)):
-    """Create a new Stoop (audio room)"""
+    """Create a new Stoop"""
     stoop_data = {
         "stoop_id": f"stoop_{uuid.uuid4().hex[:12]}",
         "title": stoop.title,
@@ -1221,7 +1389,7 @@ async def leave_stoop(stoop_id: str, user: UserBase = Depends(get_current_user))
 
 @stoop_router.post("/{stoop_id}/pass-aux")
 async def pass_aux(stoop_id: str, user_id: str, user: UserBase = Depends(get_current_user)):
-    """Pass the Aux (grant speaking rights) - Host only"""
+    """Pass the Aux - Host only"""
     stoop = await db.stoops.find_one({"stoop_id": stoop_id})
     if not stoop or stoop["host_id"] != user.user_id:
         raise HTTPException(status_code=403, detail="Only host can pass the aux")
