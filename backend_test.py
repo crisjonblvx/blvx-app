@@ -113,7 +113,6 @@ class BLVXAPITester:
         
         try:
             import subprocess
-            from datetime import timedelta
             
             # Insert user
             user_cmd = f'mongosh --eval "use test_database; db.users.insertOne({json.dumps(user_doc)});"'
