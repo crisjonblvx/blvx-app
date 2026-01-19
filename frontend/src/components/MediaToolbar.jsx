@@ -99,8 +99,8 @@ export const MediaToolbar = ({ onMediaSelect, selectedMedia, onRemoveMedia }) =>
         <input
           ref={fileInputRef}
           type="file"
-          accept="image/*,video/*"
-          onChange={handleFileSelect}
+          accept="image/*"
+          onChange={(e) => handleFileSelect(e, false)}
           className="hidden"
           id="media-upload"
         />
@@ -113,12 +113,38 @@ export const MediaToolbar = ({ onMediaSelect, selectedMedia, onRemoveMedia }) =>
           className="text-white/40 hover:text-white text-xs gap-2"
           data-testid="media-upload-btn"
         >
-          {uploading ? (
+          {uploading && !videoInputRef.current?.files?.length ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <Image className="h-4 w-4" />
           )}
           <span className="hidden sm:inline">Receipts</span>
+        </Button>
+
+        {/* POV (Video Upload) */}
+        <input
+          ref={videoInputRef}
+          type="file"
+          accept="video/mp4,video/webm,video/quicktime"
+          onChange={(e) => handleFileSelect(e, true)}
+          className="hidden"
+          id="video-upload"
+        />
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => videoInputRef.current?.click()}
+          disabled={uploading || !!selectedMedia}
+          className="text-white/40 hover:text-white text-xs gap-2"
+          data-testid="video-upload-btn"
+        >
+          {uploading && videoInputRef.current?.files?.length ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <Video className="h-4 w-4" />
+          )}
+          <span className="hidden sm:inline">POV</span>
         </Button>
 
         {/* The Reaction (GIF Picker) */}
@@ -135,6 +161,21 @@ export const MediaToolbar = ({ onMediaSelect, selectedMedia, onRemoveMedia }) =>
           <span className="hidden sm:inline">Reaction</span>
         </Button>
       </div>
+
+      {/* Upload Progress */}
+      {uploading && uploadProgress > 0 && (
+        <div className="mt-2">
+          <div className="h-1 bg-white/10 rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-white transition-all duration-300"
+              style={{ width: `${uploadProgress}%` }}
+            />
+          </div>
+          <p className="text-[10px] text-white/40 mt-1 text-center">
+            Uploading... {uploadProgress}%
+          </p>
+        </div>
+      )}
 
       {/* Media Preview */}
       {selectedMedia && (
