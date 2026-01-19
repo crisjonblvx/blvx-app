@@ -2138,6 +2138,21 @@ async def upload_file(
     if len(contents) > 10 * 1024 * 1024:
         raise HTTPException(status_code=400, detail="File too large. Maximum size is 10MB.")
     
+    # Try S3 upload first if configured
+    if is_s3_configured():
+        try:
+            file_url = await upload_to_s3(contents, filename, content_type)
+            return {
+                "url": file_url,
+                "filename": filename,
+                "content_type": content_type,
+                "size": len(contents),
+                "storage": "s3"
+            }
+        except Exception as e:
+            logger.warning(f"S3 upload failed, falling back to local: {e}")
+    
+    # Fallback to local storage
     with open(filepath, "wb") as f:
         f.write(contents)
     
