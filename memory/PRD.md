@@ -154,8 +154,8 @@ Build **BLVX**, a "High-Context Social Network" designed to be a "Group Chat" ra
 ### 🔲 Upcoming Features
 
 #### P1 - High Priority
-- [ ] WebSocket real-time updates for GC
-- [ ] WebRTC integration for The Stoop audio
+- [ ] **Dynamic Spark Topics** - Connect Bonita to a real News API for current topics
+- [ ] **Cloud Media Storage** - Integrate AWS S3 or similar for persistent media uploads
 - [ ] Push notifications
 - [ ] Email verification flow completion
 
