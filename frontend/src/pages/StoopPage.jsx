@@ -176,11 +176,34 @@ export default function StoopPage() {
     setMicError(null);
     
     try {
-      await toggleMute();
-      if (isMuted) {
-        toast.success('Microphone activated - You\'re live!');
+      // Try WebRTC toggle first
+      if (wsConnected) {
+        await toggleMute();
+        if (isMuted) {
+          toast.success('Microphone activated - You\'re live!');
+        } else {
+          toast.success('Microphone muted');
+        }
       } else {
-        toast.success('Microphone muted');
+        // Fallback: Local-only mic toggle (WebSocket not connected)
+        // This allows testing mic permissions even without WebRTC
+        if (!localMicStream) {
+          console.log('[Stoop] Starting local mic (no WebSocket)...');
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true
+            }
+          });
+          setLocalMicStream(stream);
+          toast.success('Microphone activated! (Local mode - WebSocket not connected)');
+        } else {
+          console.log('[Stoop] Stopping local mic...');
+          localMicStream.getTracks().forEach(track => track.stop());
+          setLocalMicStream(null);
+          toast.success('Microphone muted');
+        }
       }
     } catch (error) {
       console.error('[Stoop] Mic toggle error:', error);
@@ -200,7 +223,7 @@ export default function StoopPage() {
         duration: 5000,
       });
     }
-  }, [isSpeaker, isMuted, toggleMute]);
+  }, [isSpeaker, isMuted, toggleMute, wsConnected, localMicStream]);
 
   // Check if a speaker is currently live
   const isSpeakerLive = (speakerUserId) => {
