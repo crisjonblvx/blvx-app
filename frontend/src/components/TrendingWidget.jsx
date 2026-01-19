@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { TrendingUp, Hash, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 import axios from 'axios';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
