@@ -1670,7 +1670,7 @@ SPARK_SEARCH_QUERIES = {
 
 async def search_real_news(query: str) -> Optional[Dict]:
     """Search DuckDuckGo for real news and return first result"""
-    from duckduckgo_search import DDGS
+    from ddgs import DDGS
     
     try:
         with DDGS() as ddgs:
