@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { formatDistanceToNow, format } from 'date-fns';
-import { Calendar, MapPin, Link as LinkIcon, Edit2 } from 'lucide-react';
+import { Calendar, MapPin, Link as LinkIcon, Edit2, MessageSquare, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useUsers } from '@/hooks/useUsers';
 import { usePosts } from '@/hooks/usePosts';
@@ -12,6 +12,9 @@ import { PostCard } from '@/components/PostCard';
 import { EditProfileModal } from '@/components/EditProfileModal';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import axios from 'axios';
+
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export default function ProfilePage() {
   const { username } = useParams();
