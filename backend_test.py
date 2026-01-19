@@ -80,62 +80,108 @@ class BLVXAPITester:
             return False, {}
 
     def setup_test_user(self):
-        """Create test user and session using MongoDB directly"""
+        """Create test user and session using pymongo"""
         self.log("Setting up test user and session...")
         
-        # Generate unique identifiers
-        timestamp = int(time.time())
-        self.user_id = f"test_user_{timestamp}"
-        self.session_token = f"test_session_{timestamp}"
-        
-        # Create test user document
-        user_doc = {
-            "user_id": self.user_id,
-            "email": f"test.user.{timestamp}@example.com",
-            "name": "Test User BLVX",
-            "picture": "https://via.placeholder.com/150",
-            "username": f"testuser{timestamp}",
-            "bio": "Test bio for BLVX testing",
-            "verified": False,
-            "followers_count": 0,
-            "following_count": 0,
-            "posts_count": 0,
-            "created_at": datetime.now().isoformat()
-        }
-        
-        # Create session document
-        session_doc = {
-            "user_id": self.user_id,
-            "session_token": self.session_token,
-            "expires_at": (datetime.now() + timedelta(days=7)).isoformat(),
-            "created_at": datetime.now().isoformat()
-        }
-        
+        try:
+            from pymongo import MongoClient
+            
+            # Connect to MongoDB
+            client = MongoClient("mongodb://localhost:27017")
+            db = client.test_database
+            
+            # Generate unique identifiers
+            timestamp = int(time.time())
+            self.user_id = f"test_user_{timestamp}"
+            self.session_token = f"test_session_{timestamp}"
+            
+            # Create test user document
+            user_doc = {
+                "user_id": self.user_id,
+                "email": f"test.user.{timestamp}@example.com",
+                "name": "Test User BLVX",
+                "picture": "https://via.placeholder.com/150",
+                "username": f"testuser{timestamp}",
+                "bio": "Test bio for BLVX testing",
+                "verified": False,
+                "followers_count": 0,
+                "following_count": 0,
+                "posts_count": 0,
+                "created_at": datetime.now().isoformat()
+            }
+            
+            # Create session document
+            session_doc = {
+                "user_id": self.user_id,
+                "session_token": self.session_token,
+                "expires_at": (datetime.now() + timedelta(days=7)).isoformat(),
+                "created_at": datetime.now().isoformat()
+            }
+            
+            # Insert documents
+            db.users.insert_one(user_doc)
+            db.user_sessions.insert_one(session_doc)
+            
+            self.log(f"✅ Test user created - ID: {self.user_id}")
+            self.log(f"✅ Session token: {self.session_token}")
+            
+            # Verify insertion
+            user_count = db.users.count_documents({"user_id": self.user_id})
+            session_count = db.user_sessions.count_documents({"session_token": self.session_token})
+            self.log(f"✅ Verification - User: {user_count}, Session: {session_count}")
+            
+            client.close()
+            return True
+            
+        except ImportError:
+            self.log("❌ pymongo not available, falling back to mongosh")
+            return self.setup_test_user_mongosh()
+        except Exception as e:
+            self.log(f"❌ MongoDB setup error: {str(e)}")
+            return False
+
+    def setup_test_user_mongosh(self):
+        """Fallback method using mongosh"""
         try:
             import subprocess
             
-            # Insert user
-            user_cmd = f'mongosh --eval "use test_database; db.users.insertOne({json.dumps(user_doc)});"'
-            result1 = subprocess.run(user_cmd, shell=True, capture_output=True, text=True, timeout=30)
+            timestamp = int(time.time())
+            self.user_id = f"test_user_{timestamp}"
+            self.session_token = f"test_session_{timestamp}"
             
-            # Insert session
-            session_cmd = f'mongosh --eval "use test_database; db.user_sessions.insertOne({json.dumps(session_doc)});"'
-            result2 = subprocess.run(session_cmd, shell=True, capture_output=True, text=True, timeout=30)
+            # Simple mongosh command
+            cmd = f'''mongosh --eval "
+            use test_database;
+            db.users.insertOne({{
+                user_id: '{self.user_id}',
+                email: 'test.user.{timestamp}@example.com',
+                name: 'Test User BLVX',
+                picture: 'https://via.placeholder.com/150',
+                username: 'testuser{timestamp}',
+                bio: 'Test bio for BLVX testing',
+                verified: false,
+                followers_count: 0,
+                following_count: 0,
+                posts_count: 0,
+                created_at: new Date().toISOString()
+            }});
+            db.user_sessions.insertOne({{
+                user_id: '{self.user_id}',
+                session_token: '{self.session_token}',
+                expires_at: new Date(Date.now() + 7*24*60*60*1000).toISOString(),
+                created_at: new Date().toISOString()
+            }});
+            print('Setup complete');
+            "'''
             
-            if result1.returncode == 0 and result2.returncode == 0:
+            result = subprocess.run(cmd, shell=True, capture_output=True, text=True, timeout=30)
+            
+            if result.returncode == 0 and "Setup complete" in result.stdout:
                 self.log(f"✅ Test user created - ID: {self.user_id}")
                 self.log(f"✅ Session token: {self.session_token}")
-                
-                # Verify the data was inserted
-                verify_cmd = f'mongosh --eval "use test_database; print(\\"Users:\\"); db.users.find({{user_id: \\"{self.user_id}\\"}}).pretty(); print(\\"Sessions:\\"); db.user_sessions.find({{session_token: \\"{self.session_token}\\"}}).pretty();"'
-                verify_result = subprocess.run(verify_cmd, shell=True, capture_output=True, text=True, timeout=30)
-                self.log(f"Database verification: {verify_result.stdout}")
-                
                 return True
             else:
-                self.log(f"❌ Failed to create test user")
-                self.log(f"User insert result: {result1.stderr}")
-                self.log(f"Session insert result: {result2.stderr}")
+                self.log(f"❌ Failed to create test user: {result.stderr}")
                 return False
                 
         except Exception as e:
