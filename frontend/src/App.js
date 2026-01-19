@@ -21,6 +21,7 @@ import { Toaster } from "@/components/ui/sonner";
 
 // Context
 import { AuthProvider, useAuth } from "@/context/AuthContext";
+import { ThemeProvider } from "@/context/ThemeContext";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -116,9 +117,11 @@ function App() {
     <div className="app-container bg-black min-h-screen">
       <NoiseOverlay />
       <BrowserRouter>
-        <AuthProvider>
-          <AppRouter />
-        </AuthProvider>
+        <ThemeProvider>
+          <AuthProvider>
+            <AppRouter />
+          </AuthProvider>
+        </ThemeProvider>
       </BrowserRouter>
       <Toaster 
         position="top-center" 
