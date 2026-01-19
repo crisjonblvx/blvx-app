@@ -1695,6 +1695,91 @@ SPARK_TOPIC_CATEGORIES = {
     ],
 }
 
+# ========================
+# CULTURE CALENDAR - Significant Dates for BIPOC Communities
+# ========================
+
+CULTURE_CALENDAR = {
+    # January
+    (1, 1): {"name": "New Year's Day", "message": "New year, new goals. What's the vision for {year}? Let's build together. 🖤✊🏾"},
+    (1, 15): {"name": "Martin Luther King Jr. Day", "message": "Today we honor Dr. King's legacy. The dream continues through action. What are YOU doing to push the culture forward? ✊🏾 #MLKDay #BlackExcellence"},
+    
+    # February
+    (2, 1): {"name": "Black History Month Begins", "message": "Black History Month is here! 28 days to celebrate excellence, but we're Black 365. Drop your favorite Black-owned brand below 👇🏾 #BlackHistoryMonth #BHM"},
+    (2, 14): {"name": "Valentine's Day", "message": "Love is love. Black love is magic. Show some love to your people today 🖤"},
+    
+    # March
+    (3, 8): {"name": "International Women's Day", "message": "Celebrating the Black and Brown women who move mountains daily. Tag a queen who inspires you 👑 #IWD #WomenOfColor"},
+    (3, 31): {"name": "César Chávez Day", "message": "Honoring César Chávez and the fight for workers' rights. ¡Sí se puede! ✊🏽 #CesarChavezDay"},
+    
+    # April
+    (4, 4): {"name": "Anniversary of MLK's Assassination", "message": "56 years since we lost Dr. King. His words still ring true: 'Injustice anywhere is a threat to justice everywhere.' 🖤"},
+    
+    # May
+    (5, 5): {"name": "Cinco de Mayo", "message": "¡Feliz Cinco de Mayo! Celebrating Mexican heritage and culture. Not just margaritas - it's about resistance and pride 🇲🇽"},
+    (5, 19): {"name": "Malcolm X's Birthday", "message": "Happy Birthday to Malcolm X. 'Education is the passport to the future.' What book changed your life? 📚 #MalcolmX"},
+    
+    # June
+    (6, 19): {"name": "Juneteenth", "message": "JUNETEENTH! Freedom Day. Liberation. Black joy. Today we celebrate our ancestors' resilience and our continued fight for equality. 🖤❤️💚 #Juneteenth #FreedomDay"},
+    (6, 1): {"name": "Pride Month Begins", "message": "Pride Month is here! Extra love to our LGBTQ+ siblings in the BIPOC community. You belong. You are seen. 🏳️‍🌈✊🏾"},
+    
+    # July
+    (7, 4): {"name": "Independence Day", "message": "July 4th hits different when your ancestors weren't free in 1776. But we're here now, building our own legacy. 🖤"},
+    
+    # August
+    (8, 28): {"name": "March on Washington Anniversary", "message": "On this day in 1963, Dr. King delivered 'I Have a Dream.' The march continues. What's YOUR dream for our community?"},
+    
+    # September
+    (9, 15): {"name": "Hispanic Heritage Month Begins", "message": "Hispanic Heritage Month begins! Celebrating the rich cultures, histories, and contributions of Latino and Hispanic communities. ¡Wepa! 🇵🇷🇲🇽🇩🇴🇨🇺 #HispanicHeritageMonth"},
+    
+    # October
+    (10, 1): {"name": "Black Speculative Fiction Month", "message": "Black Speculative Fiction Month! From Octavia Butler to N.K. Jemisin - Black creators have been shaping futures. What's your favorite Afrofuturist work? 📚🚀"},
+    (10, 12): {"name": "Indigenous Peoples' Day", "message": "Today we honor Indigenous peoples and their resilience. This land has original stewards. #IndigenousPeoplesDay ✊🏽"},
+    
+    # November
+    (11, 1): {"name": "Native American Heritage Month", "message": "November is Native American Heritage Month. Honoring the first peoples of this land and their enduring cultures. ✊🏽 #NAHM"},
+    (11, 11): {"name": "Veterans Day", "message": "Honoring ALL veterans, especially the Black and Brown service members whose contributions are often overlooked. Thank you for your service. 🎖️"},
+    
+    # December
+    (12, 26): {"name": "Kwanzaa Begins", "message": "Habari Gani! Kwanzaa begins today with Umoja (Unity). Seven days to celebrate our heritage, values, and community. What principle resonates with you most? 🖤❤️💚 #Kwanzaa"},
+}
+
+def get_culture_calendar_post(date: datetime = None) -> Optional[dict]:
+    """Check if today has a cultural significance and return appropriate message"""
+    if date is None:
+        date = datetime.now()
+    
+    key = (date.month, date.day)
+    
+    if key in CULTURE_CALENDAR:
+        event = CULTURE_CALENDAR[key]
+        message = event["message"].format(year=date.year)
+        return {
+            "event_name": event["name"],
+            "message": message,
+            "date": date.strftime("%B %d, %Y")
+        }
+    
+    return None
+
+async def generate_culture_calendar_post() -> Optional[dict]:
+    """Generate a Bonita post for today's cultural event if any"""
+    event = get_culture_calendar_post()
+    
+    if not event:
+        return None
+    
+    # Search for related current news to add context
+    search_query = f"{event['event_name']} {datetime.now().year}"
+    news_result = await search_real_news(search_query)
+    
+    return {
+        "content": event["message"],
+        "reference_url": news_result.get("url") if news_result else None,
+        "event_name": event["event_name"],
+        "is_culture_calendar": True
+    }
+
 def get_time_anchored_query(base_query: str) -> str:
     """Generate a time-anchored search query with current month/year"""
     now = datetime.now()
