@@ -139,6 +139,12 @@ export default function StoopPage() {
     // Disconnect WebRTC
     disconnectWebRTC();
     
+    // Stop local mic if active
+    if (localMicStream) {
+      localMicStream.getTracks().forEach(track => track.stop());
+      setLocalMicStream(null);
+    }
+    
     try {
       await axios.post(`${API}/stoop/${activeStoopId}/leave`, {}, { withCredentials: true });
       setActiveStoopId(null);
@@ -156,6 +162,12 @@ export default function StoopPage() {
     
     // Disconnect WebRTC
     disconnectWebRTC();
+    
+    // Stop local mic if active
+    if (localMicStream) {
+      localMicStream.getTracks().forEach(track => track.stop());
+      setLocalMicStream(null);
+    }
     
     try {
       await axios.post(`${API}/stoop/${activeStoopId}/end`, {}, { withCredentials: true });
