@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { MessageCircle, Plus, Send, Users, Sparkles, ArrowRight } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { MessageCircle, Plus, Send, Users, Sparkles, Wifi, WifiOff } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -18,9 +18,10 @@ import { cn } from '@/lib/utils';
 import { formatDistanceToNow } from 'date-fns';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const WS_URL = process.env.REACT_APP_BACKEND_URL?.replace('https://', 'wss://').replace('http://', 'ws://');
 
 export default function GCPage() {
-  const { user } = useAuth();
+  const { user, sessionToken } = useAuth();
   const [gcs, setGcs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
@@ -29,7 +30,12 @@ export default function GCPage() {
   const [messages, setMessages] = useState([]);
   const [newMessage, setNewMessage] = useState('');
   const [sendingMessage, setSendingMessage] = useState(false);
+  const [wsConnected, setWsConnected] = useState(false);
+  const [typingUsers, setTypingUsers] = useState([]);
+  
   const messagesEndRef = useRef(null);
+  const wsRef = useRef(null);
+  const typingTimeoutRef = useRef(null);
 
   useEffect(() => {
     fetchGCs();
@@ -39,7 +45,12 @@ export default function GCPage() {
   useEffect(() => {
     if (activeGC) {
       fetchMessages(activeGC.gc_id);
+      connectWebSocket(activeGC.gc_id);
     }
+    
+    return () => {
+      disconnectWebSocket();
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeGC]);
 
@@ -47,12 +58,99 @@ export default function GCPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // WebSocket Connection
+  const connectWebSocket = useCallback((gcId) => {
+    if (!sessionToken || !gcId) return;
+    
+    disconnectWebSocket();
+    
+    try {
+      const wsUrl = `${WS_URL}/ws/gc/${gcId}?token=${sessionToken}`;
+      console.log('[WS] Connecting to:', wsUrl);
+      
+      const ws = new WebSocket(wsUrl);
+      
+      ws.onopen = () => {
+        console.log('[WS] Connected to GC:', gcId);
+        setWsConnected(true);
+      };
+      
+      ws.onmessage = (event) => {
+        try {
+          const data = JSON.parse(event.data);
+          console.log('[WS] Received:', data);
+          
+          if (data.type === 'new_message') {
+            setMessages(prev => {
+              // Avoid duplicates
+              if (prev.some(m => m.message_id === data.message.message_id)) {
+                return prev;
+              }
+              return [...prev, data.message];
+            });
+          } else if (data.type === 'typing') {
+            if (data.user_id !== user?.user_id) {
+              setTypingUsers(prev => {
+                if (!prev.includes(data.username)) {
+                  return [...prev, data.username];
+                }
+                return prev;
+              });
+              // Clear typing indicator after 3 seconds
+              setTimeout(() => {
+                setTypingUsers(prev => prev.filter(u => u !== data.username));
+              }, 3000);
+            }
+          }
+        } catch (e) {
+          console.error('[WS] Parse error:', e);
+        }
+      };
+      
+      ws.onerror = (error) => {
+        console.error('[WS] Error:', error);
+        setWsConnected(false);
+      };
+      
+      ws.onclose = (event) => {
+        console.log('[WS] Disconnected:', event.code, event.reason);
+        setWsConnected(false);
+        
+        // Auto-reconnect after 3 seconds if not intentional close
+        if (event.code !== 1000 && activeGC?.gc_id === gcId) {
+          setTimeout(() => {
+            console.log('[WS] Attempting reconnect...');
+            connectWebSocket(gcId);
+          }, 3000);
+        }
+      };
+      
+      wsRef.current = ws;
+    } catch (error) {
+      console.error('[WS] Connection error:', error);
+      setWsConnected(false);
+    }
+  }, [sessionToken, user?.user_id, activeGC?.gc_id]);
+
+  const disconnectWebSocket = () => {
+    if (wsRef.current) {
+      wsRef.current.close(1000, 'User navigated away');
+      wsRef.current = null;
+    }
+    setWsConnected(false);
+  };
+
+  const sendTypingIndicator = useCallback(() => {
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({ type: 'typing' }));
+    }
+  }, []);
+
   const fetchGCs = async () => {
     try {
       const response = await axios.get(`${API}/gc/my-gcs`, { withCredentials: true });
       setGcs(response.data);
       
-      // Auto-select first GC if available
       if (response.data.length > 0 && !activeGC) {
         selectGC(response.data[0]);
       }
@@ -84,21 +182,35 @@ export default function GCPage() {
   const sendMessage = async () => {
     if (!newMessage.trim() || !activeGC || sendingMessage) return;
     
+    const messageContent = newMessage.trim();
+    setNewMessage('');
     setSendingMessage(true);
+    
+    // Send via WebSocket if connected
+    if (wsRef.current?.readyState === WebSocket.OPEN) {
+      wsRef.current.send(JSON.stringify({
+        type: 'message',
+        content: messageContent
+      }));
+      setSendingMessage(false);
+      return;
+    }
+    
+    // Fallback to HTTP
     try {
       const response = await axios.post(
         `${API}/gc/${activeGC.gc_id}/message`,
         null,
         { 
-          params: { content: newMessage.trim() },
+          params: { content: messageContent },
           withCredentials: true 
         }
       );
       
       setMessages([...messages, { ...response.data, user: { name: user.name, username: user.username, picture: user.picture } }]);
-      setNewMessage('');
     } catch (error) {
       toast.error('Failed to send message');
+      setNewMessage(messageContent); // Restore message on error
     } finally {
       setSendingMessage(false);
     }
@@ -127,14 +239,23 @@ export default function GCPage() {
     }
   };
 
+  const handleMessageChange = (e) => {
+    setNewMessage(e.target.value);
+    
+    // Send typing indicator (debounced)
+    if (typingTimeoutRef.current) {
+      clearTimeout(typingTimeoutRef.current);
+    }
+    typingTimeoutRef.current = setTimeout(sendTypingIndicator, 500);
+  };
+
   const createGC = async () => {
     if (!newGCName.trim()) return;
     
     try {
-      // For demo, just create a GC with the current user
       const response = await axios.post(`${API}/gc/create`, {
         name: newGCName.trim(),
-        member_ids: [] // Backend will add the creator
+        member_ids: []
       }, { withCredentials: true });
       
       toast.success('GC created! Invite members to start chatting.');
@@ -162,6 +283,16 @@ export default function GCPage() {
           <div className="flex items-center gap-3">
             <MessageCircle className="h-5 w-5 text-white" />
             <h1 className="font-display text-sm tracking-widest uppercase">The GC</h1>
+            {wsConnected ? (
+              <span className="flex items-center gap-1 text-[10px] text-green-400">
+                <Wifi className="h-3 w-3" />
+                Live
+              </span>
+            ) : (
+              <span className="flex items-center gap-1 text-[10px] text-white/30">
+                <WifiOff className="h-3 w-3" />
+              </span>
+            )}
           </div>
           <Button
             onClick={() => setCreateOpen(true)}
@@ -177,7 +308,7 @@ export default function GCPage() {
       </div>
 
       <div className="flex-1 flex overflow-hidden">
-        {/* GC List - Sidebar on desktop, top on mobile if no active GC */}
+        {/* GC List */}
         <div className={cn(
           "border-r border-white/10 flex-shrink-0",
           activeGC ? "hidden md:block w-64" : "w-full md:w-64"
@@ -280,7 +411,6 @@ export default function GCPage() {
                           {msg.content}
                         </div>
                         
-                        {/* Dropped Post */}
                         {msg.dropped_post && (
                           <div className="mt-2 p-2 border border-white/20 text-xs text-white/60">
                             <p className="text-[10px] text-white/40 mb-1">Dropped post from @{msg.dropped_post.user?.username}</p>
@@ -293,6 +423,13 @@ export default function GCPage() {
                   <div ref={messagesEndRef} />
                 </div>
               )}
+              
+              {/* Typing Indicator */}
+              {typingUsers.length > 0 && (
+                <div className="text-[10px] text-white/40 italic mt-2">
+                  {typingUsers.join(', ')} {typingUsers.length === 1 ? 'is' : 'are'} typing...
+                </div>
+              )}
             </ScrollArea>
 
             {/* Input */}
@@ -300,7 +437,7 @@ export default function GCPage() {
               <div className="flex gap-2">
                 <Input
                   value={newMessage}
-                  onChange={(e) => setNewMessage(e.target.value)}
+                  onChange={handleMessageChange}
                   placeholder="Type a message..."
                   className="flex-1 bg-transparent border-white/20 focus:border-white rounded-none text-sm"
                   onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
