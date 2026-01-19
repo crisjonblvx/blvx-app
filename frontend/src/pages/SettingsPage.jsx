@@ -1,19 +1,53 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, LogOut, User, Bell, Shield, HelpCircle, Sparkles } from 'lucide-react';
+import { ArrowLeft, LogOut, User, Bell, Shield, HelpCircle, Sparkles, Zap, Moon, Sun, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { toast } from 'sonner';
+import axios from 'axios';
+
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export default function SettingsPage() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { theme, toggleTheme, isDark } = useTheme();
   const [notifications, setNotifications] = useState(true);
+  const [droppingSpark, setDroppingSpark] = useState(false);
+  const [sparkCategory, setSparkCategory] = useState('');
 
   const handleLogout = async () => {
     await logout();
+  };
+
+  const handleDropSpark = async () => {
+    setDroppingSpark(true);
+    try {
+      const response = await axios.post(
+        `${API}/spark/drop`,
+        null,
+        { 
+          params: sparkCategory ? { category: sparkCategory } : {},
+          withCredentials: true 
+        }
+      );
+      toast.success('Spark dropped to The Block!');
+    } catch (error) {
+      console.error('Spark error:', error);
+      toast.error(error.response?.data?.detail || 'Failed to drop Spark');
+    } finally {
+      setDroppingSpark(false);
+    }
   };
 
   const settingSections = [
@@ -36,6 +70,14 @@ export default function SettingsPage() {
           toggle: true,
           value: notifications,
           onChange: setNotifications,
+        },
+        {
+          icon: isDark ? Moon : Sun,
+          label: isDark ? 'Cinema Mode (Dark)' : 'Editorial Mode (Light)',
+          description: isDark ? 'Immersive, focus on content' : 'Sharp, magazine aesthetic',
+          toggle: true,
+          value: isDark,
+          onChange: toggleTheme,
         },
       ],
     },
@@ -78,6 +120,47 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      {/* The Spark - Admin Tool */}
+      <div className="p-4 border-b border-white/10">
+        <div className="flex items-center gap-2 mb-4">
+          <Zap className="h-5 w-5 text-yellow-500" />
+          <h2 className="font-display text-sm tracking-widest uppercase">The Spark</h2>
+        </div>
+        <p className="text-xs text-white/40 mb-4">
+          Drop a Bonita-generated conversation starter to The Block
+        </p>
+        
+        <div className="flex gap-2">
+          <Select value={sparkCategory} onValueChange={setSparkCategory}>
+            <SelectTrigger className="flex-1 bg-transparent border-white/20 focus:border-white rounded-none">
+              <SelectValue placeholder="Random topic" />
+            </SelectTrigger>
+            <SelectContent className="bg-black border-white/20">
+              <SelectItem value="">Random</SelectItem>
+              <SelectItem value="music">Music</SelectItem>
+              <SelectItem value="tech">Tech</SelectItem>
+              <SelectItem value="culture">Culture</SelectItem>
+            </SelectContent>
+          </Select>
+          
+          <Button
+            onClick={handleDropSpark}
+            disabled={droppingSpark}
+            className="bg-white text-black hover:bg-white/90 rounded-none font-display tracking-wider"
+            data-testid="drop-spark-btn"
+          >
+            {droppingSpark ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <>
+                <Zap className="h-4 w-4 mr-2" />
+                Drop Spark
+              </>
+            )}
+          </Button>
+        </div>
+      </div>
+
       {/* Settings List */}
       <div className="divide-y divide-white/10">
         {settingSections.map((section) => (
@@ -97,7 +180,12 @@ export default function SettingsPage() {
                   >
                     <div className="flex items-center gap-3">
                       <Icon className="h-5 w-5 text-white/60" />
-                      <span className="text-white">{item.label}</span>
+                      <div>
+                        <span className="text-white">{item.label}</span>
+                        {item.description && (
+                          <p className="text-xs text-white/40">{item.description}</p>
+                        )}
+                      </div>
                     </div>
                     <Switch
                       checked={item.value}
