@@ -88,46 +88,55 @@ class BLVXAPITester:
         self.user_id = f"test_user_{timestamp}"
         self.session_token = f"test_session_{timestamp}"
         
-        # MongoDB commands to create test user and session
-        mongo_commands = f'''
-        use test_database;
-        db.users.insertOne({{
-            "user_id": "{self.user_id}",
-            "email": "test.user.{timestamp}@example.com",
+        # Create test user document
+        user_doc = {
+            "user_id": self.user_id,
+            "email": f"test.user.{timestamp}@example.com",
             "name": "Test User BLVX",
             "picture": "https://via.placeholder.com/150",
-            "username": "testuser{timestamp}",
+            "username": f"testuser{timestamp}",
             "bio": "Test bio for BLVX testing",
-            "verified": false,
+            "verified": False,
             "followers_count": 0,
             "following_count": 0,
             "posts_count": 0,
-            "created_at": new Date().toISOString()
-        }});
+            "created_at": datetime.now().isoformat()
+        }
         
-        db.user_sessions.insertOne({{
-            "user_id": "{self.user_id}",
-            "session_token": "{self.session_token}",
-            "expires_at": new Date(Date.now() + 7*24*60*60*1000).toISOString(),
-            "created_at": new Date().toISOString()
-        }});
-        '''
+        # Create session document
+        session_doc = {
+            "user_id": self.user_id,
+            "session_token": self.session_token,
+            "expires_at": (datetime.now() + timedelta(days=7)).isoformat(),
+            "created_at": datetime.now().isoformat()
+        }
         
         try:
             import subprocess
-            result = subprocess.run(
-                ['mongosh', '--eval', mongo_commands],
-                capture_output=True,
-                text=True,
-                timeout=30
-            )
+            from datetime import timedelta
             
-            if result.returncode == 0:
+            # Insert user
+            user_cmd = f'mongosh --eval "use test_database; db.users.insertOne({json.dumps(user_doc)});"'
+            result1 = subprocess.run(user_cmd, shell=True, capture_output=True, text=True, timeout=30)
+            
+            # Insert session
+            session_cmd = f'mongosh --eval "use test_database; db.user_sessions.insertOne({json.dumps(session_doc)});"'
+            result2 = subprocess.run(session_cmd, shell=True, capture_output=True, text=True, timeout=30)
+            
+            if result1.returncode == 0 and result2.returncode == 0:
                 self.log(f"✅ Test user created - ID: {self.user_id}")
                 self.log(f"✅ Session token: {self.session_token}")
+                
+                # Verify the data was inserted
+                verify_cmd = f'mongosh --eval "use test_database; print(\\"Users:\\"); db.users.find({{user_id: \\"{self.user_id}\\"}}).pretty(); print(\\"Sessions:\\"); db.user_sessions.find({{session_token: \\"{self.session_token}\\"}}).pretty();"'
+                verify_result = subprocess.run(verify_cmd, shell=True, capture_output=True, text=True, timeout=30)
+                self.log(f"Database verification: {verify_result.stdout}")
+                
                 return True
             else:
-                self.log(f"❌ Failed to create test user: {result.stderr}")
+                self.log(f"❌ Failed to create test user")
+                self.log(f"User insert result: {result1.stderr}")
+                self.log(f"Session insert result: {result2.stderr}")
                 return False
                 
         except Exception as e:
