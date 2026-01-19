@@ -1502,41 +1502,43 @@ async def ask_bonita(request: BonitaRequest, user: UserBase = Depends(get_curren
 
 spark_router = APIRouter(prefix="/spark", tags=["The Spark"])
 
-# Topic categories for content generation
+# Topic categories for content generation with reference URLs
 SPARK_TOPICS = {
     "music": [
-        "Kendrick Lamar announces tour",
-        "New album drops at midnight",
-        "Grammy nominations announced",
-        "Festival lineup revealed",
-        "Artist goes viral on TikTok",
+        {"headline": "Kendrick Lamar announces tour", "reference_url": "https://pitchfork.com/news/kendrick-lamar-tour"},
+        {"headline": "New album drops at midnight", "reference_url": "https://complex.com/music/new-album"},
+        {"headline": "Grammy nominations announced", "reference_url": "https://grammy.com/nominations"},
+        {"headline": "Festival lineup revealed", "reference_url": "https://rollingstone.com/music/festival"},
+        {"headline": "Artist goes viral on TikTok", "reference_url": "https://billboard.com/tiktok-viral"},
     ],
     "tech": [
-        "New iPhone features leaked",
-        "AI tool breaks the internet",
-        "App update changes everything",
-        "Tech company under fire",
-        "Viral tech hack discovered",
+        {"headline": "New iPhone features leaked", "reference_url": "https://techcrunch.com/apple-iphone"},
+        {"headline": "AI tool breaks the internet", "reference_url": "https://theverge.com/ai-viral"},
+        {"headline": "App update changes everything", "reference_url": "https://wired.com/app-update"},
+        {"headline": "Tech company under fire", "reference_url": "https://nytimes.com/tech-accountability"},
+        {"headline": "Viral tech hack discovered", "reference_url": "https://mashable.com/tech-hack"},
     ],
     "culture": [
-        "Reality show drama escalates",
-        "Celebrity couple spotted together",
-        "Viral tweet sparks debate",
-        "Fashion week highlights",
-        "Movie trailer drops online",
+        {"headline": "Reality show drama escalates", "reference_url": "https://vulture.com/reality-tv"},
+        {"headline": "Celebrity couple spotted together", "reference_url": "https://tmz.com/celebrity"},
+        {"headline": "Viral tweet sparks debate", "reference_url": "https://twitter.com/viral"},
+        {"headline": "Fashion week highlights", "reference_url": "https://vogue.com/fashion-week"},
+        {"headline": "Movie trailer drops online", "reference_url": "https://deadline.com/movie-trailer"},
     ],
 }
 
-async def generate_spark_post(topic_category: str = None) -> str:
-    """Generate a BLVX-style post using Bonita AI in 'Town Crier' mode"""
+async def generate_spark_post(topic_category: str = None) -> dict:
+    """Generate a BLVX-style post with reference URL using Bonita AI in 'Town Crier' mode"""
     import random
     
     # Select random category if not specified
     if not topic_category or topic_category not in SPARK_TOPICS:
         topic_category = random.choice(list(SPARK_TOPICS.keys()))
     
-    # Select random headline from category
-    headline = random.choice(SPARK_TOPICS[topic_category])
+    # Select random topic from category
+    topic = random.choice(SPARK_TOPICS[topic_category])
+    headline = topic["headline"]
+    reference_url = topic["reference_url"]
     
     # Generate BLVX-style post using Bonita
     town_crier_prompt = f"""You are Bonita in "Town Crier" mode. Your job is to take a headline and turn it into a BLVX-style post that:
@@ -1552,7 +1554,7 @@ Generate a single BLVX-style post. Output ONLY the post text, nothing else."""
 
     try:
         response = await call_bonita(town_crier_prompt, "conversation", "block")
-        return response.strip()
+        content = response.strip()
     except Exception as e:
         logger.error(f"Spark generation error: {e}")
         # Fallback to basic template
@@ -1561,7 +1563,13 @@ Generate a single BLVX-style post. Output ONLY the post text, nothing else."""
             f"Not {headline}... The timeline about to be wild 🔥",
             f"Okay but can we talk about {headline}? Because... 👀",
         ]
-        return random.choice(fallback_posts)
+        content = random.choice(fallback_posts)
+    
+    return {
+        "content": content,
+        "reference_url": reference_url,
+        "category": topic_category
+    }
 
 @spark_router.post("/drop")
 async def drop_spark(
