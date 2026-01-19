@@ -5,6 +5,7 @@ import { BottomNav } from '@/components/BottomNav';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { FAB } from '@/components/FAB';
+import { TrendingWidget } from '@/components/TrendingWidget';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export const AppShell = ({ children }) => {
@@ -58,8 +59,26 @@ export const AppShell = ({ children }) => {
       
       {/* Main Content */}
       <main className="main-content pt-14 md:pt-0">
-        <div className="feed-container px-0 md:px-4">
-          {children}
+        <div className="flex">
+          {/* Feed Container */}
+          <div className="feed-container flex-1 px-0 md:px-4 max-w-2xl">
+            {children}
+          </div>
+          
+          {/* Right Sidebar - "The Word" Trending Widget (Desktop Only) */}
+          <aside className="hidden lg:block w-72 flex-shrink-0 sticky top-0 h-screen overflow-y-auto border-l border-white/10 p-4">
+            <TrendingWidget className="mb-6" />
+            
+            {/* Footer */}
+            <div className="mt-8 text-[10px] text-white/20 space-y-1">
+              <p>© 2025 BLVX</p>
+              <p>Culture first. Scale second.</p>
+              <div className="flex items-center gap-1.5 mt-2">
+                <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
+                Bonita Online
+              </div>
+            </div>
+          </aside>
         </div>
       </main>
       

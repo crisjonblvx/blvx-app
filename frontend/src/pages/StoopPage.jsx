@@ -1,5 +1,5 @@
-import { useState, useEffect } from 'react';
-import { Radio, Users, Plus, Mic, MicOff, PhoneOff } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { Radio, Users, Plus, Mic, MicOff, PhoneOff, AlertCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -26,9 +26,19 @@ export default function StoopPage() {
   const [activeStoopId, setActiveStoopId] = useState(null);
   const [activeStoopData, setActiveStoopData] = useState(null);
   const [isSpeaker, setIsSpeaker] = useState(false);
+  const [isMicActive, setIsMicActive] = useState(false);
+  const [micError, setMicError] = useState(null);
+  
+  // Audio stream ref
+  const audioStreamRef = useRef(null);
 
   useEffect(() => {
     fetchStoops();
+    
+    // Cleanup audio stream on unmount
+    return () => {
+      stopMicrophone();
+    };
   }, []);
 
   const fetchStoops = async () => {
@@ -69,6 +79,7 @@ export default function StoopPage() {
       setActiveStoopId(stoopId);
       setActiveStoopData(response.data);
       setIsSpeaker(response.data.speakers.includes(user.user_id));
+      setMicError(null);
     } catch (error) {
       toast.error('Failed to join Stoop');
     }
@@ -77,11 +88,15 @@ export default function StoopPage() {
   const leaveStoop = async () => {
     if (!activeStoopId) return;
     
+    // Stop microphone before leaving
+    stopMicrophone();
+    
     try {
       await axios.post(`${API}/stoop/${activeStoopId}/leave`, {}, { withCredentials: true });
       setActiveStoopId(null);
       setActiveStoopData(null);
       setIsSpeaker(false);
+      setIsMicActive(false);
       fetchStoops();
     } catch (error) {
       toast.error('Failed to leave Stoop');
@@ -91,6 +106,9 @@ export default function StoopPage() {
   const endStoop = async () => {
     if (!activeStoopId || activeStoopData?.host_id !== user.user_id) return;
     
+    // Stop microphone before ending
+    stopMicrophone();
+    
     try {
       await axios.post(`${API}/stoop/${activeStoopId}/end`, {}, { withCredentials: true });
       setActiveStoopId(null);
@@ -99,6 +117,92 @@ export default function StoopPage() {
       toast.success('Stoop ended');
     } catch (error) {
       toast.error('Failed to end Stoop');
+    }
+  };
+
+  // Start microphone with proper error handling
+  const startMicrophone = useCallback(async () => {
+    console.log('[Stoop] Attempting to start microphone...');
+    setMicError(null);
+    
+    // Check if browser supports getUserMedia
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      const errorMsg = 'Your browser does not support microphone access.';
+      console.error('[Stoop] MediaDevices not supported:', errorMsg);
+      setMicError(errorMsg);
+      toast.error(errorMsg);
+      return false;
+    }
+    
+    try {
+      console.log('[Stoop] Requesting microphone permission...');
+      const stream = await navigator.mediaDevices.getUserMedia({ 
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
+      });
+      
+      console.log('[Stoop] Microphone access granted!', stream);
+      audioStreamRef.current = stream;
+      setIsMicActive(true);
+      toast.success('Microphone activated!');
+      
+      // In a full implementation, we would send this stream to WebRTC peers
+      // For now, we just track the state
+      return true;
+    } catch (error) {
+      console.error('[Stoop] Microphone access error:', error);
+      
+      let errorMsg = 'Microphone access denied. Check your browser settings.';
+      
+      if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
+        errorMsg = 'Microphone access denied. Check your browser settings.';
+      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+        errorMsg = 'No microphone found. Please connect a microphone.';
+      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+        errorMsg = 'Microphone is already in use by another application.';
+      } else if (error.name === 'OverconstrainedError') {
+        errorMsg = 'Microphone configuration error. Try again.';
+      } else if (error.name === 'SecurityError') {
+        errorMsg = 'Microphone access blocked. Use HTTPS connection.';
+      }
+      
+      setMicError(errorMsg);
+      toast.error(errorMsg, {
+        icon: <AlertCircle className="h-4 w-4" />,
+        duration: 5000,
+      });
+      return false;
+    }
+  }, []);
+
+  // Stop microphone
+  const stopMicrophone = useCallback(() => {
+    console.log('[Stoop] Stopping microphone...');
+    if (audioStreamRef.current) {
+      audioStreamRef.current.getTracks().forEach(track => {
+        console.log('[Stoop] Stopping track:', track.label);
+        track.stop();
+      });
+      audioStreamRef.current = null;
+    }
+    setIsMicActive(false);
+  }, []);
+
+  // Toggle microphone
+  const toggleMicrophone = async () => {
+    if (!isSpeaker) {
+      toast.error('You need to be a speaker to use the mic');
+      return;
+    }
+    
+    if (isMicActive) {
+      stopMicrophone();
+      toast.success('Microphone muted');
+    } else {
+      await startMicrophone();
     }
   };
 
@@ -144,34 +248,66 @@ export default function StoopPage() {
             <div className="flex flex-wrap gap-3">
               {activeStoopData.speaker_details?.map((speaker) => (
                 <div key={speaker.user_id} className="flex flex-col items-center">
-                  <Avatar className="h-12 w-12 border-2 border-white/30">
+                  <Avatar className={cn(
+                    "h-12 w-12 border-2 transition-colors",
+                    speaker.user_id === user.user_id && isMicActive 
+                      ? "border-green-500 shadow-lg shadow-green-500/20" 
+                      : "border-white/30"
+                  )}>
                     <AvatarImage src={speaker.picture} />
                     <AvatarFallback className="bg-white/10 text-sm">{speaker.name?.charAt(0)}</AvatarFallback>
                   </Avatar>
                   <span className="text-[10px] text-white/60 mt-1">{speaker.name?.split(' ')[0]}</span>
+                  {speaker.user_id === user.user_id && isMicActive && (
+                    <span className="text-[8px] text-green-500 mt-0.5">LIVE</span>
+                  )}
                 </div>
               ))}
             </div>
           </div>
+          
+          {/* Mic Error Message */}
+          {micError && (
+            <div className="mb-3 p-2 bg-red-500/10 border border-red-500/30 flex items-center gap-2 text-xs text-red-400">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              <span>{micError}</span>
+            </div>
+          )}
           
           {/* Controls */}
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
               size="sm"
+              onClick={toggleMicrophone}
               className={cn(
-                "flex-1 text-xs",
-                isSpeaker ? "bg-white/10 text-white" : "text-white/50"
+                "flex-1 text-xs transition-all",
+                isMicActive 
+                  ? "bg-green-500/20 text-green-400 border border-green-500/30" 
+                  : isSpeaker 
+                    ? "bg-white/10 text-white hover:bg-white/20" 
+                    : "text-white/50"
               )}
+              data-testid="stoop-mic-btn"
             >
-              {isSpeaker ? <Mic className="h-4 w-4 mr-2" /> : <MicOff className="h-4 w-4 mr-2" />}
-              {isSpeaker ? 'On Mic' : 'Listening'}
+              {isMicActive ? (
+                <>
+                  <Mic className="h-4 w-4 mr-2 animate-pulse" />
+                  On Mic
+                </>
+              ) : (
+                <>
+                  <MicOff className="h-4 w-4 mr-2" />
+                  {isSpeaker ? 'Turn On Mic' : 'Listening'}
+                </>
+              )}
             </Button>
             <Button
               onClick={leaveStoop}
               variant="ghost"
               size="sm"
               className="text-red-500 hover:text-red-400 text-xs"
+              data-testid="stoop-leave-btn"
             >
               <PhoneOff className="h-4 w-4 mr-2" />
               Leave
@@ -182,6 +318,7 @@ export default function StoopPage() {
                 variant="ghost"
                 size="sm"
                 className="text-red-500 hover:text-red-400 text-xs"
+                data-testid="stoop-end-btn"
               >
                 End Stoop
               </Button>
