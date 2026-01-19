@@ -2153,30 +2153,35 @@ async def upload_file(
     # Read and save file
     contents = await file.read()
     
-    # Validate file size (10MB limit)
-    if len(contents) > 10 * 1024 * 1024:
-        raise HTTPException(status_code=400, detail="File too large. Maximum size is 10MB.")
+    # Validate file size (50MB limit for videos, 10MB for images)
+    max_size = 50 * 1024 * 1024 if content_type.startswith("video/") else 10 * 1024 * 1024
+    if len(contents) > max_size:
+        max_mb = max_size // (1024 * 1024)
+        raise HTTPException(status_code=400, detail=f"File too large. Maximum size is {max_mb}MB.")
     
-    # Try S3 upload first if configured
-    if is_s3_configured():
+    # Try Cloudinary upload first if configured
+    if is_cloudinary_configured():
         try:
-            file_url = await upload_to_s3(contents, filename, content_type)
+            cloud_result = await upload_to_cloudinary(contents, filename, content_type)
             return {
-                "url": file_url,
+                "url": cloud_result["url"],
                 "filename": filename,
                 "content_type": content_type,
                 "size": len(contents),
-                "storage": "s3"
+                "storage": "cloudinary",
+                "width": cloud_result.get("width"),
+                "height": cloud_result.get("height"),
+                "duration": cloud_result.get("duration"),  # For videos
+                "resource_type": cloud_result.get("resource_type")
             }
         except Exception as e:
-            logger.warning(f"S3 upload failed, falling back to local: {e}")
+            logger.warning(f"Cloudinary upload failed, falling back to local: {e}")
     
     # Fallback to local storage
     with open(filepath, "wb") as f:
         f.write(contents)
     
-    # For MVP, return local file URL
-    # In production with S3 configured, files will be stored in the cloud
+    # Return local file URL
     file_url = f"{os.environ.get('REACT_APP_BACKEND_URL', '')}/api/media/{filename}"
     
     return {
