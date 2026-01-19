@@ -1808,41 +1808,87 @@ async def get_trending(user: UserBase = Depends(get_current_user)):
 
 @api_router.get("/link-preview")
 async def get_link_preview(url: str, user: UserBase = Depends(get_current_user)):
-    """Get OpenGraph preview data for a URL"""
-    import re
+    """Get OpenGraph preview data for a URL - The Unfurler"""
+    from bs4 import BeautifulSoup
+    from urllib.parse import urlparse, quote_plus
     
     try:
-        # Parse domain from URL
-        from urllib.parse import urlparse
         parsed = urlparse(url)
         domain = parsed.hostname.replace('www.', '') if parsed.hostname else 'unknown'
         
-        # Extract path-based title
-        path_parts = [p for p in parsed.path.split('/') if p]
-        title = ' '.join(path_parts[-2:]) if path_parts else domain
-        title = title.replace('-', ' ').replace('_', ' ').title()
+        # Handle Google Search URLs specially
+        if 'google.com/search' in url:
+            # Extract search query
+            query_start = url.find('q=')
+            if query_start != -1:
+                query_end = url.find('&', query_start)
+                query = url[query_start+2:query_end if query_end != -1 else None]
+                query = query.replace('+', ' ')
+                return {
+                    "url": url,
+                    "domain": "google.com",
+                    "title": f"Search: {query}",
+                    "description": f"Find news and articles about '{query}' from multiple sources",
+                    "image": "https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png"
+                }
         
-        # For MVP, return mocked OpenGraph data based on domain
-        # In production, would fetch actual OG tags from the URL
+        # Try to fetch and parse OpenGraph tags
         preview_data = {
             "url": url,
             "domain": domain,
-            "title": title or "Link",
-            "description": f"Read the full story on {domain}",
-            "image": None  # Would fetch og:image in production
+            "title": None,
+            "description": None,
+            "image": None
         }
         
-        # Add mock images for known domains
-        domain_images = {
-            "techcrunch.com": "https://techcrunch.com/wp-content/uploads/2024/01/tc-logo.png",
-            "theverge.com": "https://cdn.vox-cdn.com/uploads/chorus_asset/file/7395367/TheVerge_300x300.0.png",
-            "pitchfork.com": "https://media.pitchfork.com/photos/5929a84413d197565213abd8/master/pass/pitchfork-logo.png",
-            "complex.com": "https://images.complex.com/complex/images/c_fill,dpr_auto,f_auto,q_auto,w_1400/fl_lossy,pg_1/complex-logo_shdprx/complex-logo_shdprx.png",
-            "rollingstone.com": "https://www.rollingstone.com/wp-content/themes/flavor-theme/assets/images/rolling-stone-logo.svg",
-        }
+        try:
+            async with httpx.AsyncClient(timeout=5.0, follow_redirects=True) as client:
+                response = await client.get(url, headers={
+                    "User-Agent": "Mozilla/5.0 (compatible; BLVXBot/1.0; +https://blvx.app)"
+                })
+                
+                if response.status_code == 200:
+                    soup = BeautifulSoup(response.text, 'lxml')
+                    
+                    # Extract OpenGraph tags
+                    og_title = soup.find('meta', property='og:title')
+                    og_desc = soup.find('meta', property='og:description')
+                    og_image = soup.find('meta', property='og:image')
+                    
+                    # Fallback to regular meta tags
+                    if not og_title:
+                        title_tag = soup.find('title')
+                        og_title = {'content': title_tag.text if title_tag else None}
+                    if not og_desc:
+                        meta_desc = soup.find('meta', attrs={'name': 'description'})
+                        og_desc = meta_desc if meta_desc else {'content': None}
+                    
+                    preview_data["title"] = og_title.get('content') if og_title else None
+                    preview_data["description"] = og_desc.get('content') if og_desc else None
+                    preview_data["image"] = og_image.get('content') if og_image else None
+                    
+        except Exception as fetch_error:
+            logger.warning(f"Could not fetch URL {url}: {fetch_error}")
         
-        if domain in domain_images:
-            preview_data["image"] = domain_images[domain]
+        # Fallback values if scraping failed
+        if not preview_data["title"]:
+            path_parts = [p for p in parsed.path.split('/') if p]
+            preview_data["title"] = ' '.join(path_parts[-2:]).replace('-', ' ').replace('_', ' ').title() if path_parts else domain
+        
+        if not preview_data["description"]:
+            preview_data["description"] = f"Read the full story on {domain}"
+        
+        # Fallback images for known domains
+        if not preview_data["image"]:
+            domain_images = {
+                "google.com": "https://www.google.com/images/branding/googlelogo/2x/googlelogo_color_272x92dp.png",
+                "techcrunch.com": "https://techcrunch.com/wp-content/uploads/2024/01/tc-logo.png",
+                "theverge.com": "https://cdn.vox-cdn.com/uploads/chorus_asset/file/7395367/TheVerge_300x300.0.png",
+                "pitchfork.com": "https://media.pitchfork.com/photos/5929a84413d197565213abd8/master/pass/pitchfork-logo.png",
+                "twitter.com": "https://abs.twimg.com/icons/apple-touch-icon-192x192.png",
+                "x.com": "https://abs.twimg.com/icons/apple-touch-icon-192x192.png",
+            }
+            preview_data["image"] = domain_images.get(domain)
         
         return preview_data
     except Exception as e:
