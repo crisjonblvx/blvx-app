@@ -87,14 +87,18 @@ Build **BLVX**, a "High-Context Social Network" designed to be a "Group Chat" ra
 - [x] Create/join group chats
 - [x] Real-time messaging UI
 - [x] Live Drop feature (drop posts into chat)
+- [x] **WebSocket real-time messaging** (NEW)
+- [x] **Typing indicators** (NEW)
+- [x] **Live connection status** (NEW)
 
 #### The Stoop (Audio Spaces)
 - [x] Create/join live audio rooms
 - [x] Host/Speaker/Listener roles
 - [x] "Pass the Aux" feature
 - [x] Pin posts to Stoop
-- [x] **Mic error handling with toast notifications** (NEW)
+- [x] **Mic error handling with toast notifications**
 - [x] Browser permission detection (NotAllowedError, NotFoundError, etc.)
+- [x] **WebRTC signaling infrastructure** (NEW)
 
 #### "The Word" (Trending Widget) (NEW)
 - [x] Desktop: Right sidebar with trending hashtags
