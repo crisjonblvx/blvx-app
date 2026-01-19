@@ -33,12 +33,14 @@ export default function GCPage() {
 
   useEffect(() => {
     fetchGCs();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (activeGC) {
       fetchMessages(activeGC.gc_id);
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeGC]);
 
   useEffect(() => {
