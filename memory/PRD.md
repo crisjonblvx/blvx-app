@@ -191,6 +191,10 @@ Build **BLVX**, a "High-Context Social Network" designed to be a "Group Chat" ra
 - `DELETE /api/posts/{id}/like` - Unlike post
 - `GET /api/posts/{id}/replies` - Get replies
 
+### Trending & Link Preview
+- `GET /api/trending` - Get trending hashtags ("The Word")
+- `GET /api/link-preview` - Get OpenGraph preview for URL
+
 ### The Spark
 - `POST /api/spark/drop` - Generate AI conversation starter
 - `GET /api/spark/categories` - Available topic categories
