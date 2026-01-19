@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { MessageCircle, Plus, Send, Users, Sparkles, Wifi, WifiOff } from 'lucide-react';
+import { MessageCircle, Plus, Send, Users, Sparkles, Wifi, WifiOff, Search, Check, X } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { ScrollArea } from '@/components/ui/scroll-area';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
   Dialog,
   DialogContent,
@@ -33,6 +34,12 @@ export default function GCPage() {
   const [wsConnected, setWsConnected] = useState(false);
   const [typingUsers, setTypingUsers] = useState([]);
   
+  // User selection for new GC
+  const [availableUsers, setAvailableUsers] = useState([]);
+  const [selectedUsers, setSelectedUsers] = useState([]);
+  const [userSearch, setUserSearch] = useState('');
+  const [loadingUsers, setLoadingUsers] = useState(false);
+  
   const messagesEndRef = useRef(null);
   const wsRef = useRef(null);
   const typingTimeoutRef = useRef(null);
@@ -58,6 +65,31 @@ export default function GCPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
+  // Fetch available users when create dialog opens
+  useEffect(() => {
+    if (createOpen) {
+      fetchAvailableUsers();
+    } else {
+      // Reset state when dialog closes
+      setSelectedUsers([]);
+      setNewGCName('');
+      setUserSearch('');
+    }
+  }, [createOpen]);
+
+  const fetchAvailableUsers = async () => {
+    setLoadingUsers(true);
+    try {
+      const response = await axios.get(`${API}/gc/available-users`, { withCredentials: true });
+      setAvailableUsers(response.data);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      toast.error('Failed to load users');
+    } finally {
+      setLoadingUsers(false);
+    }
+  };
+
   // WebSocket Connection
   const connectWebSocket = useCallback((gcId) => {
     if (!sessionToken || !gcId) return;
@@ -82,7 +114,6 @@ export default function GCPage() {
           
           if (data.type === 'new_message') {
             setMessages(prev => {
-              // Avoid duplicates
               if (prev.some(m => m.message_id === data.message.message_id)) {
                 return prev;
               }
@@ -96,7 +127,6 @@ export default function GCPage() {
                 }
                 return prev;
               });
-              // Clear typing indicator after 3 seconds
               setTimeout(() => {
                 setTypingUsers(prev => prev.filter(u => u !== data.username));
               }, 3000);
@@ -116,7 +146,6 @@ export default function GCPage() {
         console.log('[WS] Disconnected:', event.code, event.reason);
         setWsConnected(false);
         
-        // Auto-reconnect after 3 seconds if not intentional close
         if (event.code !== 1000 && activeGC?.gc_id === gcId) {
           setTimeout(() => {
             console.log('[WS] Attempting reconnect...');
@@ -186,7 +215,6 @@ export default function GCPage() {
     setNewMessage('');
     setSendingMessage(true);
     
-    // Send via WebSocket if connected
     if (wsRef.current?.readyState === WebSocket.OPEN) {
       wsRef.current.send(JSON.stringify({
         type: 'message',
@@ -196,7 +224,6 @@ export default function GCPage() {
       return;
     }
     
-    // Fallback to HTTP
     try {
       const response = await axios.post(
         `${API}/gc/${activeGC.gc_id}/message`,
@@ -210,7 +237,7 @@ export default function GCPage() {
       setMessages([...messages, { ...response.data, user: { name: user.name, username: user.username, picture: user.picture } }]);
     } catch (error) {
       toast.error('Failed to send message');
-      setNewMessage(messageContent); // Restore message on error
+      setNewMessage(messageContent);
     } finally {
       setSendingMessage(false);
     }
@@ -242,28 +269,44 @@ export default function GCPage() {
   const handleMessageChange = (e) => {
     setNewMessage(e.target.value);
     
-    // Send typing indicator (debounced)
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
     typingTimeoutRef.current = setTimeout(sendTypingIndicator, 500);
   };
 
+  const toggleUserSelection = (userId) => {
+    setSelectedUsers(prev => {
+      if (prev.includes(userId)) {
+        return prev.filter(id => id !== userId);
+      }
+      return [...prev, userId];
+    });
+  };
+
   const createGC = async () => {
-    if (!newGCName.trim()) return;
+    if (!newGCName.trim()) {
+      toast.error('Please enter a name for the chat');
+      return;
+    }
+    
+    if (selectedUsers.length === 0) {
+      toast.error('Please select at least one person to chat with');
+      return;
+    }
     
     try {
       const response = await axios.post(`${API}/gc/create`, {
         name: newGCName.trim(),
-        member_ids: []
+        member_ids: selectedUsers
       }, { withCredentials: true });
       
-      toast.success('GC created! Invite members to start chatting.');
+      toast.success('Chat started!');
       setCreateOpen(false);
-      setNewGCName('');
       fetchGCs();
+      selectGC(response.data);
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Failed to create GC');
+      toast.error(error.response?.data?.detail || 'Failed to create chat');
     }
   };
 
@@ -274,6 +317,12 @@ export default function GCPage() {
       return '';
     }
   };
+
+  // Filter users by search
+  const filteredUsers = availableUsers.filter(u => 
+    u.name?.toLowerCase().includes(userSearch.toLowerCase()) ||
+    u.username?.toLowerCase().includes(userSearch.toLowerCase())
+  );
 
   return (
     <div className="mb-safe h-[calc(100vh-8rem)] md:h-screen flex flex-col" data-testid="gc-page">
@@ -301,7 +350,7 @@ export default function GCPage() {
             data-testid="create-gc-btn"
           >
             <Plus className="h-3.5 w-3.5 mr-2" />
-            New
+            Start Chat
           </Button>
         </div>
         <p className="text-[10px] text-white/40 mt-2">"The Chat Said..."</p>
@@ -322,8 +371,8 @@ export default function GCPage() {
           ) : gcs.length === 0 ? (
             <div className="text-center py-16 px-4">
               <MessageCircle className="h-10 w-10 text-white/20 mx-auto mb-4" />
-              <p className="text-white/50 text-sm mb-2">No GCs yet</p>
-              <p className="text-white/30 text-xs">Create one to start chatting</p>
+              <p className="text-white/50 text-sm mb-2">No chats yet</p>
+              <p className="text-white/30 text-xs">Start a chat to connect with someone</p>
             </div>
           ) : (
             <ScrollArea className="h-full">
@@ -410,13 +459,6 @@ export default function GCPage() {
                         )}>
                           {msg.content}
                         </div>
-                        
-                        {msg.dropped_post && (
-                          <div className="mt-2 p-2 border border-white/20 text-xs text-white/60">
-                            <p className="text-[10px] text-white/40 mb-1">Dropped post from @{msg.dropped_post.user?.username}</p>
-                            <p className="line-clamp-2">{msg.dropped_post.content}</p>
-                          </div>
-                        )}
                       </div>
                     </div>
                   ))}
@@ -468,34 +510,130 @@ export default function GCPage() {
           <div className="hidden md:flex flex-1 items-center justify-center">
             <div className="text-center">
               <MessageCircle className="h-12 w-12 text-white/20 mx-auto mb-4" />
-              <p className="text-white/40 text-sm">Select a GC to start chatting</p>
+              <p className="text-white/40 text-sm">Select a chat to start messaging</p>
             </div>
           </div>
         )}
       </div>
 
-      {/* Create GC Dialog */}
+      {/* Create GC Dialog - with User Selection */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="bg-black border border-white/20 sm:max-w-[400px]">
-          <DialogHeader>
-            <DialogTitle className="font-display text-sm tracking-widest uppercase">New GC</DialogTitle>
+        <DialogContent className="bg-black border border-white/20 sm:max-w-[450px] max-h-[80vh] p-0 overflow-hidden">
+          <DialogHeader className="p-4 border-b border-white/10">
+            <DialogTitle className="font-display text-sm tracking-widest uppercase">Start Chat</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 pt-4">
-            <Input
-              value={newGCName}
-              onChange={(e) => setNewGCName(e.target.value)}
-              placeholder="Name your GC..."
-              className="bg-transparent border-white/20 focus:border-white rounded-none"
-              data-testid="gc-name-input"
-            />
-            <p className="text-[10px] text-white/40">You'll be able to add members after creating</p>
+          
+          <div className="p-4 space-y-4">
+            {/* Chat Name */}
+            <div>
+              <label className="text-[10px] text-white/40 uppercase tracking-wider mb-2 block">Chat Name</label>
+              <Input
+                value={newGCName}
+                onChange={(e) => setNewGCName(e.target.value)}
+                placeholder="Name this conversation..."
+                className="bg-transparent border-white/20 focus:border-white rounded-none"
+                data-testid="gc-name-input"
+              />
+            </div>
+            
+            {/* User Search */}
+            <div>
+              <label className="text-[10px] text-white/40 uppercase tracking-wider mb-2 block">
+                Add People {selectedUsers.length > 0 && `(${selectedUsers.length} selected)`}
+              </label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+                <Input
+                  value={userSearch}
+                  onChange={(e) => setUserSearch(e.target.value)}
+                  placeholder="Search people..."
+                  className="bg-transparent border-white/20 focus:border-white rounded-none pl-10"
+                  data-testid="gc-user-search"
+                />
+              </div>
+            </div>
+            
+            {/* Selected Users Chips */}
+            {selectedUsers.length > 0 && (
+              <div className="flex flex-wrap gap-2">
+                {selectedUsers.map(userId => {
+                  const u = availableUsers.find(au => au.user_id === userId);
+                  return (
+                    <div 
+                      key={userId}
+                      className="flex items-center gap-1.5 px-2 py-1 bg-white/10 text-xs"
+                    >
+                      <span>@{u?.username || userId}</span>
+                      <button 
+                        onClick={() => toggleUserSelection(userId)}
+                        className="text-white/50 hover:text-white"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+            
+            {/* User List */}
+            <ScrollArea className="h-48 border border-white/10">
+              {loadingUsers ? (
+                <div className="p-4 space-y-3">
+                  {[...Array(3)].map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-full" />
+                  ))}
+                </div>
+              ) : filteredUsers.length === 0 ? (
+                <div className="p-4 text-center text-white/40 text-sm">
+                  {userSearch ? 'No users found' : 'No other users yet'}
+                </div>
+              ) : (
+                <div className="divide-y divide-white/10">
+                  {filteredUsers.map((u) => (
+                    <div
+                      key={u.user_id}
+                      onClick={() => toggleUserSelection(u.user_id)}
+                      className={cn(
+                        "flex items-center gap-3 p-3 cursor-pointer transition-colors",
+                        selectedUsers.includes(u.user_id) ? "bg-white/10" : "hover:bg-white/5"
+                      )}
+                      data-testid={`gc-user-${u.user_id}`}
+                    >
+                      <div className={cn(
+                        "w-5 h-5 border flex items-center justify-center transition-colors",
+                        selectedUsers.includes(u.user_id) 
+                          ? "bg-white border-white" 
+                          : "border-white/30"
+                      )}>
+                        {selectedUsers.includes(u.user_id) && (
+                          <Check className="h-3 w-3 text-black" />
+                        )}
+                      </div>
+                      <Avatar className="h-10 w-10 border border-white/20">
+                        <AvatarImage src={u.picture} />
+                        <AvatarFallback className="bg-white/10 text-sm">
+                          {u.name?.charAt(0)}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-white text-sm truncate">{u.name}</p>
+                        <p className="text-xs text-white/40 truncate">@{u.username}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </ScrollArea>
+            
+            {/* Submit Button */}
             <Button
               onClick={createGC}
-              disabled={!newGCName.trim()}
+              disabled={!newGCName.trim() || selectedUsers.length === 0}
               className="w-full bg-white text-black hover:bg-white/90 rounded-none font-display tracking-wider"
               data-testid="create-gc-submit"
             >
-              Create GC
+              Start Chat with {selectedUsers.length} {selectedUsers.length === 1 ? 'Person' : 'People'}
             </Button>
           </div>
         </DialogContent>
