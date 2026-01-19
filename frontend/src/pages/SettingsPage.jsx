@@ -24,7 +24,7 @@ export default function SettingsPage() {
   const { theme, toggleTheme, isDark } = useTheme();
   const [notifications, setNotifications] = useState(true);
   const [droppingSpark, setDroppingSpark] = useState(false);
-  const [sparkCategory, setSparkCategory] = useState('');
+  const [sparkCategory, setSparkCategory] = useState('random');
 
   const handleLogout = async () => {
     await logout();
