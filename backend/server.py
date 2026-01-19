@@ -1579,8 +1579,10 @@ async def drop_spark(
     """Drop a Spark post to The Block (Admin only for MVP)"""
     # For MVP, any authenticated user can drop sparks (later: admin only)
     
-    # Generate the content
-    content = await generate_spark_post(category)
+    # Generate the content with reference URL
+    spark_data = await generate_spark_post(category)
+    content = spark_data["content"]
+    reference_url = spark_data["reference_url"]
     
     # Create Bonita system user if not exists
     bonita_user = await db.users.find_one({"user_id": "bonita"})
@@ -1604,7 +1606,7 @@ async def drop_spark(
             "created_at": datetime.now(timezone.utc).isoformat()
         })
     
-    # Create the post as Bonita
+    # Create the post as Bonita with reference URL
     post_id = f"post_{uuid.uuid4().hex[:12]}"
     spark_post = {
         "post_id": post_id,
@@ -1613,6 +1615,7 @@ async def drop_spark(
         "media_url": None,
         "media_type": None,
         "gif_metadata": None,
+        "reference_url": reference_url,  # NEW: Reference URL for rich link preview
         "post_type": "original",
         "parent_post_id": None,
         "quote_post_id": None,
