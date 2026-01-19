@@ -90,6 +90,7 @@ class PostBase(BaseModel):
     media_url: Optional[str] = None
     media_type: Optional[str] = None  # "image", "video", "gif"
     gif_metadata: Optional[Dict] = None  # alt text, dimensions for GIFs
+    reference_url: Optional[str] = None  # Rich link preview URL
     post_type: str = "original"
     parent_post_id: Optional[str] = None
     quote_post_id: Optional[str] = None
@@ -105,6 +106,7 @@ class PostCreate(BaseModel):
     media_url: Optional[str] = None
     media_type: Optional[str] = None  # "image", "video", "gif"
     gif_metadata: Optional[Dict] = None
+    reference_url: Optional[str] = None  # Rich link preview URL
     post_type: str = "original"
     parent_post_id: Optional[str] = None
     quote_post_id: Optional[str] = None
