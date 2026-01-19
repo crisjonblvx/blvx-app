@@ -405,7 +405,7 @@ async def get_post_with_user(post: dict) -> dict:
     
     return post
 
-@posts_router.post("")
+@posts_router.post("", status_code=201)
 async def create_post(post: PostCreate, user: UserBase = Depends(get_current_user)):
     """Create a new post (BLVX)"""
     if len(post.content) > 500:
