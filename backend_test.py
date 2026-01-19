@@ -371,14 +371,17 @@ class BLVXAPITester:
         tests = [
             ("Health Check", self.test_health_check),
             ("Authentication", self.test_auth_me),
-            ("Create Post", self.test_create_post),
+            ("Create Posts with Visibility", self.test_create_post_with_visibility),
+            ("Vouch System (Plates)", self.test_vouch_system),
+            ("GC System (Group Chat)", self.test_gc_system),
+            ("Stoop System (Audio Rooms)", self.test_stoop_system),
             ("Get Feed", self.test_get_feed),
             ("Get Explore Feed", self.test_get_explore_feed),
             ("Like Post", self.test_like_post),
             ("User Profile", self.test_get_user_profile),
             ("Search Users", self.test_search_users),
             ("Notifications", self.test_notifications),
-            ("Bonita AI", self.test_bonita_ai),
+            ("Bonita AI (All Modes)", self.test_bonita_ai),
         ]
 
         for test_name, test_func in tests:
