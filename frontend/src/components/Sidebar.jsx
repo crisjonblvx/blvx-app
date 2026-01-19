@@ -12,6 +12,7 @@ const navItems = [
   { path: '/stoop', icon: Radio, label: 'The Stoop' },
   { path: '/search', icon: Search, label: 'Search' },
   { path: '/gc', icon: MessageCircle, label: 'The GC' },
+  { path: '/vouch', icon: Ticket, label: 'The Vouch' },
   { path: '/bonita', icon: Sparkles, label: 'Bonita' },
 ];
 
