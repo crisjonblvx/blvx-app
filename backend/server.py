@@ -1491,13 +1491,246 @@ async def ask_bonita(request: BonitaRequest, user: UserBase = Depends(get_curren
     return BonitaResponse(response=response, mode=request.mode)
 
 # ========================
+# THE SPARK (CONTENT SEEDER)
+# ========================
+
+spark_router = APIRouter(prefix="/spark", tags=["The Spark"])
+
+# Topic categories for content generation
+SPARK_TOPICS = {
+    "music": [
+        "Kendrick Lamar announces tour",
+        "New album drops at midnight",
+        "Grammy nominations announced",
+        "Festival lineup revealed",
+        "Artist goes viral on TikTok",
+    ],
+    "tech": [
+        "New iPhone features leaked",
+        "AI tool breaks the internet",
+        "App update changes everything",
+        "Tech company under fire",
+        "Viral tech hack discovered",
+    ],
+    "culture": [
+        "Reality show drama escalates",
+        "Celebrity couple spotted together",
+        "Viral tweet sparks debate",
+        "Fashion week highlights",
+        "Movie trailer drops online",
+    ],
+}
+
+async def generate_spark_post(topic_category: str = None) -> str:
+    """Generate a BLVX-style post using Bonita AI in 'Town Crier' mode"""
+    import random
+    
+    # Select random category if not specified
+    if not topic_category or topic_category not in SPARK_TOPICS:
+        topic_category = random.choice(list(SPARK_TOPICS.keys()))
+    
+    # Select random headline from category
+    headline = random.choice(SPARK_TOPICS[topic_category])
+    
+    # Generate BLVX-style post using Bonita
+    town_crier_prompt = f"""You are Bonita in "Town Crier" mode. Your job is to take a headline and turn it into a BLVX-style post that:
+1. Asks a question or adds cultural context
+2. Uses culturally relevant language without being corny
+3. Is engaging and invites conversation
+4. Keeps it under 280 characters
+5. May include 1-2 relevant hashtags
+
+Headline: {headline}
+
+Generate a single BLVX-style post. Output ONLY the post text, nothing else."""
+
+    try:
+        response = await call_bonita(town_crier_prompt, "conversation", "block")
+        return response.strip()
+    except Exception as e:
+        logger.error(f"Spark generation error: {e}")
+        # Fallback to basic template
+        fallback_posts = [
+            f"Y'all see this? {headline} 👀 What we thinking?",
+            f"Not {headline}... The timeline about to be wild 🔥",
+            f"Okay but can we talk about {headline}? Because... 👀",
+        ]
+        return random.choice(fallback_posts)
+
+@spark_router.post("/drop")
+async def drop_spark(
+    category: Optional[str] = None,
+    user: UserBase = Depends(get_current_user)
+):
+    """Drop a Spark post to The Block (Admin only for MVP)"""
+    # For MVP, any authenticated user can drop sparks (later: admin only)
+    
+    # Generate the content
+    content = await generate_spark_post(category)
+    
+    # Create Bonita system user if not exists
+    bonita_user = await db.users.find_one({"user_id": "bonita"})
+    if not bonita_user:
+        await db.users.insert_one({
+            "user_id": "bonita",
+            "email": "bonita@blvx.app",
+            "name": "Bonita",
+            "picture": "",
+            "username": "bonita",
+            "bio": "Your culturally fluent AI companion. The Auntie of The Block.",
+            "verified": True,
+            "email_verified": True,
+            "reputation_score": 1000,
+            "plates_remaining": 0,
+            "is_day_one": True,
+            "followers_count": 0,
+            "following_count": 0,
+            "posts_count": 0,
+            "vouched_by": None,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+    
+    # Create the post as Bonita
+    post_id = f"post_{uuid.uuid4().hex[:12]}"
+    spark_post = {
+        "post_id": post_id,
+        "user_id": "bonita",
+        "content": content,
+        "media_url": None,
+        "media_type": None,
+        "gif_metadata": None,
+        "post_type": "original",
+        "parent_post_id": None,
+        "quote_post_id": None,
+        "visibility": "block",
+        "is_spark": True,  # Mark as generated spark
+        "reply_count": 0,
+        "repost_count": 0,
+        "like_count": 0,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.posts.insert_one(spark_post)
+    await db.users.update_one({"user_id": "bonita"}, {"$inc": {"posts_count": 1}})
+    
+    spark_post.pop("_id", None)
+    if isinstance(spark_post.get("created_at"), str):
+        spark_post["created_at"] = datetime.fromisoformat(spark_post["created_at"])
+    
+    enriched = await get_post_with_user(spark_post)
+    
+    return {
+        "message": "Spark dropped!",
+        "post": enriched,
+        "category": category
+    }
+
+@spark_router.get("/categories")
+async def get_spark_categories():
+    """Get available spark topic categories"""
+    return {
+        "categories": list(SPARK_TOPICS.keys()),
+        "topics": SPARK_TOPICS
+    }
+
+# ========================
+# FILE UPLOAD (For Media Support)
+# ========================
+
+upload_router = APIRouter(prefix="/upload", tags=["Upload"])
+
+import base64
+import os as os_module
+from pathlib import Path as PathLib
+
+# Create uploads directory
+UPLOAD_DIR = PathLib("/app/uploads")
+UPLOAD_DIR.mkdir(exist_ok=True)
+
+@upload_router.post("")
+async def upload_file(
+    request: Request,
+    user: UserBase = Depends(get_current_user)
+):
+    """Upload media file (images, videos)"""
+    from fastapi import UploadFile, File
+    
+    # Parse multipart form data
+    form = await request.form()
+    file = form.get("file")
+    
+    if not file:
+        raise HTTPException(status_code=400, detail="No file provided")
+    
+    # Validate file type
+    allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp", "video/mp4", "video/webm"]
+    content_type = file.content_type
+    
+    if content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Unsupported file type")
+    
+    # Generate unique filename
+    ext = content_type.split("/")[-1]
+    if ext == "jpeg":
+        ext = "jpg"
+    filename = f"{uuid.uuid4().hex[:16]}.{ext}"
+    filepath = UPLOAD_DIR / filename
+    
+    # Read and save file
+    contents = await file.read()
+    
+    # Validate file size (10MB limit)
+    if len(contents) > 10 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File too large. Maximum size is 10MB.")
+    
+    with open(filepath, "wb") as f:
+        f.write(contents)
+    
+    # For MVP, return local file URL
+    # In production, this would upload to cloud storage (S3, GCS, etc.)
+    file_url = f"{os.environ.get('REACT_APP_BACKEND_URL', '')}/api/media/{filename}"
+    
+    return {
+        "url": file_url,
+        "filename": filename,
+        "content_type": content_type,
+        "size": len(contents)
+    }
+
+@api_router.get("/media/{filename}")
+async def serve_media(filename: str):
+    """Serve uploaded media files"""
+    from fastapi.responses import FileResponse
+    
+    filepath = UPLOAD_DIR / filename
+    
+    if not filepath.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    
+    # Determine content type
+    ext = filename.split(".")[-1].lower()
+    content_types = {
+        "jpg": "image/jpeg",
+        "jpeg": "image/jpeg",
+        "png": "image/png",
+        "gif": "image/gif",
+        "webp": "image/webp",
+        "mp4": "video/mp4",
+        "webm": "video/webm",
+    }
+    
+    content_type = content_types.get(ext, "application/octet-stream")
+    
+    return FileResponse(filepath, media_type=content_type)
+
+# ========================
 # HEALTH CHECK
 # ========================
 
 @api_router.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {"status": "healthy", "service": "BLVX API", "bonita": "online"}
+    return {"status": "healthy", "service": "BLVX API", "bonita": "online", "spark": "ready"}
 
 # ========================
 # INCLUDE ROUTERS
