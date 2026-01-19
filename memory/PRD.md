@@ -173,30 +173,54 @@ Build **BLVX**, a "High-Context Social Network" designed to be a "Group Chat" ra
 - [x] /api/spark/auto endpoint for batch post generation
 - [x] Hashtags: #BlackExcellence, #POC, #LatinoCommunity, #BIPOC
 
-#### Cloud Media Storage Infrastructure (NEW - Jan 19, 2026)
-- [x] AWS S3 integration code ready
-- [x] Environment variable configuration (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_BUCKET)
-- [x] Automatic fallback to local storage when S3 not configured
+#### Cloud Media Storage - Cloudinary (COMPLETED - Jan 19, 2026)
+- [x] Cloudinary integration (Cloud Name: dtr9wu1fw)
+- [x] Image upload with auto-optimization
+- [x] Video upload (50MB limit) with transcoding
+- [x] CDN delivery worldwide
 - [x] Storage status in /api/health endpoint
-- [ ] **Pending:** AWS credentials to enable S3 uploads
+- [x] Fallback to local storage if needed
+
+#### POV - Native Video Posts (COMPLETED - Jan 19, 2026)
+- [x] Video upload button in composer ("POV")
+- [x] 50MB file size limit for videos
+- [x] Video player in PostCard with controls
+- [x] Upload progress indicator
+- [x] Cloudinary video transcoding
+
+#### Culture Calendar (COMPLETED - Jan 19, 2026)
+- [x] BIPOC-focused significant dates database
+- [x] MLK Day, Juneteenth, Black History Month
+- [x] Hispanic Heritage Month, Cinco de Mayo
+- [x] Kwanzaa, Indigenous Peoples' Day
+- [x] Native American Heritage Month
+- [x] API endpoints: /api/spark/calendar, /api/spark/calendar/post
+- [x] Settings page "Post Today's Event" button
+- [x] Bonita auto-posts for cultural events
+
+#### Push Notifications (COMPLETED - Jan 19, 2026)
+- [x] VAPID key generation and storage
+- [x] Service worker for push handling (sw-push.js)
+- [x] Subscribe/Unsubscribe endpoints
+- [x] usePushNotifications hook
+- [x] Settings page toggle for notifications
+- [x] Test notification endpoint
 
 ### 🔲 Upcoming Features
 
 #### P1 - High Priority
-- [ ] Push notifications
 - [ ] Email verification flow completion
 - [ ] WebRTC audio streaming deployment (infrastructure ready)
 
 #### P2 - Medium Priority
-- [ ] POV (Native video posts)
 - [ ] News API integration for more dynamic Spark topics
 - [ ] Full WebRTC testing in deployed environment
+- [ ] Admin dashboard
 
 #### P3 - Future
 - [ ] Explore page with trending posts
 - [ ] Hashtag system
 - [ ] Search improvements
-- [ ] Admin dashboard
 - [ ] Analytics
 
 ---
