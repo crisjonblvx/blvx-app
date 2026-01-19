@@ -12,6 +12,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { MediaToolbar } from '@/components/MediaToolbar';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
@@ -28,6 +29,7 @@ export const ComposerModal = ({
   const [visibility, setVisibility] = useState('block');
   const [showBonita, setShowBonita] = useState(false);
   const [bonitaSuggestions, setBonitaSuggestions] = useState(null);
+  const [selectedMedia, setSelectedMedia] = useState(null);
 
   const charCount = content.length;
   const isOverLimit = charCount > 500;
@@ -42,12 +44,20 @@ export const ComposerModal = ({
         parent_post_id: replyTo?.post_id || null,
         quote_post_id: quotedPost?.post_id || null,
         visibility: visibility,
+        media_url: selectedMedia?.url || null,
+        media_type: selectedMedia?.type || null,
+        gif_metadata: selectedMedia?.type === 'gif' ? {
+          alt: selectedMedia.alt,
+          width: selectedMedia.width,
+          height: selectedMedia.height,
+        } : null,
       };
 
       await createPost(postData);
       setContent('');
       setBonitaSuggestions(null);
       setShowBonita(false);
+      setSelectedMedia(null);
       onOpenChange(false);
       toast.success('Posted!');
     } catch (error) {
@@ -78,6 +88,14 @@ export const ComposerModal = ({
     }
     setBonitaSuggestions(null);
     setShowBonita(false);
+  };
+
+  const handleMediaSelect = (media) => {
+    setSelectedMedia(media);
+  };
+
+  const handleRemoveMedia = () => {
+    setSelectedMedia(null);
   };
 
   return (
@@ -126,6 +144,15 @@ export const ComposerModal = ({
                 autoFocus
                 data-testid="composer-textarea"
               />
+              
+              {/* Media Toolbar - The Receipts Bar */}
+              <div className="mt-2 pt-2 border-t border-white/5">
+                <MediaToolbar
+                  onMediaSelect={handleMediaSelect}
+                  selectedMedia={selectedMedia}
+                  onRemoveMedia={handleRemoveMedia}
+                />
+              </div>
               
               {/* Quoted post */}
               {quotedPost && (
