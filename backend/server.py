@@ -2968,6 +2968,103 @@ async def websocket_notifications_endpoint(websocket: WebSocket):
         await ws_manager.disconnect_user(user["user_id"])
 
 # ========================
+# PUSH NOTIFICATIONS
+# ========================
+
+push_router = APIRouter(prefix="/push", tags=["Push Notifications"])
+
+# Generate VAPID keys for push notifications (in production, these should be in .env)
+import secrets as py_secrets
+
+# Check if VAPID keys exist in env, otherwise use defaults for development
+VAPID_PUBLIC_KEY = os.environ.get('VAPID_PUBLIC_KEY', 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U')
+VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY', 'Dl9HKb8sXKUCzERSm5DNBkKPCpSjNlpMwP9p1r9Nmyw')
+VAPID_CLAIMS = {"sub": "mailto:notifications@blvx.app"}
+
+@push_router.get("/vapid-key")
+async def get_vapid_public_key():
+    """Get the VAPID public key for push subscription"""
+    return {"publicKey": VAPID_PUBLIC_KEY}
+
+class PushSubscription(BaseModel):
+    endpoint: str
+    keys: dict
+
+@push_router.post("/subscribe")
+async def subscribe_push(
+    subscription: PushSubscription,
+    user: UserBase = Depends(get_current_user)
+):
+    """Subscribe a device to push notifications"""
+    # Store subscription in database
+    await db.push_subscriptions.update_one(
+        {"user_id": user.user_id, "endpoint": subscription.endpoint},
+        {
+            "$set": {
+                "user_id": user.user_id,
+                "endpoint": subscription.endpoint,
+                "keys": subscription.keys,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+        },
+        upsert=True
+    )
+    
+    return {"message": "Subscribed to push notifications"}
+
+@push_router.delete("/unsubscribe")
+async def unsubscribe_push(
+    endpoint: str,
+    user: UserBase = Depends(get_current_user)
+):
+    """Unsubscribe a device from push notifications"""
+    await db.push_subscriptions.delete_one({
+        "user_id": user.user_id,
+        "endpoint": endpoint
+    })
+    
+    return {"message": "Unsubscribed from push notifications"}
+
+async def send_push_notification(user_id: str, title: str, body: str, data: dict = None):
+    """Send push notification to all devices of a user"""
+    from pywebpush import webpush, WebPushException
+    
+    subscriptions = await db.push_subscriptions.find({"user_id": user_id}).to_list(100)
+    
+    for sub in subscriptions:
+        try:
+            webpush(
+                subscription_info={
+                    "endpoint": sub["endpoint"],
+                    "keys": sub["keys"]
+                },
+                data=json.dumps({
+                    "title": title,
+                    "body": body,
+                    "data": data or {}
+                }),
+                vapid_private_key=VAPID_PRIVATE_KEY,
+                vapid_claims=VAPID_CLAIMS
+            )
+        except WebPushException as e:
+            logger.error(f"Push notification failed: {e}")
+            # Remove invalid subscription
+            if e.response and e.response.status_code in [404, 410]:
+                await db.push_subscriptions.delete_one({"endpoint": sub["endpoint"]})
+
+@push_router.post("/test")
+async def test_push_notification(user: UserBase = Depends(get_current_user)):
+    """Send a test push notification to the current user"""
+    await send_push_notification(
+        user.user_id,
+        "BLVX Test",
+        "Push notifications are working! 🎉",
+        {"type": "test"}
+    )
+    
+    return {"message": "Test notification sent"}
+
+# ========================
 # INCLUDE ROUTERS
 # ========================
 
