@@ -79,12 +79,12 @@ export default function HomePage() {
           variant="ghost"
           size="sm"
           onClick={handleRefresh}
-          disabled={loading}
+          disabled={loading || refreshing}
           className="text-white/40 hover:text-white text-xs"
           data-testid="feed-refresh"
         >
-          <RefreshCw className={cn("h-3.5 w-3.5 mr-2", loading && "animate-spin")} />
-          Refresh
+          <RefreshCw className={cn("h-3.5 w-3.5 mr-2", (loading || refreshing) && "animate-spin")} />
+          {refreshing ? 'Refreshing...' : 'Refresh'}
         </Button>
       </div>
 
