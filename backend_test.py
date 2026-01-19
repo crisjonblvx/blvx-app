@@ -266,12 +266,32 @@ class BLVXAPITester:
         return self.run_test("Get Notifications", "GET", "notifications", 200)
 
     def test_bonita_ai(self):
-        """Test Bonita AI endpoint"""
+        """Test Bonita AI endpoint with different modes"""
+        # Test conversation mode
         bonita_data = {
-            "prompt_type": "cultural_context",
-            "content": "What does 'periodt' mean in this context?"
+            "mode": "conversation",
+            "content": "What does 'periodt' mean in this context?",
+            "context": "block"
         }
-        return self.run_test("Bonita AI", "POST", "bonita/ask", 200, bonita_data)
+        success1, _ = self.run_test("Bonita AI - Conversation", "POST", "bonita/ask", 200, bonita_data)
+        
+        # Test vibe_check mode
+        bonita_data = {
+            "mode": "vibe_check", 
+            "content": "This post is fire! Everyone needs to see this.",
+            "context": "cookout"
+        }
+        success2, _ = self.run_test("Bonita AI - Vibe Check", "POST", "bonita/ask", 200, bonita_data)
+        
+        # Test tone_rewrite mode
+        bonita_data = {
+            "mode": "tone_rewrite",
+            "content": "You're completely wrong about this topic.",
+            "context": "block"
+        }
+        success3, _ = self.run_test("Bonita AI - Tone Rewrite", "POST", "bonita/ask", 200, bonita_data)
+        
+        return success1 and success2 and success3, {}
 
     def run_all_tests(self):
         """Run all API tests"""
