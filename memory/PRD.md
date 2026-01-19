@@ -310,6 +310,15 @@ Build **BLVX**, a "High-Context Social Network" designed to be a "Group Chat" ra
 
 ## Changelog
 
+### v1.2.0 (January 19, 2026)
+- **Stoop Mic Fix**: Added proper WebRTC error handling with toast notifications for microphone access failures
+- **Bonita's Receipts**: Spark posts now include reference URLs with rich link preview cards (OpenGraph-style)
+- **The Word (Trending)**: Added trending topics widget to desktop right sidebar and mobile search tab
+- Added /api/trending endpoint for hashtag aggregation
+- Added /api/link-preview endpoint for URL metadata
+- Updated Post schema with reference_url field
+- Enhanced Search page with "The Word" tab for mobile users
+
 ### v1.1.0 (January 19, 2026)
 - Added The Spark (AI content seeder)
 - Added Media & GIF Support
