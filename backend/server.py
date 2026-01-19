@@ -1643,30 +1643,37 @@ async def ask_bonita(request: BonitaRequest, user: UserBase = Depends(get_curren
 
 spark_router = APIRouter(prefix="/spark", tags=["The Spark"])
 
-# Topic search queries for DuckDuckGo
-SPARK_SEARCH_QUERIES = {
+# Topic categories for DuckDuckGo (queries are now dynamically generated with current date)
+SPARK_TOPIC_CATEGORIES = {
     "music": [
-        "latest music news today",
-        "new album release this week",
-        "concert tour announcement 2025",
-        "viral music TikTok trending",
-        "Grammy awards news",
+        "music news",
+        "new album release",
+        "concert tour announcement",
+        "Grammy awards",
+        "hip hop rap news",
     ],
     "tech": [
-        "latest tech news today",
-        "AI artificial intelligence news",
-        "iPhone Apple news today",
-        "viral tech hack tips",
-        "tech company controversy news",
+        "tech news",
+        "AI artificial intelligence",
+        "Apple iPhone",
+        "tech controversy",
+        "startup news",
     ],
     "culture": [
-        "celebrity news today trending",
-        "reality TV show drama news",
-        "viral tweet trending today",
-        "fashion week highlights",
-        "new movie trailer release",
+        "celebrity news",
+        "reality TV drama",
+        "viral trending",
+        "fashion week",
+        "new movie trailer",
     ],
 }
+
+def get_time_anchored_query(base_query: str) -> str:
+    """Generate a time-anchored search query with current month/year"""
+    now = datetime.now()
+    current_month = now.strftime("%B")  # e.g., "January"
+    current_year = now.year  # e.g., 2026
+    return f"{base_query} news {current_month} {current_year} latest"
 
 async def search_real_news(query: str) -> Optional[Dict]:
     """Search DuckDuckGo for real news and return first result"""
