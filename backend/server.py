@@ -2891,6 +2891,13 @@ async def websocket_stoop_endpoint(websocket: WebSocket, stoop_id: str):
     
     await ws_manager.connect_stoop(websocket, stoop_id, user["user_id"])
     
+    # Store the user_id -> websocket mapping for this stoop
+    if not hasattr(ws_manager, 'stoop_user_sockets'):
+        ws_manager.stoop_user_sockets = {}
+    if stoop_id not in ws_manager.stoop_user_sockets:
+        ws_manager.stoop_user_sockets[stoop_id] = {}
+    ws_manager.stoop_user_sockets[stoop_id][user["user_id"]] = websocket
+    
     # Notify others that user joined
     await ws_manager.broadcast_to_stoop(stoop_id, {
         "type": "user_joined",
@@ -2899,9 +2906,12 @@ async def websocket_stoop_endpoint(websocket: WebSocket, stoop_id: str):
         "name": user.get("name")
     })
     
+    logger.info(f"[Stoop WebSocket] User {user['user_id']} joined stoop {stoop_id}")
+    
     try:
         while True:
             data = await websocket.receive_json()
+            logger.info(f"[Stoop WebSocket] Received from {user['user_id']}: {data.get('type')}")
             
             if data.get("type") == "webrtc_signal":
                 # Forward WebRTC signaling data to target user
@@ -2909,13 +2919,30 @@ async def websocket_stoop_endpoint(websocket: WebSocket, stoop_id: str):
                 signal_type = data.get("signal_type")  # offer, answer, ice_candidate
                 signal_data = data.get("signal_data")
                 
-                # Broadcast to all in Stoop (simple mesh approach)
-                await ws_manager.broadcast_to_stoop(stoop_id, {
+                logger.info(f"[Stoop WebSocket] WebRTC signal {signal_type} from {user['user_id']} to {target_user_id}")
+                
+                # Send to specific target if specified, otherwise broadcast
+                message = {
                     "type": "webrtc_signal",
                     "from_user_id": user["user_id"],
+                    "target_user_id": target_user_id,
                     "signal_type": signal_type,
                     "signal_data": signal_data
-                })
+                }
+                
+                if target_user_id and stoop_id in ws_manager.stoop_user_sockets:
+                    target_socket = ws_manager.stoop_user_sockets[stoop_id].get(target_user_id)
+                    if target_socket:
+                        try:
+                            await target_socket.send_json(message)
+                            logger.info(f"[Stoop WebSocket] Sent {signal_type} to {target_user_id}")
+                        except Exception as e:
+                            logger.error(f"[Stoop WebSocket] Error sending to {target_user_id}: {e}")
+                    else:
+                        logger.warning(f"[Stoop WebSocket] Target {target_user_id} not found in stoop")
+                else:
+                    # Fallback to broadcast (excluding sender)
+                    await ws_manager.broadcast_to_stoop(stoop_id, message)
             
             elif data.get("type") == "mic_status":
                 # Broadcast mic status change
@@ -2934,7 +2961,11 @@ async def websocket_stoop_endpoint(websocket: WebSocket, stoop_id: str):
                 })
     
     except WebSocketDisconnect:
+        logger.info(f"[Stoop WebSocket] User {user['user_id']} disconnected from stoop {stoop_id}")
         await ws_manager.disconnect_stoop(websocket, stoop_id, user["user_id"])
+        # Remove from user socket mapping
+        if stoop_id in ws_manager.stoop_user_sockets:
+            ws_manager.stoop_user_sockets[stoop_id].pop(user["user_id"], None)
         # Notify others that user left
         await ws_manager.broadcast_to_stoop(stoop_id, {
             "type": "user_left",
@@ -2943,6 +2974,8 @@ async def websocket_stoop_endpoint(websocket: WebSocket, stoop_id: str):
     except Exception as e:
         logger.error(f"WebSocket Stoop error: {e}")
         await ws_manager.disconnect_stoop(websocket, stoop_id, user["user_id"])
+        if stoop_id in ws_manager.stoop_user_sockets:
+            ws_manager.stoop_user_sockets[stoop_id].pop(user["user_id"], None)
 
 @app.websocket("/ws/notifications")
 async def websocket_notifications_endpoint(websocket: WebSocket):
