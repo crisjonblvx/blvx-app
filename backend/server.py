@@ -1741,6 +1741,113 @@ async def serve_media(filename: str):
     return FileResponse(filepath, media_type=content_type)
 
 # ========================
+# TRENDING & LINK PREVIEW
+# ========================
+
+@api_router.get("/trending")
+async def get_trending(user: UserBase = Depends(get_current_user)):
+    """Get trending hashtags and topics - 'The Word'"""
+    # For MVP, aggregate hashtags from recent posts
+    # In production, this would be computed periodically and cached
+    
+    try:
+        # Get posts from the last 24 hours
+        yesterday = (datetime.now(timezone.utc) - timedelta(hours=24)).isoformat()
+        posts = await db.posts.find(
+            {"created_at": {"$gte": yesterday}, "visibility": "block"},
+            {"_id": 0, "content": 1}
+        ).to_list(1000)
+        
+        # Extract hashtags
+        import re
+        hashtag_counts = {}
+        for post in posts:
+            hashtags = re.findall(r'#(\w+)', post.get("content", ""))
+            for tag in hashtags:
+                tag_lower = f"#{tag.lower()}"
+                hashtag_counts[tag_lower] = hashtag_counts.get(tag_lower, 0) + 1
+        
+        # Sort by count and get top 5
+        sorted_tags = sorted(hashtag_counts.items(), key=lambda x: x[1], reverse=True)[:5]
+        
+        trends = []
+        for tag, count in sorted_tags:
+            trends.append({
+                "hashtag": tag,
+                "post_count": count,
+                "change": "+5%"  # Placeholder for MVP
+            })
+        
+        # If not enough real trends, add defaults
+        default_trends = [
+            {"hashtag": "#TechAccountability", "post_count": 1247, "change": "+12%"},
+            {"hashtag": "#MusicCulture", "post_count": 892, "change": "+8%"},
+            {"hashtag": "#TheBlock", "post_count": 654, "change": "+5%"},
+            {"hashtag": "#StoopTalk", "post_count": 421, "change": "+3%"},
+            {"hashtag": "#BonitaSays", "post_count": 318, "change": "new"},
+        ]
+        
+        while len(trends) < 5:
+            trends.append(default_trends[len(trends)])
+        
+        return {"trends": trends[:5]}
+    except Exception as e:
+        logger.error(f"Trending error: {e}")
+        # Return defaults on error
+        return {
+            "trends": [
+                {"hashtag": "#TechAccountability", "post_count": 1247, "change": "+12%"},
+                {"hashtag": "#MusicCulture", "post_count": 892, "change": "+8%"},
+                {"hashtag": "#TheBlock", "post_count": 654, "change": "+5%"},
+                {"hashtag": "#StoopTalk", "post_count": 421, "change": "+3%"},
+                {"hashtag": "#BonitaSays", "post_count": 318, "change": "new"},
+            ]
+        }
+
+@api_router.get("/link-preview")
+async def get_link_preview(url: str, user: UserBase = Depends(get_current_user)):
+    """Get OpenGraph preview data for a URL"""
+    import re
+    
+    try:
+        # Parse domain from URL
+        from urllib.parse import urlparse
+        parsed = urlparse(url)
+        domain = parsed.hostname.replace('www.', '') if parsed.hostname else 'unknown'
+        
+        # Extract path-based title
+        path_parts = [p for p in parsed.path.split('/') if p]
+        title = ' '.join(path_parts[-2:]) if path_parts else domain
+        title = title.replace('-', ' ').replace('_', ' ').title()
+        
+        # For MVP, return mocked OpenGraph data based on domain
+        # In production, would fetch actual OG tags from the URL
+        preview_data = {
+            "url": url,
+            "domain": domain,
+            "title": title or "Link",
+            "description": f"Read the full story on {domain}",
+            "image": None  # Would fetch og:image in production
+        }
+        
+        # Add mock images for known domains
+        domain_images = {
+            "techcrunch.com": "https://techcrunch.com/wp-content/uploads/2024/01/tc-logo.png",
+            "theverge.com": "https://cdn.vox-cdn.com/uploads/chorus_asset/file/7395367/TheVerge_300x300.0.png",
+            "pitchfork.com": "https://media.pitchfork.com/photos/5929a84413d197565213abd8/master/pass/pitchfork-logo.png",
+            "complex.com": "https://images.complex.com/complex/images/c_fill,dpr_auto,f_auto,q_auto,w_1400/fl_lossy,pg_1/complex-logo_shdprx/complex-logo_shdprx.png",
+            "rollingstone.com": "https://www.rollingstone.com/wp-content/themes/flavor-theme/assets/images/rolling-stone-logo.svg",
+        }
+        
+        if domain in domain_images:
+            preview_data["image"] = domain_images[domain]
+        
+        return preview_data
+    except Exception as e:
+        logger.error(f"Link preview error: {e}")
+        raise HTTPException(status_code=400, detail="Could not fetch link preview")
+
+# ========================
 # HEALTH CHECK
 # ========================
 
