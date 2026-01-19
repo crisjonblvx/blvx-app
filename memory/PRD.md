@@ -127,6 +127,13 @@ Build **BLVX**, a "High-Context Social Network" designed to be a "Group Chat" ra
 - [x] Special handling for Google Search URLs
 - [x] Spark posts use non-404 Google Search links
 
+#### Bonita "Time Synchronization" (CRITICAL FIX - Jan 19, 2026)
+- [x] **Time-anchored search queries** - Queries include current month/year
+- [x] **Stale content filter** - Rejects 2023/2024 content as current news
+- [x] **Dynamic system prompt** - Injects CURRENT_DATE into Bonita prompts
+- [x] **DuckDuckGo news search** - Uses ddgs.news() for fresher results
+- [x] **Final safety check** - Replaces any stale years in output
+
 #### Bonita's "Receipts" (Rich Media) (NEW)
 - [x] Spark posts include reference_url field
 - [x] Link preview cards (OpenGraph-style)
