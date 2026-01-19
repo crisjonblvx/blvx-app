@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
-import { Radio, Users, Plus, Mic, MicOff, PhoneOff, AlertCircle } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Radio, Users, Plus, Mic, MicOff, PhoneOff, AlertCircle, Wifi, WifiOff, Volume2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +14,7 @@ import {
 import { toast } from 'sonner';
 import axios from 'axios';
 import { cn } from '@/lib/utils';
+import { useWebRTC } from '@/hooks/useWebRTC';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -26,20 +27,56 @@ export default function StoopPage() {
   const [activeStoopId, setActiveStoopId] = useState(null);
   const [activeStoopData, setActiveStoopData] = useState(null);
   const [isSpeaker, setIsSpeaker] = useState(false);
-  const [isMicActive, setIsMicActive] = useState(false);
   const [micError, setMicError] = useState(null);
-  
-  // Audio stream ref
-  const audioStreamRef = useRef(null);
+  const [peerMicStatus, setPeerMicStatus] = useState({}); // Track who is speaking
+
+  // WebRTC hook for real-time audio
+  const {
+    isConnected: wsConnected,
+    peers,
+    isMuted,
+    connectionError,
+    connect: connectWebRTC,
+    disconnect: disconnectWebRTC,
+    toggleMute
+  } = useWebRTC({
+    stoopId: activeStoopId,
+    userId: user?.user_id,
+    onPeerJoined: (data) => {
+      console.log('[Stoop] Peer joined:', data);
+      toast.success(`${data.name || data.username} joined the Stoop`);
+      // Refresh stoop data
+      if (activeStoopId) {
+        fetchStoopData(activeStoopId);
+      }
+    },
+    onPeerLeft: (data) => {
+      console.log('[Stoop] Peer left:', data.user_id);
+      // Refresh stoop data
+      if (activeStoopId) {
+        fetchStoopData(activeStoopId);
+      }
+    },
+    onMicStatusChange: (data) => {
+      console.log('[Stoop] Mic status change:', data);
+      setPeerMicStatus(prev => ({
+        ...prev,
+        [data.user_id]: !data.is_muted
+      }));
+    }
+  });
 
   useEffect(() => {
     fetchStoops();
-    
-    // Cleanup audio stream on unmount
-    return () => {
-      stopMicrophone();
-    };
   }, []);
+
+  // Connect WebRTC when joining a stoop
+  useEffect(() => {
+    if (activeStoopId && user?.user_id) {
+      console.log('[Stoop] Connecting WebRTC for stoop:', activeStoopId);
+      connectWebRTC();
+    }
+  }, [activeStoopId, user?.user_id, connectWebRTC]);
 
   const fetchStoops = async () => {
     try {
@@ -49,6 +86,16 @@ export default function StoopPage() {
       console.error('Error fetching stoops:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const fetchStoopData = async (stoopId) => {
+    try {
+      const response = await axios.get(`${API}/stoop/${stoopId}`, { withCredentials: true });
+      setActiveStoopData(response.data);
+      setIsSpeaker(response.data.speakers.includes(user.user_id));
+    } catch (error) {
+      console.error('Error fetching stoop data:', error);
     }
   };
 
@@ -88,15 +135,15 @@ export default function StoopPage() {
   const leaveStoop = async () => {
     if (!activeStoopId) return;
     
-    // Stop microphone before leaving
-    stopMicrophone();
+    // Disconnect WebRTC
+    disconnectWebRTC();
     
     try {
       await axios.post(`${API}/stoop/${activeStoopId}/leave`, {}, { withCredentials: true });
       setActiveStoopId(null);
       setActiveStoopData(null);
       setIsSpeaker(false);
-      setIsMicActive(false);
+      setPeerMicStatus({});
       fetchStoops();
     } catch (error) {
       toast.error('Failed to leave Stoop');
@@ -106,8 +153,8 @@ export default function StoopPage() {
   const endStoop = async () => {
     if (!activeStoopId || activeStoopData?.host_id !== user.user_id) return;
     
-    // Stop microphone before ending
-    stopMicrophone();
+    // Disconnect WebRTC
+    disconnectWebRTC();
     
     try {
       await axios.post(`${API}/stoop/${activeStoopId}/end`, {}, { withCredentials: true });
@@ -120,53 +167,31 @@ export default function StoopPage() {
     }
   };
 
-  // Start microphone with proper error handling
-  const startMicrophone = useCallback(async () => {
-    console.log('[Stoop] Attempting to start microphone...');
-    setMicError(null);
-    
-    // Check if browser supports getUserMedia
-    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-      const errorMsg = 'Your browser does not support microphone access.';
-      console.error('[Stoop] MediaDevices not supported:', errorMsg);
-      setMicError(errorMsg);
-      toast.error(errorMsg);
-      return false;
+  const handleToggleMic = useCallback(async () => {
+    if (!isSpeaker) {
+      toast.error('You need to be a speaker to use the mic');
+      return;
     }
     
+    setMicError(null);
+    
     try {
-      console.log('[Stoop] Requesting microphone permission...');
-      const stream = await navigator.mediaDevices.getUserMedia({ 
-        audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
-          autoGainControl: true
-        }
-      });
-      
-      console.log('[Stoop] Microphone access granted!', stream);
-      audioStreamRef.current = stream;
-      setIsMicActive(true);
-      toast.success('Microphone activated!');
-      
-      // In a full implementation, we would send this stream to WebRTC peers
-      // For now, we just track the state
-      return true;
+      await toggleMute();
+      if (isMuted) {
+        toast.success('Microphone activated - You\'re live!');
+      } else {
+        toast.success('Microphone muted');
+      }
     } catch (error) {
-      console.error('[Stoop] Microphone access error:', error);
-      
+      console.error('[Stoop] Mic toggle error:', error);
       let errorMsg = 'Microphone access denied. Check your browser settings.';
       
       if (error.name === 'NotAllowedError' || error.name === 'PermissionDeniedError') {
         errorMsg = 'Microphone access denied. Check your browser settings.';
-      } else if (error.name === 'NotFoundError' || error.name === 'DevicesNotFoundError') {
+      } else if (error.name === 'NotFoundError') {
         errorMsg = 'No microphone found. Please connect a microphone.';
-      } else if (error.name === 'NotReadableError' || error.name === 'TrackStartError') {
+      } else if (error.name === 'NotReadableError') {
         errorMsg = 'Microphone is already in use by another application.';
-      } else if (error.name === 'OverconstrainedError') {
-        errorMsg = 'Microphone configuration error. Try again.';
-      } else if (error.name === 'SecurityError') {
-        errorMsg = 'Microphone access blocked. Use HTTPS connection.';
       }
       
       setMicError(errorMsg);
@@ -174,36 +199,15 @@ export default function StoopPage() {
         icon: <AlertCircle className="h-4 w-4" />,
         duration: 5000,
       });
-      return false;
     }
-  }, []);
+  }, [isSpeaker, isMuted, toggleMute]);
 
-  // Stop microphone
-  const stopMicrophone = useCallback(() => {
-    console.log('[Stoop] Stopping microphone...');
-    if (audioStreamRef.current) {
-      audioStreamRef.current.getTracks().forEach(track => {
-        console.log('[Stoop] Stopping track:', track.label);
-        track.stop();
-      });
-      audioStreamRef.current = null;
+  // Check if a speaker is currently live
+  const isSpeakerLive = (speakerUserId) => {
+    if (speakerUserId === user.user_id) {
+      return !isMuted;
     }
-    setIsMicActive(false);
-  }, []);
-
-  // Toggle microphone
-  const toggleMicrophone = async () => {
-    if (!isSpeaker) {
-      toast.error('You need to be a speaker to use the mic');
-      return;
-    }
-    
-    if (isMicActive) {
-      stopMicrophone();
-      toast.success('Microphone muted');
-    } else {
-      await startMicrophone();
-    }
+    return peerMicStatus[speakerUserId] || false;
   };
 
   return (
@@ -237,10 +241,23 @@ export default function StoopPage() {
               <h2 className="font-display text-lg">{activeStoopData.title}</h2>
             </div>
             <div className="flex items-center gap-2">
+              {wsConnected ? (
+                <Wifi className="h-3 w-3 text-green-500" />
+              ) : (
+                <WifiOff className="h-3 w-3 text-red-500" />
+              )}
               <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
               <span className="text-xs text-white/50">LIVE</span>
             </div>
           </div>
+          
+          {/* Connection Status */}
+          {connectionError && (
+            <div className="mb-3 p-2 bg-red-500/10 border border-red-500/30 flex items-center gap-2 text-xs text-red-400">
+              <AlertCircle className="h-4 w-4 flex-shrink-0" />
+              <span>Connection error: {connectionError}</span>
+            </div>
+          )}
           
           {/* Speakers */}
           <div className="mb-4">
@@ -248,23 +265,51 @@ export default function StoopPage() {
             <div className="flex flex-wrap gap-3">
               {activeStoopData.speaker_details?.map((speaker) => (
                 <div key={speaker.user_id} className="flex flex-col items-center">
-                  <Avatar className={cn(
-                    "h-12 w-12 border-2 transition-colors",
-                    speaker.user_id === user.user_id && isMicActive 
-                      ? "border-green-500 shadow-lg shadow-green-500/20" 
-                      : "border-white/30"
-                  )}>
-                    <AvatarImage src={speaker.picture} />
-                    <AvatarFallback className="bg-white/10 text-sm">{speaker.name?.charAt(0)}</AvatarFallback>
-                  </Avatar>
+                  <div className="relative">
+                    <Avatar className={cn(
+                      "h-12 w-12 border-2 transition-all duration-300",
+                      isSpeakerLive(speaker.user_id)
+                        ? "border-green-500 shadow-lg shadow-green-500/30 ring-2 ring-green-500/20" 
+                        : "border-white/30"
+                    )}>
+                      <AvatarImage src={speaker.picture} />
+                      <AvatarFallback className="bg-white/10 text-sm">{speaker.name?.charAt(0)}</AvatarFallback>
+                    </Avatar>
+                    {isSpeakerLive(speaker.user_id) && (
+                      <div className="absolute -bottom-1 -right-1 bg-green-500 rounded-full p-0.5">
+                        <Volume2 className="h-2.5 w-2.5 text-black" />
+                      </div>
+                    )}
+                  </div>
                   <span className="text-[10px] text-white/60 mt-1">{speaker.name?.split(' ')[0]}</span>
-                  {speaker.user_id === user.user_id && isMicActive && (
-                    <span className="text-[8px] text-green-500 mt-0.5">LIVE</span>
+                  {isSpeakerLive(speaker.user_id) && (
+                    <span className="text-[8px] text-green-500 mt-0.5 animate-pulse">LIVE</span>
                   )}
                 </div>
               ))}
             </div>
           </div>
+          
+          {/* Listeners */}
+          {activeStoopData.listeners?.length > 0 && (
+            <div className="mb-4">
+              <p className="text-[10px] text-white/40 uppercase tracking-wider mb-2">
+                Listening ({activeStoopData.listeners?.length || 0})
+              </p>
+              <div className="flex -space-x-2">
+                {activeStoopData.listeners?.slice(0, 8).map((listenerId, idx) => (
+                  <Avatar key={listenerId} className="h-8 w-8 border-2 border-black">
+                    <AvatarFallback className="bg-white/10 text-xs">{idx + 1}</AvatarFallback>
+                  </Avatar>
+                ))}
+                {activeStoopData.listeners?.length > 8 && (
+                  <div className="h-8 w-8 rounded-full bg-white/10 border-2 border-black flex items-center justify-center text-[10px]">
+                    +{activeStoopData.listeners.length - 8}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
           
           {/* Mic Error Message */}
           {micError && (
@@ -279,10 +324,11 @@ export default function StoopPage() {
             <Button
               variant="ghost"
               size="sm"
-              onClick={toggleMicrophone}
+              onClick={handleToggleMic}
+              disabled={!wsConnected}
               className={cn(
                 "flex-1 text-xs transition-all",
-                isMicActive 
+                !isMuted
                   ? "bg-green-500/20 text-green-400 border border-green-500/30" 
                   : isSpeaker 
                     ? "bg-white/10 text-white hover:bg-white/20" 
@@ -290,7 +336,7 @@ export default function StoopPage() {
               )}
               data-testid="stoop-mic-btn"
             >
-              {isMicActive ? (
+              {!isMuted ? (
                 <>
                   <Mic className="h-4 w-4 mr-2 animate-pulse" />
                   On Mic
@@ -323,6 +369,13 @@ export default function StoopPage() {
                 End Stoop
               </Button>
             )}
+          </div>
+          
+          {/* WebRTC Status Debug */}
+          <div className="mt-3 text-[10px] text-white/30">
+            {wsConnected ? '🟢 Connected' : '🔴 Disconnected'} • 
+            {Object.keys(peers).length} peer(s) • 
+            {isSpeaker ? 'Speaker' : 'Listener'}
           </div>
         </div>
       )}
