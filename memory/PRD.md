@@ -99,6 +99,10 @@ Build **BLVX**, a "High-Context Social Network" designed to be a "Group Chat" ra
 - [x] **Mic error handling with toast notifications**
 - [x] Browser permission detection (NotAllowedError, NotFoundError, etc.)
 - [x] **WebRTC signaling infrastructure** (NEW)
+- [x] **Full WebRTC peer-to-peer audio streaming** (NEW - Jan 19, 2026)
+- [x] **WebSocket connection for signaling** (NEW)
+- [x] **Peer connection status display** (NEW)
+- [x] **Live speaker indicators** (NEW)
 
 #### "The Word" (Trending Widget) (NEW)
 - [x] Desktop: Right sidebar with trending hashtags
