@@ -31,8 +31,10 @@ export function useWebRTC({
     ]
   };
 
-  // Get session token from cookies
+  // Get session token from cookies (fallback - cookies may be httpOnly)
   const getSessionToken = () => {
+    // Note: httpOnly cookies won't be accessible here
+    // The WebSocket backend will read cookies directly
     const cookies = document.cookie.split(';');
     for (let cookie of cookies) {
       const [name, value] = cookie.trim().split('=');
