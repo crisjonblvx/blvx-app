@@ -2571,8 +2571,8 @@ async def websocket_stoop_endpoint(websocket: WebSocket, stoop_id: str):
 @app.websocket("/ws/notifications")
 async def websocket_notifications_endpoint(websocket: WebSocket):
     """WebSocket endpoint for real-time notifications"""
-    token = websocket.query_params.get("token")
-    user = await get_user_from_token(token)
+    # Get user from token or cookies
+    user = await get_user_from_websocket(websocket)
     
     if not user:
         await websocket.close(code=4001, reason="Unauthorized")
