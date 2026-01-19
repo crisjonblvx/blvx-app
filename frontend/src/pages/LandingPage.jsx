@@ -232,7 +232,7 @@ export default function LandingPage() {
       <div className="min-h-screen bg-black flex flex-col items-center justify-center px-6 py-12">
         <div className="w-full max-w-sm">
           <img 
-            src="https://customer-assets.emergentagent.com/job_blackvoices-1/artifacts/vepdsom9_BLVX%20logo%20white.png"
+            src="/assets/logo-white.png"
             alt="BLVX"
             className="h-10 mx-auto mb-8"
           />
