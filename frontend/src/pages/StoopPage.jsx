@@ -353,10 +353,10 @@ export default function StoopPage() {
               variant="ghost"
               size="sm"
               onClick={handleToggleMic}
-              disabled={!wsConnected}
+              disabled={!isSpeaker}
               className={cn(
                 "flex-1 text-xs transition-all",
-                !isMuted
+                isLocalMicActive
                   ? "bg-green-500/20 text-green-400 border border-green-500/30" 
                   : isSpeaker 
                     ? "bg-white/10 text-white hover:bg-white/20" 
@@ -364,7 +364,7 @@ export default function StoopPage() {
               )}
               data-testid="stoop-mic-btn"
             >
-              {!isMuted ? (
+              {isLocalMicActive ? (
                 <>
                   <Mic className="h-4 w-4 mr-2 animate-pulse" />
                   On Mic
