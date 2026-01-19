@@ -1,34 +1,157 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
-}
+/* BLVX App Styles */
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
-    }
-}
-
-.App-header {
-    background-color: #0f0f10;
+/* Layout containers */
+.app-container {
     min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
+    min-height: 100dvh;
+}
+
+/* Mobile first layout */
+.main-content {
+    padding-bottom: 5rem;
+}
+
+@media (min-width: 768px) {
+    .main-content {
+        padding-bottom: 0;
+        padding-left: 16rem;
+    }
+}
+
+@media (min-width: 1280px) {
+    .main-content {
+        padding-right: 20rem;
+    }
+}
+
+/* Feed container */
+.feed-container {
+    max-width: 600px;
+    margin: 0 auto;
+}
+
+/* Post transitions */
+.post-enter {
+    opacity: 0;
+    transform: translateY(-10px);
+}
+
+.post-enter-active {
+    opacity: 1;
+    transform: translateY(0);
+    transition: opacity 300ms ease-out, transform 300ms ease-out;
+}
+
+/* FAB positioning */
+.fab-container {
+    position: fixed;
+    bottom: 5.5rem;
+    right: 1rem;
+    z-index: 40;
+}
+
+@media (min-width: 768px) {
+    .fab-container {
+        bottom: 2rem;
+        right: 2rem;
+    }
+}
+
+/* Profile header */
+.profile-header {
+    background: linear-gradient(to bottom, rgba(255,255,255,0.05), transparent);
+}
+
+/* Thread connector line */
+.thread-line {
+    width: 2px;
+    background-color: rgba(255, 255, 255, 0.15);
+}
+
+/* Bonita panel */
+.bonita-panel {
+    border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Skeleton loading */
+.skeleton {
+    background: linear-gradient(
+        90deg,
+        rgba(255, 255, 255, 0.05) 0%,
+        rgba(255, 255, 255, 0.1) 50%,
+        rgba(255, 255, 255, 0.05) 100%
+    );
+    background-size: 200% 100%;
+    animation: skeleton-loading 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-loading {
+    0% {
+        background-position: 200% 0;
+    }
+    100% {
+        background-position: -200% 0;
+    }
+}
+
+/* Image loading placeholder */
+.image-placeholder {
+    background-color: rgba(255, 255, 255, 0.05);
+}
+
+/* Composer modal */
+.composer-backdrop {
+    background-color: rgba(0, 0, 0, 0.9);
+}
+
+/* Tab active indicator */
+.tab-active {
+    position: relative;
+}
+
+.tab-active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 4px;
+    height: 4px;
+    background-color: white;
+    border-radius: 50%;
+}
+
+/* Notification badge */
+.notification-badge {
+    min-width: 18px;
+    height: 18px;
+    font-size: 11px;
+    font-weight: 600;
+}
+
+/* Avatar ring */
+.avatar-ring {
+    box-shadow: 0 0 0 2px black, 0 0 0 3px rgba(255, 255, 255, 0.3);
+}
+
+/* Text truncate with ellipsis */
+.text-truncate {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* Multi-line truncate */
+.line-clamp-3 {
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+/* Verified badge */
+.verified-badge {
     color: white;
-}
-
-.App-link {
-    color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
-    }
+    width: 16px;
+    height: 16px;
 }
