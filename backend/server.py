@@ -1623,43 +1623,76 @@ async def ask_bonita(request: BonitaRequest, user: UserBase = Depends(get_curren
 
 spark_router = APIRouter(prefix="/spark", tags=["The Spark"])
 
-# Topic categories with VERIFIED REAL URLs (Google Search fallback)
-SPARK_TOPICS = {
+# Topic search queries for DuckDuckGo
+SPARK_SEARCH_QUERIES = {
     "music": [
-        {"headline": "Kendrick Lamar announces tour", "reference_url": "https://www.google.com/search?q=Kendrick+Lamar+tour+2025"},
-        {"headline": "New album drops at midnight", "reference_url": "https://www.google.com/search?q=new+music+album+release+today"},
-        {"headline": "Grammy nominations announced", "reference_url": "https://www.google.com/search?q=Grammy+nominations+2025"},
-        {"headline": "Festival lineup revealed", "reference_url": "https://www.google.com/search?q=music+festival+lineup+2025"},
-        {"headline": "Artist goes viral on TikTok", "reference_url": "https://www.google.com/search?q=viral+artist+TikTok+music"},
+        "latest music news today",
+        "new album release this week",
+        "concert tour announcement 2025",
+        "viral music TikTok trending",
+        "Grammy awards news",
     ],
     "tech": [
-        {"headline": "New iPhone features leaked", "reference_url": "https://www.google.com/search?q=iPhone+features+leaked+2025"},
-        {"headline": "AI tool breaks the internet", "reference_url": "https://www.google.com/search?q=viral+AI+tool+news"},
-        {"headline": "App update changes everything", "reference_url": "https://www.google.com/search?q=major+app+update+news"},
-        {"headline": "Tech company under fire", "reference_url": "https://www.google.com/search?q=tech+company+controversy+news"},
-        {"headline": "Viral tech hack discovered", "reference_url": "https://www.google.com/search?q=viral+tech+hack+tips"},
+        "latest tech news today",
+        "AI artificial intelligence news",
+        "iPhone Apple news today",
+        "viral tech hack tips",
+        "tech company controversy news",
     ],
     "culture": [
-        {"headline": "Reality show drama escalates", "reference_url": "https://www.google.com/search?q=reality+show+drama+news"},
-        {"headline": "Celebrity couple spotted together", "reference_url": "https://www.google.com/search?q=celebrity+couple+news+today"},
-        {"headline": "Viral tweet sparks debate", "reference_url": "https://www.google.com/search?q=viral+tweet+debate+trending"},
-        {"headline": "Fashion week highlights", "reference_url": "https://www.google.com/search?q=fashion+week+highlights+2025"},
-        {"headline": "Movie trailer drops online", "reference_url": "https://www.google.com/search?q=new+movie+trailer+viral"},
+        "celebrity news today trending",
+        "reality TV show drama news",
+        "viral tweet trending today",
+        "fashion week highlights",
+        "new movie trailer release",
     ],
 }
 
+async def search_real_news(query: str) -> Optional[Dict]:
+    """Search DuckDuckGo for real news and return first result"""
+    from duckduckgo_search import DDGS
+    
+    try:
+        with DDGS() as ddgs:
+            results = list(ddgs.text(query, max_results=3))
+            if results:
+                # Return first valid result
+                for result in results:
+                    if result.get('href') and result.get('title'):
+                        return {
+                            "title": result.get('title', ''),
+                            "url": result.get('href', ''),
+                            "body": result.get('body', '')
+                        }
+        return None
+    except Exception as e:
+        logger.error(f"DuckDuckGo search error: {e}")
+        return None
+
 async def generate_spark_post(topic_category: str = None) -> dict:
-    """Generate a BLVX-style post with reference URL using Bonita AI in 'Town Crier' mode"""
+    """Generate a BLVX-style post with REAL reference URL using DuckDuckGo search"""
     import random
     
     # Select random category if not specified
-    if not topic_category or topic_category not in SPARK_TOPICS:
-        topic_category = random.choice(list(SPARK_TOPICS.keys()))
+    if not topic_category or topic_category not in SPARK_SEARCH_QUERIES:
+        topic_category = random.choice(list(SPARK_SEARCH_QUERIES.keys()))
     
-    # Select random topic from category
-    topic = random.choice(SPARK_TOPICS[topic_category])
-    headline = topic["headline"]
-    reference_url = topic["reference_url"]
+    # Select random search query from category
+    search_query = random.choice(SPARK_SEARCH_QUERIES[topic_category])
+    
+    # Search for real news
+    search_result = await search_real_news(search_query)
+    
+    # Get headline and URL from real search result
+    if search_result:
+        headline = search_result["title"]
+        reference_url = search_result["url"]
+        extra_context = search_result.get("body", "")
+    else:
+        # Fallback: No link is better than a dead link
+        headline = f"Latest {topic_category} news trending today"
+        reference_url = None
+        extra_context = ""
     
     # Generate BLVX-style post using Bonita
     town_crier_prompt = f"""You are Bonita in "Town Crier" mode. Your job is to take a headline and turn it into a BLVX-style post that:
@@ -1670,6 +1703,7 @@ async def generate_spark_post(topic_category: str = None) -> dict:
 5. May include 1-2 relevant hashtags
 
 Headline: {headline}
+{f'Context: {extra_context[:200]}' if extra_context else ''}
 
 Generate a single BLVX-style post. Output ONLY the post text, nothing else."""
 
