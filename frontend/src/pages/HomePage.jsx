@@ -6,11 +6,13 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { RefreshCw, Lock, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 export default function HomePage() {
   const { user } = useAuth();
   const { posts, loading, fetchFeed, fetchExploreFeed } = usePosts();
   const [feedType, setFeedType] = useState('block'); // block (following) or explore
+  const [refreshing, setRefreshing] = useState(false);
 
   useEffect(() => {
     if (feedType === 'block') {
@@ -20,11 +22,19 @@ export default function HomePage() {
     }
   }, [feedType, fetchFeed, fetchExploreFeed]);
 
-  const handleRefresh = () => {
-    if (feedType === 'block') {
-      fetchFeed();
-    } else {
-      fetchExploreFeed();
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    try {
+      if (feedType === 'block') {
+        await fetchFeed();
+      } else {
+        await fetchExploreFeed();
+      }
+      toast.success('Feed refreshed!');
+    } catch (error) {
+      toast.error('Failed to refresh feed');
+    } finally {
+      setRefreshing(false);
     }
   };
 
