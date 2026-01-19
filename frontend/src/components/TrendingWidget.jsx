@@ -171,6 +171,9 @@ export const LinkPreviewCard = ({ url, className }) => {
     );
   }
 
+  // Check if it's a Google Search URL
+  const isGoogleSearch = url.includes('google.com/search');
+
   return (
     <a
       href={url}
@@ -181,11 +184,17 @@ export const LinkPreviewCard = ({ url, className }) => {
     >
       {/* Image */}
       {preview?.image && (
-        <div className="h-32 bg-white/5 overflow-hidden">
+        <div className={cn(
+          "overflow-hidden bg-white/5",
+          isGoogleSearch ? "h-16 flex items-center justify-center" : "h-32"
+        )}>
           <img
             src={preview.image}
             alt=""
-            className="w-full h-full object-cover"
+            className={cn(
+              "object-contain",
+              isGoogleSearch ? "h-8" : "w-full h-full object-cover"
+            )}
             onError={(e) => e.target.style.display = 'none'}
           />
         </div>
