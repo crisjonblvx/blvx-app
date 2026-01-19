@@ -125,3 +125,4 @@ zipp==3.23.0
 beautifulsoup4==4.14.3
 httpx==0.28.1
 lxml==6.0.2
+duckduckgo_search==8.1.1
