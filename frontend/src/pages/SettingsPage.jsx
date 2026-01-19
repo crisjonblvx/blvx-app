@@ -199,6 +199,8 @@ export default function SettingsPage() {
               <SelectItem value="music">Music</SelectItem>
               <SelectItem value="tech">Tech</SelectItem>
               <SelectItem value="culture">Culture</SelectItem>
+              <SelectItem value="politics">Politics</SelectItem>
+              <SelectItem value="finance">Finance</SelectItem>
             </SelectContent>
           </Select>
           
@@ -218,6 +220,34 @@ export default function SettingsPage() {
             )}
           </Button>
         </div>
+      </div>
+
+      {/* Culture Calendar */}
+      <div className="p-4 border-b border-white/10">
+        <div className="flex items-center gap-2 mb-4">
+          <Calendar className="h-5 w-5 text-red-500" />
+          <h2 className="font-display text-sm tracking-widest uppercase">Culture Calendar</h2>
+        </div>
+        <p className="text-xs text-white/40 mb-4">
+          Bonita posts for culturally significant dates (MLK Day, Juneteenth, Hispanic Heritage Month, etc.)
+        </p>
+        
+        <Button
+          onClick={handleDropCalendarPost}
+          disabled={droppingCalendar}
+          variant="outline"
+          className="w-full border-white/20 text-white hover:bg-white hover:text-black rounded-none font-display tracking-wider"
+          data-testid="drop-calendar-btn"
+        >
+          {droppingCalendar ? (
+            <Loader2 className="h-4 w-4 animate-spin" />
+          ) : (
+            <>
+              <Calendar className="h-4 w-4 mr-2" />
+              Post Today's Event
+            </>
+          )}
+        </Button>
       </div>
 
       {/* Settings List */}
