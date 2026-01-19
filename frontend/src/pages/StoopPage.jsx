@@ -29,7 +29,6 @@ export default function StoopPage() {
   const [isSpeaker, setIsSpeaker] = useState(false);
   const [micError, setMicError] = useState(null);
   const [peerMicStatus, setPeerMicStatus] = useState({}); // Track who is speaking
-  const [localMicStream, setLocalMicStream] = useState(null); // Local mic fallback when WebSocket fails
 
   // WebRTC hook for real-time audio
   const {
