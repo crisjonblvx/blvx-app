@@ -1192,7 +1192,17 @@ async def get_unread_count(user: UserBase = Depends(get_current_user)):
 
 @gc_router.post("/create")
 async def create_gc(gc: GCCreate, user: UserBase = Depends(get_current_user)):
-    """Create a new Group Chat"""
+    """Create a new Group Chat - requires at least one other member"""
+    # Validate that at least one other member is selected
+    if not gc.member_ids or len(gc.member_ids) == 0:
+        raise HTTPException(status_code=400, detail="Please select at least one person to chat with")
+    
+    # Verify all members exist
+    for member_id in gc.member_ids:
+        member = await db.users.find_one({"user_id": member_id})
+        if not member:
+            raise HTTPException(status_code=400, detail=f"User not found: {member_id}")
+    
     all_members = list(set([user.user_id] + gc.member_ids))
     
     gc_data = {
@@ -1208,6 +1218,16 @@ async def create_gc(gc: GCCreate, user: UserBase = Depends(get_current_user)):
     gc_data.pop("_id", None)
     
     return gc_data
+
+@gc_router.get("/available-users")
+async def get_available_users_for_gc(user: UserBase = Depends(get_current_user)):
+    """Get list of users available to add to a GC (excludes current user)"""
+    users = await db.users.find(
+        {"user_id": {"$ne": user.user_id}},
+        {"_id": 0, "user_id": 1, "name": 1, "username": 1, "picture": 1, "bio": 1}
+    ).limit(50).to_list(50)
+    
+    return users
 
 @gc_router.get("/my-gcs")
 async def get_my_gcs(user: UserBase = Depends(get_current_user)):
