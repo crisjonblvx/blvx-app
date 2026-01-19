@@ -106,16 +106,29 @@ export const AuthProvider = ({ children }) => {
   };
 
   // Expose a method to set user after successful login
-  const setAuthenticatedUser = (userData) => {
+  const setAuthenticatedUser = (userData, token = null) => {
     setUser(userData);
     setIsAuthenticated(true);
     setLoading(false);
+    if (token) {
+      setSessionToken(token);
+      localStorage.setItem('blvx-session-token', token);
+    }
   };
+
+  // Load session token from localStorage on mount
+  useEffect(() => {
+    const savedToken = localStorage.getItem('blvx-session-token');
+    if (savedToken) {
+      setSessionToken(savedToken);
+    }
+  }, []);
 
   const value = {
     user,
     loading,
     isAuthenticated,
+    sessionToken,
     login,
     logout,
     updateUser,
