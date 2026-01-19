@@ -1643,28 +1643,54 @@ async def ask_bonita(request: BonitaRequest, user: UserBase = Depends(get_curren
 
 spark_router = APIRouter(prefix="/spark", tags=["The Spark"])
 
-# Topic categories for DuckDuckGo (queries are now dynamically generated with current date)
+# Culturally diverse topic categories for DuckDuckGo
+# Focused on POC voices, Black/Brown communities, and underrepresented perspectives
 SPARK_TOPIC_CATEGORIES = {
     "music": [
-        "music news",
-        "new album release",
-        "concert tour announcement",
-        "Grammy awards",
-        "hip hop rap news",
+        "Black artists music news",
+        "Afrobeats latest news",
+        "hip hop rap new releases",
+        "Latin music reggaeton news",
+        "R&B soul music news",
+        "Black women artists music",
+        "indie Black musicians",
     ],
     "tech": [
-        "tech news",
-        "AI artificial intelligence",
-        "Apple iPhone",
-        "tech controversy",
-        "startup news",
+        "Black founders tech startup",
+        "diversity in tech news",
+        "Black entrepreneurs technology",
+        "Latina tech founders",
+        "POC in Silicon Valley",
+        "Black owned tech companies",
+        "tech layoffs impact minority workers",
     ],
     "culture": [
-        "celebrity news",
-        "reality TV drama",
-        "viral trending",
-        "fashion week",
-        "new movie trailer",
+        "Black fashion designers",
+        "African fashion week",
+        "Black celebrities news",
+        "Latina representation Hollywood",
+        "HBCU news updates",
+        "Black owned business success",
+        "Caribbean culture news",
+    ],
+    "politics": [
+        "immigration policy news impact",
+        "DEI diversity policy changes",
+        "civil rights news today",
+        "voting rights news",
+        "police reform news",
+        "Black community politics",
+        "Latino community policy impact",
+        "environmental justice communities of color",
+    ],
+    "finance": [
+        "Black wealth building tips",
+        "investing advice Black community",
+        "Black financial advisors",
+        "generational wealth minorities",
+        "Black Wall Street news",
+        "Latina entrepreneurs business",
+        "minority small business news",
     ],
 }
 
