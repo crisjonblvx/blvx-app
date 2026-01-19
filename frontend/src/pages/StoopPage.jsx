@@ -229,10 +229,14 @@ export default function StoopPage() {
   // Check if a speaker is currently live
   const isSpeakerLive = (speakerUserId) => {
     if (speakerUserId === user.user_id) {
-      return !isMuted;
+      // Check both WebRTC and local mic state
+      return !isMuted || !!localMicStream;
     }
     return peerMicStatus[speakerUserId] || false;
   };
+  
+  // Determine if local user has mic active (either mode)
+  const isLocalMicActive = !isMuted || !!localMicStream;
 
   return (
     <div className="mb-safe" data-testid="stoop-page">
