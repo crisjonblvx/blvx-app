@@ -1958,6 +1958,94 @@ async def get_spark_categories():
         "topics": SPARK_TOPIC_CATEGORIES
     }
 
+@spark_router.get("/trending")
+async def get_trending_news():
+    """Get trending news headlines for dynamic spark topics"""
+    from ddgs import DDGS
+    
+    trending = []
+    current_date = datetime.now().strftime("%B %Y")
+    
+    # Search for trending headlines in each category
+    categories_to_search = ["politics", "culture", "music", "finance", "tech"]
+    
+    for category in categories_to_search:
+        try:
+            # Pick a random query from the category
+            base_queries = SPARK_TOPIC_CATEGORIES.get(category, ["news"])
+            search_term = random.choice(base_queries)
+            
+            with DDGS() as ddgs:
+                results = list(ddgs.news(f"{search_term} {current_date}", max_results=2))
+                
+                for result in results:
+                    title = result.get('title', '')
+                    url = result.get('url', result.get('href', ''))
+                    source = result.get('source', 'Unknown')
+                    
+                    if title and url and is_content_fresh(title):
+                        trending.append({
+                            "category": category,
+                            "title": title[:100],
+                            "url": url,
+                            "source": source
+                        })
+                        break  # One per category
+        except Exception as e:
+            logger.error(f"Error fetching trending for {category}: {e}")
+            continue
+    
+    return {
+        "trending": trending,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+
+@spark_router.post("/auto")
+async def auto_spark(user: UserBase = Depends(get_current_user)):
+    """Automatically generate multiple diverse spark posts"""
+    results = []
+    categories = list(SPARK_TOPIC_CATEGORIES.keys())
+    
+    # Generate 3 diverse posts from different categories
+    selected_categories = random.sample(categories, min(3, len(categories)))
+    
+    for category in selected_categories:
+        try:
+            spark_data = await generate_spark_post(category)
+            
+            if spark_data.get("content"):
+                post_id = f"post_{secrets.token_urlsafe(8)}"
+                spark_post = {
+                    "post_id": post_id,
+                    "user_id": "bonita",
+                    "content": spark_data["content"],
+                    "reference_url": spark_data.get("reference_url"),
+                    "post_type": "original",
+                    "visibility": "block",
+                    "is_spark": True,
+                    "reply_count": 0,
+                    "repost_count": 0,
+                    "like_count": 0,
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                }
+                
+                await db.posts.insert_one(spark_post)
+                spark_post.pop("_id", None)
+                
+                results.append({
+                    "category": category,
+                    "content": spark_data["content"][:100] + "..." if len(spark_data["content"]) > 100 else spark_data["content"],
+                    "has_link": bool(spark_data.get("reference_url"))
+                })
+        except Exception as e:
+            logger.error(f"Auto-spark error for {category}: {e}")
+            continue
+    
+    return {
+        "message": f"Generated {len(results)} spark posts",
+        "posts": results
+    }
+
 # ========================
 # FILE UPLOAD (For Media Support)
 # ========================
