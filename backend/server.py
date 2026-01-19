@@ -2227,7 +2227,180 @@ async def delete_alert(alert_id: str, user: UserBase = Depends(get_current_user)
 @api_router.get("/health")
 async def health_check():
     """Health check endpoint"""
-    return {"status": "healthy", "service": "BLVX API", "bonita": "online", "spark": "ready"}
+    return {"status": "healthy", "service": "BLVX API", "bonita": "online", "spark": "ready", "websocket": "enabled"}
+
+# ========================
+# WEBSOCKET ENDPOINTS
+# ========================
+
+async def get_user_from_token(token: str) -> Optional[dict]:
+    """Validate session token and get user"""
+    if not token:
+        return None
+    session = await db.sessions.find_one({"token": token})
+    if not session:
+        return None
+    user = await db.users.find_one({"user_id": session["user_id"]}, {"_id": 0})
+    return user
+
+@app.websocket("/ws/gc/{gc_id}")
+async def websocket_gc_endpoint(websocket: WebSocket, gc_id: str):
+    """WebSocket endpoint for real-time GC messaging"""
+    # Get token from query params
+    token = websocket.query_params.get("token")
+    user = await get_user_from_token(token)
+    
+    if not user:
+        await websocket.close(code=4001, reason="Unauthorized")
+        return
+    
+    # Verify user is member of GC
+    gc = await db.gcs.find_one({"gc_id": gc_id})
+    if not gc or user["user_id"] not in gc.get("members", []):
+        await websocket.close(code=4003, reason="Not a member of this GC")
+        return
+    
+    await ws_manager.connect_gc(websocket, gc_id, user["user_id"])
+    
+    try:
+        while True:
+            data = await websocket.receive_json()
+            
+            if data.get("type") == "message":
+                # Create the message
+                message_id = f"msg_{uuid.uuid4().hex[:12]}"
+                message = {
+                    "message_id": message_id,
+                    "gc_id": gc_id,
+                    "user_id": user["user_id"],
+                    "content": data.get("content", ""),
+                    "post_id": data.get("post_id"),  # For Live Drop feature
+                    "created_at": datetime.now(timezone.utc).isoformat()
+                }
+                
+                await db.gc_messages.insert_one(message)
+                message.pop("_id", None)
+                
+                # Get user info for broadcast
+                message["user"] = {
+                    "name": user.get("name"),
+                    "username": user.get("username"),
+                    "picture": user.get("picture")
+                }
+                
+                # Broadcast to all GC members
+                await ws_manager.broadcast_to_gc(gc_id, {
+                    "type": "new_message",
+                    "message": message
+                })
+            
+            elif data.get("type") == "typing":
+                # Broadcast typing indicator
+                await ws_manager.broadcast_to_gc(gc_id, {
+                    "type": "typing",
+                    "user_id": user["user_id"],
+                    "username": user.get("username")
+                })
+    
+    except WebSocketDisconnect:
+        await ws_manager.disconnect_gc(websocket, gc_id, user["user_id"])
+    except Exception as e:
+        logger.error(f"WebSocket GC error: {e}")
+        await ws_manager.disconnect_gc(websocket, gc_id, user["user_id"])
+
+@app.websocket("/ws/stoop/{stoop_id}")
+async def websocket_stoop_endpoint(websocket: WebSocket, stoop_id: str):
+    """WebSocket endpoint for Stoop signaling (WebRTC coordination)"""
+    token = websocket.query_params.get("token")
+    user = await get_user_from_token(token)
+    
+    if not user:
+        await websocket.close(code=4001, reason="Unauthorized")
+        return
+    
+    # Verify user is in the Stoop
+    stoop = await db.stoops.find_one({"stoop_id": stoop_id})
+    if not stoop or not stoop.get("is_live"):
+        await websocket.close(code=4004, reason="Stoop not found or not live")
+        return
+    
+    await ws_manager.connect_stoop(websocket, stoop_id, user["user_id"])
+    
+    # Notify others that user joined
+    await ws_manager.broadcast_to_stoop(stoop_id, {
+        "type": "user_joined",
+        "user_id": user["user_id"],
+        "username": user.get("username"),
+        "name": user.get("name")
+    })
+    
+    try:
+        while True:
+            data = await websocket.receive_json()
+            
+            if data.get("type") == "webrtc_signal":
+                # Forward WebRTC signaling data to target user
+                target_user_id = data.get("target_user_id")
+                signal_type = data.get("signal_type")  # offer, answer, ice_candidate
+                signal_data = data.get("signal_data")
+                
+                # Broadcast to all in Stoop (simple mesh approach)
+                await ws_manager.broadcast_to_stoop(stoop_id, {
+                    "type": "webrtc_signal",
+                    "from_user_id": user["user_id"],
+                    "signal_type": signal_type,
+                    "signal_data": signal_data
+                })
+            
+            elif data.get("type") == "mic_status":
+                # Broadcast mic status change
+                await ws_manager.broadcast_to_stoop(stoop_id, {
+                    "type": "mic_status",
+                    "user_id": user["user_id"],
+                    "is_muted": data.get("is_muted", True)
+                })
+            
+            elif data.get("type") == "reaction":
+                # Broadcast reactions (hand raise, clap, etc.)
+                await ws_manager.broadcast_to_stoop(stoop_id, {
+                    "type": "reaction",
+                    "user_id": user["user_id"],
+                    "reaction": data.get("reaction")
+                })
+    
+    except WebSocketDisconnect:
+        await ws_manager.disconnect_stoop(websocket, stoop_id, user["user_id"])
+        # Notify others that user left
+        await ws_manager.broadcast_to_stoop(stoop_id, {
+            "type": "user_left",
+            "user_id": user["user_id"]
+        })
+    except Exception as e:
+        logger.error(f"WebSocket Stoop error: {e}")
+        await ws_manager.disconnect_stoop(websocket, stoop_id, user["user_id"])
+
+@app.websocket("/ws/notifications")
+async def websocket_notifications_endpoint(websocket: WebSocket):
+    """WebSocket endpoint for real-time notifications"""
+    token = websocket.query_params.get("token")
+    user = await get_user_from_token(token)
+    
+    if not user:
+        await websocket.close(code=4001, reason="Unauthorized")
+        return
+    
+    await ws_manager.connect_user(websocket, user["user_id"])
+    
+    try:
+        while True:
+            # Keep connection alive
+            await websocket.receive_text()
+    
+    except WebSocketDisconnect:
+        await ws_manager.disconnect_user(user["user_id"])
+    except Exception as e:
+        logger.error(f"WebSocket notification error: {e}")
+        await ws_manager.disconnect_user(user["user_id"])
 
 # ========================
 # INCLUDE ROUTERS
