@@ -345,6 +345,15 @@ Build **BLVX**, a "High-Context Social Network" designed to be a "Group Chat" ra
 
 ## Changelog
 
+### v1.4.0 (January 19, 2026)
+- **WebSocket Real-Time Messaging**: Added WebSocket endpoints for GC and Stoop
+  - `/ws/gc/{gc_id}` - Real-time GC messaging with typing indicators
+  - `/ws/stoop/{stoop_id}` - WebRTC signaling for audio streaming
+  - `/ws/notifications` - Real-time user notifications
+- **Connection Manager**: Backend tracks active WebSocket connections
+- **GC Page Updates**: Live connection status, typing indicators, real-time message delivery
+- **Stoop WebRTC Signaling**: Infrastructure for peer-to-peer audio connections
+
 ### v1.3.0 (January 19, 2026)
 - **Link Preview Fix ("The Unfurler")**: Added BeautifulSoup OG tag scraping with graceful fallbacks
 - **Fixed Bonita's Hallucinated Links**: Spark posts now use Google Search URLs that never 404
