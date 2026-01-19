@@ -2057,57 +2057,76 @@ import base64
 import os as os_module
 from pathlib import Path as PathLib
 
-# Create uploads directory
+# Create uploads directory (fallback)
 UPLOAD_DIR = PathLib("/app/uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 
-# Cloud Storage Configuration
-AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
-AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
-AWS_S3_BUCKET = os.environ.get('AWS_S3_BUCKET')
-AWS_S3_REGION = os.environ.get('AWS_S3_REGION', 'us-east-1')
+# Cloudinary Configuration
+CLOUDINARY_CLOUD_NAME = os.environ.get('CLOUDINARY_CLOUD_NAME')
+CLOUDINARY_API_KEY = os.environ.get('CLOUDINARY_API_KEY')
+CLOUDINARY_API_SECRET = os.environ.get('CLOUDINARY_API_SECRET')
 
-def is_s3_configured():
-    """Check if S3 credentials are configured"""
-    return all([AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_BUCKET])
+def is_cloudinary_configured():
+    """Check if Cloudinary credentials are configured"""
+    return all([CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET])
 
-async def upload_to_s3(contents: bytes, filename: str, content_type: str) -> str:
-    """Upload file to AWS S3 and return the public URL"""
-    import boto3
-    from botocore.exceptions import ClientError
+def configure_cloudinary():
+    """Configure Cloudinary SDK"""
+    import cloudinary
+    cloudinary.config(
+        cloud_name=CLOUDINARY_CLOUD_NAME,
+        api_key=CLOUDINARY_API_KEY,
+        api_secret=CLOUDINARY_API_SECRET,
+        secure=True
+    )
+
+async def upload_to_cloudinary(contents: bytes, filename: str, content_type: str) -> dict:
+    """Upload file to Cloudinary and return the URL with metadata"""
+    import cloudinary.uploader
+    import io
+    
+    configure_cloudinary()
     
     try:
-        s3_client = boto3.client(
-            's3',
-            aws_access_key_id=AWS_ACCESS_KEY_ID,
-            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
-            region_name=AWS_S3_REGION
+        # Determine resource type
+        resource_type = "video" if content_type.startswith("video/") else "image"
+        
+        # Upload to Cloudinary
+        result = cloudinary.uploader.upload(
+            io.BytesIO(contents),
+            folder="blvx_uploads",
+            resource_type=resource_type,
+            public_id=filename.rsplit('.', 1)[0],  # Remove extension
+            overwrite=True,
+            # Auto-optimize for web delivery
+            transformation=[
+                {"quality": "auto", "fetch_format": "auto"} if resource_type == "image" else {}
+            ]
         )
         
-        # Upload to S3 with public-read ACL
-        s3_client.put_object(
-            Bucket=AWS_S3_BUCKET,
-            Key=f"uploads/{filename}",
-            Body=contents,
-            ContentType=content_type,
-            ACL='public-read'
-        )
+        logger.info(f"Uploaded to Cloudinary: {result.get('secure_url')}")
         
-        # Return the public URL
-        url = f"https://{AWS_S3_BUCKET}.s3.{AWS_S3_REGION}.amazonaws.com/uploads/{filename}"
-        logger.info(f"Uploaded to S3: {url}")
-        return url
+        return {
+            "url": result.get("secure_url"),
+            "public_id": result.get("public_id"),
+            "resource_type": resource_type,
+            "format": result.get("format"),
+            "width": result.get("width"),
+            "height": result.get("height"),
+            "duration": result.get("duration"),  # For videos
+            "bytes": result.get("bytes")
+        }
         
-    except ClientError as e:
-        logger.error(f"S3 upload error: {e}")
-        raise HTTPException(status_code=500, detail="Cloud storage upload failed")
+    except Exception as e:
+        logger.error(f"Cloudinary upload error: {e}")
+        raise HTTPException(status_code=500, detail=f"Cloud storage upload failed: {str(e)}")
 
 @upload_router.post("")
 async def upload_file(
     request: Request,
     user: UserBase = Depends(get_current_user)
 ):
-    """Upload media file (images, videos) - Uses S3 if configured, local storage otherwise"""
+    """Upload media file (images, videos) - Uses Cloudinary if configured, local storage otherwise"""
     from fastapi import UploadFile, File
     
     # Parse multipart form data
