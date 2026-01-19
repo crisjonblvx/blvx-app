@@ -150,20 +150,47 @@ Build **BLVX**, a "High-Context Social Network" designed to be a "Group Chat" ra
 - [x] Plate creation (invite generation)
 - [x] Plate redemption (invite acceptance)
 - [x] Vouch tracking
+- [x] **The Vouch page UI** (NEW - Jan 19, 2026)
+- [x] Plates balance display with Create Plate button
+- [x] Code redemption input
+- [x] Active/Redeemed plates list
+- [x] "How The Vouch Works" explanation
+
+#### The Sidebar (1-on-1 Whispers) (NEW - Jan 19, 2026)
+- [x] Backend API for creating/managing sidebars
+- [x] Message sending and retrieval
+- [x] Sidebar list page at /sidebar
+- [x] Chat view with message history
+- [x] Whisper button on user profiles
+- [x] Real-time-ready architecture
+
+#### Dynamic Spark Topics (NEW - Jan 19, 2026)
+- [x] Culturally diverse content categories (Music, Tech, Culture, Politics, Finance)
+- [x] POC/BIPOC focused search queries
+- [x] Time-anchored search (current month/year)
+- [x] Stale content filter (rejects 2023/2024 news)
+- [x] /api/spark/trending endpoint for live news
+- [x] /api/spark/auto endpoint for batch post generation
+- [x] Hashtags: #BlackExcellence, #POC, #LatinoCommunity, #BIPOC
+
+#### Cloud Media Storage Infrastructure (NEW - Jan 19, 2026)
+- [x] AWS S3 integration code ready
+- [x] Environment variable configuration (AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_BUCKET)
+- [x] Automatic fallback to local storage when S3 not configured
+- [x] Storage status in /api/health endpoint
+- [ ] **Pending:** AWS credentials to enable S3 uploads
 
 ### 🔲 Upcoming Features
 
 #### P1 - High Priority
-- [ ] **Dynamic Spark Topics** - Connect Bonita to a real News API for current topics
-- [ ] **Cloud Media Storage** - Integrate AWS S3 or similar for persistent media uploads
 - [ ] Push notifications
 - [ ] Email verification flow completion
+- [ ] WebRTC audio streaming deployment (infrastructure ready)
 
 #### P2 - Medium Priority
-- [ ] The Sidebar (1-on-1 whisper chats)
 - [ ] POV (Native video posts)
-- [ ] Cloud storage for media uploads (currently local)
-- [ ] News API integration for Spark topics
+- [ ] News API integration for more dynamic Spark topics
+- [ ] Full WebRTC testing in deployed environment
 
 #### P3 - Future
 - [ ] Explore page with trending posts
