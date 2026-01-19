@@ -1675,22 +1675,91 @@ def get_time_anchored_query(base_query: str) -> str:
     current_year = now.year  # e.g., 2026
     return f"{base_query} news {current_month} {current_year} latest"
 
+def is_content_fresh(text: str) -> bool:
+    """Check if content mentions current year (not stale 2023/2024 content)"""
+    current_year = datetime.now().year
+    previous_year = current_year - 1
+    
+    # Check for stale year references that indicate OLD news
+    stale_years = ["2023", "2024"]
+    text_lower = text.lower()
+    
+    # If it mentions the current year, it's fresh
+    if str(current_year) in text:
+        return True
+    
+    # If it mentions late previous year (Dec), it might still be okay
+    if str(previous_year) in text and "december" in text_lower:
+        return True
+    
+    # If it mentions stale years as the MAIN subject, reject
+    for stale_year in stale_years:
+        # Skip if it's just a date in URL or generic mention
+        if f"in {stale_year}" in text_lower or f"{stale_year} " in text_lower[:50]:
+            return False
+    
+    # Default to accepting if no year mentioned (likely recent)
+    return True
+
 async def search_real_news(query: str) -> Optional[Dict]:
-    """Search DuckDuckGo for real news and return first result"""
+    """Search DuckDuckGo for FRESH real news with time filtering"""
     from ddgs import DDGS
+    
+    # Time-anchor the query
+    time_anchored_query = get_time_anchored_query(query)
+    current_year = datetime.now().year
+    
+    logger.info(f"Searching DuckDuckGo with time-anchored query: {time_anchored_query}")
     
     try:
         with DDGS() as ddgs:
-            results = list(ddgs.text(query, max_results=3))
+            # Use news search first for more current results
+            try:
+                # Try news search with time filter (past week)
+                results = list(ddgs.news(time_anchored_query, max_results=5))
+            except Exception:
+                # Fall back to text search if news search fails
+                results = list(ddgs.text(time_anchored_query, max_results=5))
+            
             if results:
-                # Return first valid result
+                # Filter for FRESH content only
                 for result in results:
-                    if result.get('href') and result.get('title'):
-                        return {
-                            "title": result.get('title', ''),
-                            "url": result.get('href', ''),
-                            "body": result.get('body', '')
-                        }
+                    title = result.get('title', '')
+                    body = result.get('body', result.get('description', ''))
+                    url = result.get('href', result.get('url', result.get('link', '')))
+                    
+                    if not url or not title:
+                        continue
+                    
+                    # Check freshness - reject stale 2023/2024 content
+                    combined_text = f"{title} {body}"
+                    if not is_content_fresh(combined_text):
+                        logger.info(f"Skipping stale content: {title[:50]}...")
+                        continue
+                    
+                    return {
+                        "title": title,
+                        "url": url,
+                        "body": body
+                    }
+                
+                # If all results were stale, try a different approach
+                logger.warning("All search results were stale, trying alternative query")
+                
+        # Final fallback - try with "this week" modifier
+        fallback_query = f"{query} this week {current_year}"
+        with DDGS() as ddgs:
+            results = list(ddgs.text(fallback_query, max_results=3))
+            for result in results:
+                url = result.get('href', '')
+                title = result.get('title', '')
+                if url and title and is_content_fresh(f"{title} {result.get('body', '')}"):
+                    return {
+                        "title": title,
+                        "url": url,
+                        "body": result.get('body', '')
+                    }
+        
         return None
     except Exception as e:
         logger.error(f"DuckDuckGo search error: {e}")
