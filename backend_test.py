@@ -264,7 +264,11 @@ class BLVXAPITester:
         if self.failed_tests:
             self.log("\n❌ FAILED TESTS:")
             for failure in self.failed_tests:
-                self.log(f"  - {failure['test']}: {failure.get('error', f\"Status {failure.get('actual')} (expected {failure.get('expected')})\"}")
+                if 'error' in failure:
+                    error_info = failure['error']
+                else:
+                    error_info = f"Status {failure.get('actual')} (expected {failure.get('expected')})"
+                self.log(f"  - {failure['test']}: {error_info}")
 
         return len(self.failed_tests) == 0
 
