@@ -329,6 +329,17 @@ Build **BLVX**, a "High-Context Social Network" designed to be a "Group Chat" ra
 
 ## Changelog
 
+### v1.3.0 (January 19, 2026)
+- **Link Preview Fix ("The Unfurler")**: Added BeautifulSoup OG tag scraping with graceful fallbacks
+- **Fixed Bonita's Hallucinated Links**: Spark posts now use Google Search URLs that never 404
+- **Light Mode (Editorial) Fix**: CSS properly updates body class and inverts colors
+- **The Lookout**: Crowdsourced safety alerts with Waze-like verification
+  - Alert types: Police, Safety Hazard, Protest, Vibe Check, Other
+  - Vouch/Cap verification mechanic (3 vouches = verified, 3 caps = dismissed)
+  - Auto-expiry after 2 hours
+  - Ticker at top of feed shows verified alert count
+  - Full alert panel with filter tabs
+
 ### v1.2.0 (January 19, 2026)
 - **Stoop Mic Fix**: Added proper WebRTC error handling with toast notifications for microphone access failures
 - **Bonita's Receipts**: Spark posts now include reference URLs with rich link preview cards (OpenGraph-style)
