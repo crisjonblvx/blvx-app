@@ -18,6 +18,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [sessionToken, setSessionToken] = useState(null);
   const location = useLocation();
   const navigate = useNavigate();
   const authCheckRef = useRef(false);
