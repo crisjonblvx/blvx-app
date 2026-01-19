@@ -161,19 +161,36 @@ export default function ProfilePage() {
                 Edit Profile
               </Button>
             ) : (
-              <Button
-                onClick={handleFollow}
-                disabled={followLoading}
-                className={cn(
-                  "rounded-sm px-6",
-                  isFollowing
-                    ? "bg-transparent border border-white/30 text-white hover:bg-white/10 hover:border-red-500 hover:text-red-500"
-                    : "bg-white text-black hover:bg-white/90"
-                )}
-                data-testid="follow-btn"
-              >
-                {isFollowing ? 'Following' : 'Follow'}
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={startWhisper}
+                  disabled={whisperLoading}
+                  className="border border-white/20 text-white/70 hover:bg-white/10 hover:text-white rounded-sm"
+                  data-testid="whisper-btn"
+                  title="Start a sidebar"
+                >
+                  {whisperLoading ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <MessageSquare className="h-4 w-4" />
+                  )}
+                </Button>
+                <Button
+                  onClick={handleFollow}
+                  disabled={followLoading}
+                  className={cn(
+                    "rounded-sm px-6",
+                    isFollowing
+                      ? "bg-transparent border border-white/30 text-white hover:bg-white/10 hover:border-red-500 hover:text-red-500"
+                      : "bg-white text-black hover:bg-white/90"
+                  )}
+                  data-testid="follow-btn"
+                >
+                  {isFollowing ? 'Following' : 'Follow'}
+                </Button>
+              </div>
             )}
           </div>
 
