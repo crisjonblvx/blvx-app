@@ -45,6 +45,106 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 logger = logging.getLogger(__name__)
 
 # ========================
+# WEBSOCKET CONNECTION MANAGER
+# ========================
+
+class ConnectionManager:
+    """Manages WebSocket connections for real-time messaging"""
+    
+    def __init__(self):
+        # Map of gc_id -> list of active connections
+        self.gc_connections: Dict[str, List[WebSocket]] = {}
+        # Map of stoop_id -> list of active connections
+        self.stoop_connections: Dict[str, List[WebSocket]] = {}
+        # Map of user_id -> WebSocket for direct notifications
+        self.user_connections: Dict[str, WebSocket] = {}
+    
+    async def connect_gc(self, websocket: WebSocket, gc_id: str, user_id: str):
+        """Connect a user to a GC channel"""
+        await websocket.accept()
+        if gc_id not in self.gc_connections:
+            self.gc_connections[gc_id] = []
+        self.gc_connections[gc_id].append(websocket)
+        logger.info(f"User {user_id} connected to GC {gc_id}")
+    
+    async def disconnect_gc(self, websocket: WebSocket, gc_id: str, user_id: str):
+        """Disconnect a user from a GC channel"""
+        if gc_id in self.gc_connections:
+            if websocket in self.gc_connections[gc_id]:
+                self.gc_connections[gc_id].remove(websocket)
+            if not self.gc_connections[gc_id]:
+                del self.gc_connections[gc_id]
+        logger.info(f"User {user_id} disconnected from GC {gc_id}")
+    
+    async def broadcast_to_gc(self, gc_id: str, message: dict):
+        """Broadcast a message to all connections in a GC"""
+        if gc_id in self.gc_connections:
+            dead_connections = []
+            for connection in self.gc_connections[gc_id]:
+                try:
+                    await connection.send_json(message)
+                except Exception as e:
+                    logger.error(f"Error sending to GC connection: {e}")
+                    dead_connections.append(connection)
+            # Clean up dead connections
+            for conn in dead_connections:
+                if conn in self.gc_connections[gc_id]:
+                    self.gc_connections[gc_id].remove(conn)
+    
+    async def connect_stoop(self, websocket: WebSocket, stoop_id: str, user_id: str):
+        """Connect a user to a Stoop channel"""
+        await websocket.accept()
+        if stoop_id not in self.stoop_connections:
+            self.stoop_connections[stoop_id] = []
+        self.stoop_connections[stoop_id].append(websocket)
+        logger.info(f"User {user_id} connected to Stoop {stoop_id}")
+    
+    async def disconnect_stoop(self, websocket: WebSocket, stoop_id: str, user_id: str):
+        """Disconnect a user from a Stoop channel"""
+        if stoop_id in self.stoop_connections:
+            if websocket in self.stoop_connections[stoop_id]:
+                self.stoop_connections[stoop_id].remove(websocket)
+            if not self.stoop_connections[stoop_id]:
+                del self.stoop_connections[stoop_id]
+        logger.info(f"User {user_id} disconnected from Stoop {stoop_id}")
+    
+    async def broadcast_to_stoop(self, stoop_id: str, message: dict):
+        """Broadcast a message to all connections in a Stoop"""
+        if stoop_id in self.stoop_connections:
+            dead_connections = []
+            for connection in self.stoop_connections[stoop_id]:
+                try:
+                    await connection.send_json(message)
+                except Exception:
+                    dead_connections.append(connection)
+            for conn in dead_connections:
+                if conn in self.stoop_connections[stoop_id]:
+                    self.stoop_connections[stoop_id].remove(conn)
+    
+    async def connect_user(self, websocket: WebSocket, user_id: str):
+        """Connect a user for direct notifications"""
+        await websocket.accept()
+        self.user_connections[user_id] = websocket
+        logger.info(f"User {user_id} connected for notifications")
+    
+    async def disconnect_user(self, user_id: str):
+        """Disconnect a user from notifications"""
+        if user_id in self.user_connections:
+            del self.user_connections[user_id]
+        logger.info(f"User {user_id} disconnected from notifications")
+    
+    async def send_to_user(self, user_id: str, message: dict):
+        """Send a message to a specific user"""
+        if user_id in self.user_connections:
+            try:
+                await self.user_connections[user_id].send_json(message)
+            except Exception:
+                del self.user_connections[user_id]
+
+# Global connection manager
+ws_manager = ConnectionManager()
+
+# ========================
 # MODELS
 # ========================
 
