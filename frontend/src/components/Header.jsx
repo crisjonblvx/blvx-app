@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Menu, Settings, LogOut, User, Ticket, Bell } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 import { useNotificationCount } from '@/hooks/useNotificationCount';
 import {
   Sheet,
@@ -16,6 +17,7 @@ import { Separator } from '@/components/ui/separator';
 
 export const Header = () => {
   const { user, logout } = useAuth();
+  const { assets } = useTheme();
   const { count: unreadCount } = useNotificationCount();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -31,7 +33,7 @@ export const Header = () => {
         {/* Logo */}
         <Link to="/home" data-testid="header-logo">
           <img 
-            src="https://customer-assets.emergentagent.com/job_blackvoices-1/artifacts/vepdsom9_BLVX%20logo%20white.png"
+            src={assets.logo}
             alt="BLVX"
             className="h-6"
           />
