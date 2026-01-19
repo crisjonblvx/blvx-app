@@ -1,6 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Home, Radio, Search, MessageCircle, User, Settings, LogOut, Sparkles, Ticket } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 import { useNotificationCount } from '@/hooks/useNotificationCount';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
@@ -18,6 +19,7 @@ export const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
+  const { assets } = useTheme();
   const { count: unreadCount } = useNotificationCount();
 
   const handleLogout = async () => {
@@ -30,7 +32,7 @@ export const Sidebar = () => {
       <div className="p-6">
         <Link to="/home" data-testid="sidebar-logo">
           <img 
-            src="https://customer-assets.emergentagent.com/job_blackvoices-1/artifacts/vepdsom9_BLVX%20logo%20white.png"
+            src={assets.logo}
             alt="BLVX"
             className="h-8"
           />
