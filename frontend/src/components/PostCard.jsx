@@ -214,18 +214,27 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
 
             {/* Media */}
             {post.media_url && (
-              <div className="mb-3 rounded-sm overflow-hidden border border-white/10">
+              <div className="mb-3 rounded-sm overflow-hidden border border-white/10 relative">
                 {post.media_type === 'video' ? (
-                  <video 
-                    src={post.media_url} 
-                    controls 
-                    className="w-full max-h-96 object-contain bg-black"
-                  />
+                  <div className="relative">
+                    <video 
+                      src={post.media_url} 
+                      controls 
+                      playsInline
+                      preload="metadata"
+                      className="w-full max-h-96 object-contain bg-black"
+                      poster={`${post.media_url}?poster=true`}
+                    />
+                    <div className="absolute top-2 left-2 bg-black/80 px-2 py-1 text-[10px] text-white/60 font-display tracking-wider">
+                      POV
+                    </div>
+                  </div>
                 ) : (
                   <img 
                     src={post.media_url} 
                     alt="" 
                     className="w-full max-h-96 object-contain bg-black"
+                    loading="lazy"
                   />
                 )}
               </div>
