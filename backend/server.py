@@ -2436,9 +2436,8 @@ async def get_user_from_websocket(websocket: WebSocket) -> Optional[dict]:
 @app.websocket("/ws/gc/{gc_id}")
 async def websocket_gc_endpoint(websocket: WebSocket, gc_id: str):
     """WebSocket endpoint for real-time GC messaging"""
-    # Get token from query params
-    token = websocket.query_params.get("token")
-    user = await get_user_from_token(token)
+    # Get user from token or cookies
+    user = await get_user_from_websocket(websocket)
     
     if not user:
         await websocket.close(code=4001, reason="Unauthorized")
