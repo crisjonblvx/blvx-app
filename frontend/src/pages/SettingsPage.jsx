@@ -1,8 +1,9 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, LogOut, User, Bell, Shield, HelpCircle, Sparkles, Zap, Moon, Sun, Loader2 } from 'lucide-react';
+import { ArrowLeft, LogOut, User, Bell, Shield, HelpCircle, Sparkles, Zap, Moon, Sun, Loader2, Calendar } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
+import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import { Separator } from '@/components/ui/separator';
@@ -22,12 +23,45 @@ export default function SettingsPage() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { theme, toggleTheme, isDark } = useTheme();
-  const [notifications, setNotifications] = useState(true);
+  const { 
+    isSupported: pushSupported, 
+    isSubscribed: pushSubscribed, 
+    permission: pushPermission,
+    loading: pushLoading,
+    subscribe: subscribePush,
+    unsubscribe: unsubscribePush,
+    testNotification
+  } = usePushNotifications();
   const [droppingSpark, setDroppingSpark] = useState(false);
   const [sparkCategory, setSparkCategory] = useState('random');
+  const [droppingCalendar, setDroppingCalendar] = useState(false);
 
   const handleLogout = async () => {
     await logout();
+  };
+
+  const handlePushToggle = async () => {
+    if (pushSubscribed) {
+      const success = await unsubscribePush();
+      if (success) {
+        toast.success('Push notifications disabled');
+      } else {
+        toast.error('Failed to disable notifications');
+      }
+    } else {
+      const success = await subscribePush();
+      if (success) {
+        toast.success('Push notifications enabled!');
+        // Send a test notification
+        await testNotification();
+      } else {
+        if (pushPermission === 'denied') {
+          toast.error('Notification permission denied. Please enable in browser settings.');
+        } else {
+          toast.error('Failed to enable notifications');
+        }
+      }
+    }
   };
 
   const handleDropSpark = async () => {
@@ -47,6 +81,27 @@ export default function SettingsPage() {
       toast.error(error.response?.data?.detail || 'Failed to drop Spark');
     } finally {
       setDroppingSpark(false);
+    }
+  };
+
+  const handleDropCalendarPost = async () => {
+    setDroppingCalendar(true);
+    try {
+      const response = await axios.post(
+        `${API}/spark/calendar/post`,
+        {},
+        { withCredentials: true }
+      );
+      toast.success(`Culture Calendar: ${response.data.event_name}!`);
+    } catch (error) {
+      console.error('Calendar error:', error);
+      if (error.response?.status === 404) {
+        toast.error('No cultural event today');
+      } else {
+        toast.error(error.response?.data?.detail || 'Failed to post');
+      }
+    } finally {
+      setDroppingCalendar(false);
     }
   };
 
