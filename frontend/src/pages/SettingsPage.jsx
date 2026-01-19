@@ -73,10 +73,10 @@ export default function SettingsPage() {
         },
         {
           icon: isDark ? Moon : Sun,
-          label: isDark ? 'Cinema Mode (Dark)' : 'Editorial Mode (Light)',
-          description: isDark ? 'Immersive, focus on content' : 'Sharp, magazine aesthetic',
+          label: isDark ? 'Cinema Mode' : 'Editorial Mode',
+          description: isDark ? 'Immersive dark theme (current)' : 'Light magazine aesthetic (current)',
           toggle: true,
-          value: isDark,
+          value: !isDark, // Toggle is OFF for dark mode, ON for light
           onChange: toggleTheme,
         },
       ],
