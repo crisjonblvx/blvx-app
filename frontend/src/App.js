@@ -13,6 +13,7 @@ import ProfilePage from "@/pages/ProfilePage";
 import ThreadPage from "@/pages/ThreadPage";
 import SettingsPage from "@/pages/SettingsPage";
 import BonitaPage from "@/pages/BonitaPage";
+import VouchPage from "@/pages/VouchPage";
 
 // Components
 import { NoiseOverlay } from "@/components/NoiseOverlay";
