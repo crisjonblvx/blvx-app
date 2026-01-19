@@ -27,8 +27,28 @@ export default function ProfilePage() {
   const [isFollowing, setIsFollowing] = useState(false);
   const [followLoading, setFollowLoading] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
+  const [whisperLoading, setWhisperLoading] = useState(false);
 
   const isOwnProfile = currentUser?.username === username;
+
+  const startWhisper = async () => {
+    if (!profile || whisperLoading) return;
+    
+    setWhisperLoading(true);
+    try {
+      const response = await axios.post(
+        `${API}/sidebar/create?other_user_id=${profile.user_id}`,
+        {},
+        { withCredentials: true }
+      );
+      toast.success('Starting sidebar...');
+      navigate(`/sidebar/${response.data.sidebar_id}`);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to start sidebar');
+    } finally {
+      setWhisperLoading(false);
+    }
+  };
 
   useEffect(() => {
     const loadProfile = async () => {
