@@ -3,16 +3,17 @@ import { useAuth } from '@/context/AuthContext';
 import { usePosts } from '@/hooks/usePosts';
 import { PostCard } from '@/components/PostCard';
 import { Skeleton } from '@/components/ui/skeleton';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Lock, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 export default function HomePage() {
   const { user } = useAuth();
   const { posts, loading, fetchFeed, fetchExploreFeed } = usePosts();
-  const [feedType, setFeedType] = useState('following');
+  const [feedType, setFeedType] = useState('block'); // block (following) or explore
 
   useEffect(() => {
-    if (feedType === 'following') {
+    if (feedType === 'block') {
       fetchFeed();
     } else {
       fetchExploreFeed();
@@ -20,7 +21,7 @@ export default function HomePage() {
   }, [feedType, fetchFeed, fetchExploreFeed]);
 
   const handleRefresh = () => {
-    if (feedType === 'following') {
+    if (feedType === 'block') {
       fetchFeed();
     } else {
       fetchExploreFeed();
@@ -33,22 +34,25 @@ export default function HomePage() {
       <div className="sticky top-14 md:top-0 z-30 glass border-b border-white/10">
         <div className="flex">
           <button
-            onClick={() => setFeedType('following')}
-            className={`flex-1 py-4 text-sm font-medium transition-colors relative ${
-              feedType === 'following' ? 'text-white' : 'text-white/50 hover:text-white/80'
-            }`}
-            data-testid="feed-following-tab"
+            onClick={() => setFeedType('block')}
+            className={cn(
+              "flex-1 py-4 text-xs font-display tracking-widest uppercase transition-colors relative flex items-center justify-center gap-2",
+              feedType === 'block' ? "text-white" : "text-white/40 hover:text-white/70"
+            )}
+            data-testid="feed-block-tab"
           >
-            Following
-            {feedType === 'following' && (
+            <Globe className="h-3.5 w-3.5" />
+            The Block
+            {feedType === 'block' && (
               <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-0.5 bg-white" />
             )}
           </button>
           <button
             onClick={() => setFeedType('explore')}
-            className={`flex-1 py-4 text-sm font-medium transition-colors relative ${
-              feedType === 'explore' ? 'text-white' : 'text-white/50 hover:text-white/80'
-            }`}
+            className={cn(
+              "flex-1 py-4 text-xs font-display tracking-widest uppercase transition-colors relative",
+              feedType === 'explore' ? "text-white" : "text-white/40 hover:text-white/70"
+            )}
             data-testid="feed-explore-tab"
           >
             Explore
@@ -66,10 +70,10 @@ export default function HomePage() {
           size="sm"
           onClick={handleRefresh}
           disabled={loading}
-          className="text-white/50 hover:text-white"
+          className="text-white/40 hover:text-white text-xs"
           data-testid="feed-refresh"
         >
-          <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+          <RefreshCw className={cn("h-3.5 w-3.5 mr-2", loading && "animate-spin")} />
           Refresh
         </Button>
       </div>
@@ -90,15 +94,15 @@ export default function HomePage() {
         </div>
       ) : posts.length === 0 ? (
         <div className="text-center py-16 px-6">
-          <p className="text-white/50 text-lg mb-2">
-            {feedType === 'following' 
-              ? "Your timeline is empty" 
-              : "No posts yet"}
+          <p className="text-white/50 text-base mb-2 font-display tracking-wide">
+            {feedType === 'block' 
+              ? "The Block is quiet" 
+              : "Nothing to explore yet"}
           </p>
           <p className="text-white/30 text-sm">
-            {feedType === 'following'
-              ? "Follow some people to see their posts here"
-              : "Be the first to post something"}
+            {feedType === 'block'
+              ? "Follow some people or post something"
+              : "Be the first to start the conversation"}
           </p>
         </div>
       ) : (

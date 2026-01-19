@@ -1,17 +1,18 @@
 import { useState, useEffect, useRef } from "react";
 import "@/App.css";
 import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
+import axios from "axios";
 
 // Pages
 import LandingPage from "@/pages/LandingPage";
-import AuthCallback from "@/pages/AuthCallback";
 import HomePage from "@/pages/HomePage";
 import SearchPage from "@/pages/SearchPage";
-import BonitaPage from "@/pages/BonitaPage";
-import NotificationsPage from "@/pages/NotificationsPage";
+import StoopPage from "@/pages/StoopPage";
+import GCPage from "@/pages/GCPage";
 import ProfilePage from "@/pages/ProfilePage";
 import ThreadPage from "@/pages/ThreadPage";
 import SettingsPage from "@/pages/SettingsPage";
+import BonitaPage from "@/pages/BonitaPage";
 
 // Components
 import { NoiseOverlay } from "@/components/NoiseOverlay";
@@ -19,29 +20,81 @@ import { AppShell } from "@/components/AppShell";
 import { Toaster } from "@/components/ui/sonner";
 
 // Context
-import { AuthProvider } from "@/context/AuthContext";
+import { AuthProvider, useAuth } from "@/context/AuthContext";
+
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
 
-function AppRouter() {
+// Auth Callback Handler - processes session_id from URL hash
+const AuthCallbackHandler = ({ children }) => {
   const location = useLocation();
-  
-  // Check URL fragment for session_id SYNCHRONOUSLY during render
-  if (location.hash?.includes('session_id=')) {
-    return <AuthCallback />;
+  const navigate = useNavigate();
+  const hasProcessed = useRef(false);
+  const [processing, setProcessing] = useState(false);
+
+  useEffect(() => {
+    // Check for session_id in URL hash
+    if (location.hash?.includes('session_id=') && !hasProcessed.current) {
+      hasProcessed.current = true;
+      setProcessing(true);
+
+      const processAuth = async () => {
+        try {
+          const params = new URLSearchParams(location.hash.replace('#', ''));
+          const sessionId = params.get('session_id');
+
+          if (sessionId) {
+            const response = await axios.get(`${API}/auth/session`, {
+              params: { session_id: sessionId },
+              withCredentials: true
+            });
+
+            // Clear hash and navigate to home with user data
+            window.history.replaceState(null, '', window.location.pathname);
+            navigate('/home', { replace: true, state: { user: response.data } });
+          }
+        } catch (error) {
+          console.error('Auth callback error:', error);
+          navigate('/', { replace: true });
+        } finally {
+          setProcessing(false);
+        }
+      };
+
+      processAuth();
+    }
+  }, [location.hash, navigate]);
+
+  if (processing) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-12 h-12 border-2 border-white/20 border-t-white rounded-full animate-spin mx-auto mb-4" />
+          <p className="text-white/60 text-sm font-display tracking-wider">ENTERING THE CULTURE...</p>
+        </div>
+      </div>
+    );
   }
-  
+
+  return children;
+};
+
+function AppRouter() {
   return (
-    <Routes>
-      <Route path="/" element={<LandingPage />} />
-      <Route path="/home" element={<AppShell><HomePage /></AppShell>} />
-      <Route path="/search" element={<AppShell><SearchPage /></AppShell>} />
-      <Route path="/bonita" element={<AppShell><BonitaPage /></AppShell>} />
-      <Route path="/notifications" element={<AppShell><NotificationsPage /></AppShell>} />
-      <Route path="/profile/:username" element={<AppShell><ProfilePage /></AppShell>} />
-      <Route path="/post/:postId" element={<AppShell><ThreadPage /></AppShell>} />
-      <Route path="/settings" element={<AppShell><SettingsPage /></AppShell>} />
-    </Routes>
+    <AuthCallbackHandler>
+      <Routes>
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/home" element={<AppShell><HomePage /></AppShell>} />
+        <Route path="/stoop" element={<AppShell><StoopPage /></AppShell>} />
+        <Route path="/search" element={<AppShell><SearchPage /></AppShell>} />
+        <Route path="/gc" element={<AppShell><GCPage /></AppShell>} />
+        <Route path="/bonita" element={<AppShell><BonitaPage /></AppShell>} />
+        <Route path="/profile/:username" element={<AppShell><ProfilePage /></AppShell>} />
+        <Route path="/post/:postId" element={<AppShell><ThreadPage /></AppShell>} />
+        <Route path="/settings" element={<AppShell><SettingsPage /></AppShell>} />
+      </Routes>
+    </AuthCallbackHandler>
   );
 }
 
@@ -61,6 +114,7 @@ function App() {
             background: '#000',
             border: '1px solid #333',
             color: '#fff',
+            fontFamily: 'Inter, sans-serif',
           },
         }}
       />

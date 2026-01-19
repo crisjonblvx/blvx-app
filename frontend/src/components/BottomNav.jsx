@@ -1,14 +1,14 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Search, Sparkles, Bell, User } from 'lucide-react';
+import { Home, Radio, Search, MessageCircle, User } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useNotificationCount } from '@/hooks/useNotificationCount';
 import { cn } from '@/lib/utils';
 
 const navItems = [
   { path: '/home', icon: Home, label: 'Home' },
+  { path: '/stoop', icon: Radio, label: 'Stoop' },
   { path: '/search', icon: Search, label: 'Search' },
-  { path: '/bonita', icon: Sparkles, label: 'Bonita' },
-  { path: '/notifications', icon: Bell, label: 'Notifications' },
+  { path: '/gc', icon: MessageCircle, label: 'GC' },
 ];
 
 export const BottomNav = () => {
@@ -21,7 +21,7 @@ export const BottomNav = () => {
       <div className="flex items-center justify-around h-16">
         {navItems.map(({ path, icon: Icon, label }) => {
           const isActive = location.pathname === path;
-          const showBadge = path === '/notifications' && unreadCount > 0;
+          const showBadge = path === '/gc' && unreadCount > 0;
           
           return (
             <Link
@@ -29,23 +29,23 @@ export const BottomNav = () => {
               to={path}
               className={cn(
                 "flex flex-col items-center justify-center w-16 h-full relative transition-colors duration-200",
-                isActive ? "text-white" : "text-white/50 hover:text-white/80"
+                isActive ? "text-white" : "text-white/40 hover:text-white/70"
               )}
               data-testid={`nav-${label.toLowerCase()}`}
             >
               <div className="relative">
-                <Icon className="h-6 w-6" strokeWidth={isActive ? 2 : 1.5} />
+                <Icon className="h-5 w-5" strokeWidth={isActive ? 2 : 1.5} />
                 {showBadge && (
-                  <span className="absolute -top-1 -right-1 bg-white text-black notification-badge rounded-full flex items-center justify-center">
+                  <span className="absolute -top-1 -right-1.5 bg-white text-black text-[9px] font-bold min-w-[14px] h-[14px] rounded-full flex items-center justify-center">
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
               </div>
-              <span className="text-[10px] mt-1 font-medium tracking-wide uppercase">
+              <span className="text-[9px] mt-1 font-display tracking-wider uppercase">
                 {label}
               </span>
               {isActive && (
-                <span className="absolute bottom-2 w-1 h-1 bg-white rounded-full" />
+                <span className="absolute bottom-1 w-1 h-1 bg-white rounded-full" />
               )}
             </Link>
           );
@@ -56,16 +56,16 @@ export const BottomNav = () => {
           to={user ? `/profile/${user.username}` : '/'}
           className={cn(
             "flex flex-col items-center justify-center w-16 h-full relative transition-colors duration-200",
-            location.pathname.startsWith('/profile') ? "text-white" : "text-white/50 hover:text-white/80"
+            location.pathname.startsWith('/profile') ? "text-white" : "text-white/40 hover:text-white/70"
           )}
           data-testid="nav-profile"
         >
-          <User className="h-6 w-6" strokeWidth={location.pathname.startsWith('/profile') ? 2 : 1.5} />
-          <span className="text-[10px] mt-1 font-medium tracking-wide uppercase">
+          <User className="h-5 w-5" strokeWidth={location.pathname.startsWith('/profile') ? 2 : 1.5} />
+          <span className="text-[9px] mt-1 font-display tracking-wider uppercase">
             Profile
           </span>
           {location.pathname.startsWith('/profile') && (
-            <span className="absolute bottom-2 w-1 h-1 bg-white rounded-full" />
+            <span className="absolute bottom-1 w-1 h-1 bg-white rounded-full" />
           )}
         </Link>
       </div>

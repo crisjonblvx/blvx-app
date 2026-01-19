@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { X, Sparkles, RefreshCw, Send } from 'lucide-react';
+import { X, Sparkles, RefreshCw, Send, Lock, Globe } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { usePosts } from '@/hooks/usePosts';
 import { useBonitaChat } from '@/hooks/useBonitaChat';
@@ -25,19 +25,12 @@ export const ComposerModal = ({
   const { createPost, loading: postLoading } = usePosts();
   const { askBonita, loading: bonitaLoading } = useBonitaChat();
   const [content, setContent] = useState('');
+  const [visibility, setVisibility] = useState('block');
   const [showBonita, setShowBonita] = useState(false);
-  const [bonitaSuggestion, setBonitaSuggestion] = useState('');
-  const [selectedTone, setSelectedTone] = useState('calm');
+  const [bonitaSuggestions, setBonitaSuggestions] = useState(null);
 
   const charCount = content.length;
   const isOverLimit = charCount > 500;
-
-  const toneVariants = [
-    { id: 'calm', label: 'Calm' },
-    { id: 'sharp', label: 'Sharp' },
-    { id: 'humorous', label: 'Humorous' },
-    { id: 'respectful', label: 'Respectful' },
-  ];
 
   const handleSubmit = async () => {
     if (!content.trim() || isOverLimit || postLoading) return;
@@ -48,16 +41,17 @@ export const ComposerModal = ({
         post_type: replyTo ? 'reply' : quotedPost ? 'quote' : 'original',
         parent_post_id: replyTo?.post_id || null,
         quote_post_id: quotedPost?.post_id || null,
+        visibility: visibility,
       };
 
       await createPost(postData);
       setContent('');
-      setBonitaSuggestion('');
+      setBonitaSuggestions(null);
       setShowBonita(false);
       onOpenChange(false);
       toast.success('Posted!');
     } catch (error) {
-      toast.error('Failed to post. Try again.');
+      toast.error('Failed to post');
     }
   };
 
@@ -65,21 +59,25 @@ export const ComposerModal = ({
     if (!content.trim() || bonitaLoading) return;
     
     try {
-      const response = await askBonita(content, 'tone_refine', selectedTone);
+      const response = await askBonita(content, 'tone_rewrite', visibility);
       if (response) {
-        setBonitaSuggestion(response);
+        setBonitaSuggestions(response);
       }
     } catch (error) {
-      toast.error('Bonita is unavailable right now.');
+      toast.error('Bonita is unavailable');
     }
   };
 
-  const applyBonitaSuggestion = () => {
-    if (bonitaSuggestion) {
-      setContent(bonitaSuggestion);
-      setBonitaSuggestion('');
-      setShowBonita(false);
+  const applyBonitaSuggestion = (text) => {
+    // Extract just the option text
+    const match = text.match(/\[([^\]]+)\]/);
+    if (match) {
+      setContent(match[1]);
+    } else {
+      setContent(text);
     }
+    setBonitaSuggestions(null);
+    setShowBonita(false);
   };
 
   return (
@@ -87,16 +85,16 @@ export const ComposerModal = ({
       <DialogContent className="bg-black border border-white/20 sm:max-w-[500px] p-0">
         <DialogHeader className="p-4 border-b border-white/10">
           <div className="flex items-center justify-between">
-            <DialogTitle className="font-display text-lg tracking-wide uppercase">
-              {replyTo ? 'Reply' : quotedPost ? 'Quote' : 'New BLVX'}
+            <DialogTitle className="font-display text-sm tracking-widest uppercase">
+              {replyTo ? 'Reply' : quotedPost ? 'Quote' : 'New Post'}
             </DialogTitle>
             <Button 
               variant="ghost" 
               size="icon" 
               onClick={() => onOpenChange(false)}
-              className="text-white/60 hover:text-white"
+              className="text-white/50 hover:text-white h-8 w-8"
             >
-              <X className="h-5 w-5" />
+              <X className="h-4 w-4" />
             </Button>
           </div>
         </DialogHeader>
@@ -104,9 +102,9 @@ export const ComposerModal = ({
         <div className="p-4">
           {/* Reply context */}
           {replyTo && (
-            <div className="mb-4 p-3 bg-white/5 border border-white/10 rounded-sm">
-              <p className="text-xs text-white/50 mb-1">Replying to @{replyTo.user?.username}</p>
-              <p className="text-sm text-white/70 line-clamp-2">{replyTo.content}</p>
+            <div className="mb-4 p-3 bg-white/5 border border-white/10">
+              <p className="text-[10px] text-white/40 mb-1 uppercase tracking-wider">Replying to @{replyTo.user?.username}</p>
+              <p className="text-sm text-white/60 line-clamp-2">{replyTo.content}</p>
             </div>
           )}
 
@@ -114,7 +112,7 @@ export const ComposerModal = ({
           <div className="flex gap-3">
             <Avatar className="h-10 w-10 border border-white/20 flex-shrink-0">
               <AvatarImage src={user?.picture} alt={user?.name} />
-              <AvatarFallback className="bg-white/10 text-white">
+              <AvatarFallback className="bg-white/10 text-white text-sm">
                 {user?.name?.charAt(0)?.toUpperCase()}
               </AvatarFallback>
             </Avatar>
@@ -123,15 +121,15 @@ export const ComposerModal = ({
               <Textarea
                 value={content}
                 onChange={(e) => setContent(e.target.value)}
-                placeholder={replyTo ? "Write your reply..." : "What's on your mind?"}
-                className="min-h-[120px] resize-none bg-transparent border-none focus:ring-0 text-white placeholder:text-white/30 p-0"
+                placeholder={replyTo ? "Write your reply..." : "What's happening?"}
+                className="min-h-[120px] resize-none bg-transparent border-none focus:ring-0 text-white placeholder:text-white/30 p-0 text-[15px]"
                 autoFocus
                 data-testid="composer-textarea"
               />
               
               {/* Quoted post */}
               {quotedPost && (
-                <div className="mt-3 p-3 border border-white/20 rounded-sm">
+                <div className="mt-3 p-3 border border-white/20">
                   <div className="flex items-center gap-2 mb-2">
                     <Avatar className="h-5 w-5">
                       <AvatarImage src={quotedPost.user?.picture} />
@@ -139,66 +137,68 @@ export const ComposerModal = ({
                         {quotedPost.user?.name?.charAt(0)}
                       </AvatarFallback>
                     </Avatar>
-                    <span className="text-xs text-white/60">@{quotedPost.user?.username}</span>
+                    <span className="text-xs text-white/50">@{quotedPost.user?.username}</span>
                   </div>
-                  <p className="text-sm text-white/70 line-clamp-3">{quotedPost.content}</p>
+                  <p className="text-sm text-white/60 line-clamp-3">{quotedPost.content}</p>
                 </div>
               )}
             </div>
           </div>
 
-          {/* Bonita Tone Refinement */}
+          {/* Visibility Toggle */}
+          <div className="flex items-center gap-2 mt-4 pt-4 border-t border-white/10">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setVisibility('block')}
+              className={cn(
+                "text-xs gap-2",
+                visibility === 'block' ? "text-white bg-white/10" : "text-white/40 hover:text-white"
+              )}
+            >
+              <Globe className="h-3.5 w-3.5" />
+              The Block
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setVisibility('cookout')}
+              className={cn(
+                "text-xs gap-2",
+                visibility === 'cookout' ? "text-white bg-white/10" : "text-white/40 hover:text-white"
+              )}
+            >
+              <Lock className="h-3.5 w-3.5" />
+              The Cookout
+            </Button>
+          </div>
+
+          {/* Bonita Tone Lab */}
           {showBonita && (
-            <div className="mt-4 p-4 bg-white/5 border border-white/10 rounded-sm animate-fade-in">
+            <div className="mt-4 p-4 bg-white/5 border border-white/10 animate-fade-in">
               <div className="flex items-center gap-2 mb-3">
                 <Sparkles className="h-4 w-4 text-white" />
-                <span className="text-sm font-medium">Bonita's Tone Lab</span>
-              </div>
-              
-              <div className="flex gap-2 mb-3">
-                {toneVariants.map((tone) => (
-                  <Button
-                    key={tone.id}
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSelectedTone(tone.id)}
-                    className={cn(
-                      "text-xs",
-                      selectedTone === tone.id 
-                        ? "bg-white text-black" 
-                        : "text-white/60 hover:text-white"
-                    )}
-                  >
-                    {tone.label}
-                  </Button>
-                ))}
+                <span className="text-xs font-display tracking-wider uppercase">Bonita's Tone Lab</span>
               </div>
               
               <Button
                 onClick={handleBonitaRefine}
                 disabled={bonitaLoading || !content.trim()}
-                className="w-full bg-white/10 hover:bg-white/20 text-white mb-3"
+                className="w-full bg-white/10 hover:bg-white/20 text-white mb-3 text-xs"
                 size="sm"
               >
                 {bonitaLoading ? (
-                  <RefreshCw className="h-4 w-4 mr-2 animate-spin" />
+                  <RefreshCw className="h-3.5 w-3.5 mr-2 animate-spin" />
                 ) : (
-                  <Sparkles className="h-4 w-4 mr-2" />
+                  <Sparkles className="h-3.5 w-3.5 mr-2" />
                 )}
-                Refine with Bonita
+                Get Rewrites
               </Button>
               
-              {bonitaSuggestion && (
-                <div className="space-y-2">
-                  <p className="text-xs text-white/50">Bonita suggests:</p>
-                  <p className="text-sm text-white/80 p-2 bg-white/5 rounded-sm">{bonitaSuggestion}</p>
-                  <Button
-                    onClick={applyBonitaSuggestion}
-                    size="sm"
-                    className="w-full bg-white text-black hover:bg-white/90"
-                  >
-                    Use this version
-                  </Button>
+              {bonitaSuggestions && (
+                <div className="space-y-2 text-xs">
+                  <p className="text-white/40 mb-2">Bonita's options:</p>
+                  <pre className="text-white/70 whitespace-pre-wrap p-2 bg-white/5 rounded-sm">{bonitaSuggestions}</pre>
                 </div>
               )}
             </div>
@@ -212,18 +212,18 @@ export const ComposerModal = ({
                 size="sm"
                 onClick={() => setShowBonita(!showBonita)}
                 className={cn(
-                  "text-white/60 hover:text-white",
+                  "text-white/40 hover:text-white text-xs",
                   showBonita && "text-white bg-white/10"
                 )}
                 data-testid="composer-bonita-toggle"
               >
-                <Sparkles className="h-4 w-4 mr-2" />
+                <Sparkles className="h-3.5 w-3.5 mr-2" />
                 Bonita
               </Button>
               
               <span className={cn(
-                "text-sm font-mono",
-                isOverLimit ? "text-red-500" : charCount > 400 ? "text-yellow-500" : "text-white/40"
+                "text-xs font-mono",
+                isOverLimit ? "text-red-500" : charCount > 400 ? "text-yellow-500" : "text-white/30"
               )}>
                 {charCount}/500
               </span>
@@ -232,14 +232,14 @@ export const ComposerModal = ({
             <Button
               onClick={handleSubmit}
               disabled={!content.trim() || isOverLimit || postLoading}
-              className="bg-white text-black hover:bg-white/90 rounded-sm px-6"
+              className="bg-white text-black hover:bg-white/90 rounded-none px-6 text-xs font-display tracking-wider"
               data-testid="composer-submit"
             >
               {postLoading ? (
-                <RefreshCw className="h-4 w-4 animate-spin" />
+                <RefreshCw className="h-3.5 w-3.5 animate-spin" />
               ) : (
                 <>
-                  <Send className="h-4 w-4 mr-2" />
+                  <Send className="h-3.5 w-3.5 mr-2" />
                   Post
                 </>
               )}

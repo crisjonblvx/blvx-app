@@ -22,17 +22,19 @@ export const AuthProvider = ({ children }) => {
   const navigate = useNavigate();
 
   const checkAuth = useCallback(async () => {
-    // Skip auth check on landing page or during auth callback
+    // Skip auth check on landing page or if processing auth callback
     if (location.pathname === '/' || location.hash?.includes('session_id=')) {
       setLoading(false);
       return;
     }
 
-    // If user was passed from AuthCallback, use it
+    // If user was passed from auth callback, use it
     if (location.state?.user) {
       setUser(location.state.user);
       setIsAuthenticated(true);
       setLoading(false);
+      // Clear state to prevent stale data
+      window.history.replaceState({}, document.title);
       return;
     }
 

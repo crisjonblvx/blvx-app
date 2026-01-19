@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
-import { Heart, MessageCircle, Repeat2, Share, MoreHorizontal, Trash2, Sparkles } from 'lucide-react';
+import { Heart, MessageCircle, Repeat2, Share, MoreHorizontal, Trash2, Sparkles, Lock, Send } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { usePosts } from '@/hooks/usePosts';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -16,7 +16,7 @@ import { ComposerModal } from '@/components/ComposerModal';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
-export const PostCard = ({ post, showThread = false, onBonitaContext }) => {
+export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop }) => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const { likePost, unlikePost, deletePost, checkLiked } = usePosts();
@@ -56,7 +56,7 @@ export const PostCard = ({ post, showThread = false, onBonitaContext }) => {
         setIsLiked(true);
       }
     } catch (error) {
-      toast.error('Action failed. Try again.');
+      toast.error('Action failed');
     }
   };
 
@@ -74,7 +74,14 @@ export const PostCard = ({ post, showThread = false, onBonitaContext }) => {
       await navigator.clipboard.writeText(`${window.location.origin}/post/${post.post_id}`);
       toast.success('Link copied!');
     } catch (e) {
-      toast.error('Failed to copy link');
+      toast.error('Failed to copy');
+    }
+  };
+
+  const handleLiveDrop = () => {
+    if (onLiveDrop) {
+      onLiveDrop(post);
+      toast.success('Dropped to The GC!');
     }
   };
 
@@ -88,6 +95,7 @@ export const PostCard = ({ post, showThread = false, onBonitaContext }) => {
   };
 
   const isOwner = user?.user_id === post.user_id;
+  const isCookout = post.visibility === 'cookout';
 
   return (
     <>
@@ -96,14 +104,6 @@ export const PostCard = ({ post, showThread = false, onBonitaContext }) => {
         onClick={() => navigate(`/post/${post.post_id}`)}
         data-testid={`post-${post.post_id}`}
       >
-        {/* Repost indicator */}
-        {post.post_type === 'repost' && post.parent_post && (
-          <div className="flex items-center gap-2 text-xs text-white/50 mb-2 ml-12">
-            <Repeat2 className="h-3 w-3" />
-            <span>Reposted</span>
-          </div>
-        )}
-
         <div className="flex gap-3">
           {/* Avatar */}
           <Link 
@@ -113,7 +113,7 @@ export const PostCard = ({ post, showThread = false, onBonitaContext }) => {
           >
             <Avatar className="h-10 w-10 border border-white/20 hover:border-white/40 transition-colors">
               <AvatarImage src={post.user?.picture} alt={post.user?.name} />
-              <AvatarFallback className="bg-white/10 text-white">
+              <AvatarFallback className="bg-white/10 text-white text-sm">
                 {post.user?.name?.charAt(0)?.toUpperCase()}
               </AvatarFallback>
             </Avatar>
@@ -127,21 +127,24 @@ export const PostCard = ({ post, showThread = false, onBonitaContext }) => {
                 <Link 
                   to={`/profile/${post.user?.username}`}
                   onClick={(e) => e.stopPropagation()}
-                  className="font-semibold text-white hover:underline truncate"
+                  className="font-semibold text-white hover:underline truncate text-sm"
                 >
                   {post.user?.name}
                 </Link>
                 <Link 
                   to={`/profile/${post.user?.username}`}
                   onClick={(e) => e.stopPropagation()}
-                  className="text-white/50 text-sm truncate"
+                  className="text-white/40 text-xs truncate"
                 >
                   @{post.user?.username}
                 </Link>
-                <span className="text-white/30">·</span>
-                <span className="text-white/50 text-sm font-mono whitespace-nowrap">
+                <span className="text-white/20">·</span>
+                <span className="text-white/40 text-xs font-mono whitespace-nowrap">
                   {formatTime(post.created_at)}
                 </span>
+                {isCookout && (
+                  <Lock className="h-3 w-3 text-white/40" />
+                )}
               </div>
 
               <DropdownMenu>
@@ -149,7 +152,7 @@ export const PostCard = ({ post, showThread = false, onBonitaContext }) => {
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="h-8 w-8 text-white/40 hover:text-white"
+                    className="h-8 w-8 text-white/30 hover:text-white"
                     onClick={(e) => e.stopPropagation()}
                   >
                     <MoreHorizontal className="h-4 w-4" />
@@ -162,10 +165,22 @@ export const PostCard = ({ post, showThread = false, onBonitaContext }) => {
                         e.stopPropagation();
                         onBonitaContext(post.content);
                       }}
-                      className="text-white/80 hover:text-white focus:text-white cursor-pointer"
+                      className="text-white/70 hover:text-white focus:text-white cursor-pointer text-xs"
                     >
-                      <Sparkles className="h-4 w-4 mr-2" />
-                      Ask Bonita for context
+                      <Sparkles className="h-3.5 w-3.5 mr-2" />
+                      Ask Bonita
+                    </DropdownMenuItem>
+                  )}
+                  {onLiveDrop && (
+                    <DropdownMenuItem 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleLiveDrop();
+                      }}
+                      className="text-white/70 hover:text-white focus:text-white cursor-pointer text-xs"
+                    >
+                      <Send className="h-3.5 w-3.5 mr-2" />
+                      Drop to GC
                     </DropdownMenuItem>
                   )}
                   {isOwner && (
@@ -174,9 +189,9 @@ export const PostCard = ({ post, showThread = false, onBonitaContext }) => {
                         e.stopPropagation();
                         handleDelete();
                       }}
-                      className="text-red-500 hover:text-red-400 focus:text-red-400 cursor-pointer"
+                      className="text-red-500 hover:text-red-400 focus:text-red-400 cursor-pointer text-xs"
                     >
-                      <Trash2 className="h-4 w-4 mr-2" />
+                      <Trash2 className="h-3.5 w-3.5 mr-2" />
                       Delete
                     </DropdownMenuItem>
                   )}
@@ -186,20 +201,39 @@ export const PostCard = ({ post, showThread = false, onBonitaContext }) => {
 
             {/* Reply indicator */}
             {post.post_type === 'reply' && post.parent_post && (
-              <p className="text-white/50 text-sm mb-2">
-                Replying to <span className="text-white/70">@{post.parent_post.user?.username}</span>
+              <p className="text-white/40 text-xs mb-2">
+                Replying to <span className="text-white/60">@{post.parent_post.user?.username}</span>
               </p>
             )}
 
             {/* Post content */}
-            <p className="text-white whitespace-pre-wrap break-words mb-3">
+            <p className="text-white whitespace-pre-wrap break-words mb-3 text-[15px] leading-relaxed">
               {post.content}
             </p>
+
+            {/* Media */}
+            {post.media_url && (
+              <div className="mb-3 rounded-sm overflow-hidden border border-white/10">
+                {post.media_type === 'video' ? (
+                  <video 
+                    src={post.media_url} 
+                    controls 
+                    className="w-full max-h-96 object-contain bg-black"
+                  />
+                ) : (
+                  <img 
+                    src={post.media_url} 
+                    alt="" 
+                    className="w-full max-h-96 object-contain bg-black"
+                  />
+                )}
+              </div>
+            )}
 
             {/* Quoted post */}
             {post.quote_post && (
               <div 
-                className="border border-white/20 rounded-sm p-3 mb-3 hover:bg-white/5 transition-colors"
+                className="border border-white/20 p-3 mb-3 hover:bg-white/5 transition-colors"
                 onClick={(e) => {
                   e.stopPropagation();
                   navigate(`/post/${post.quote_post.post_id}`);
@@ -212,10 +246,10 @@ export const PostCard = ({ post, showThread = false, onBonitaContext }) => {
                       {post.quote_post.user?.name?.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="text-sm font-medium text-white/80">{post.quote_post.user?.name}</span>
-                  <span className="text-xs text-white/50">@{post.quote_post.user?.username}</span>
+                  <span className="text-xs font-medium text-white/70">{post.quote_post.user?.name}</span>
+                  <span className="text-[10px] text-white/40">@{post.quote_post.user?.username}</span>
                 </div>
-                <p className="text-sm text-white/70 line-clamp-3">{post.quote_post.content}</p>
+                <p className="text-sm text-white/60 line-clamp-3">{post.quote_post.content}</p>
               </div>
             )}
 
@@ -225,7 +259,7 @@ export const PostCard = ({ post, showThread = false, onBonitaContext }) => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-white/50 hover:text-white hover:bg-white/10 gap-2"
+                className="text-white/40 hover:text-white hover:bg-white/5 gap-2 h-8 px-2"
                 onClick={(e) => {
                   e.stopPropagation();
                   setReplyOpen(true);
@@ -242,7 +276,7 @@ export const PostCard = ({ post, showThread = false, onBonitaContext }) => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-white/50 hover:text-white hover:bg-white/10 gap-2"
+                className="text-white/40 hover:text-white hover:bg-white/5 gap-2 h-8 px-2"
                 onClick={(e) => {
                   e.stopPropagation();
                   setQuoteOpen(true);
@@ -260,8 +294,8 @@ export const PostCard = ({ post, showThread = false, onBonitaContext }) => {
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  "gap-2 hover:bg-white/10",
-                  isLiked ? "text-red-500 hover:text-red-400" : "text-white/50 hover:text-white"
+                  "gap-2 hover:bg-white/5 h-8 px-2",
+                  isLiked ? "text-red-500 hover:text-red-400" : "text-white/40 hover:text-white"
                 )}
                 onClick={handleLike}
                 data-testid={`post-${post.post_id}-like`}
@@ -276,7 +310,7 @@ export const PostCard = ({ post, showThread = false, onBonitaContext }) => {
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-white/50 hover:text-white hover:bg-white/10"
+                className="text-white/40 hover:text-white hover:bg-white/5 h-8 px-2"
                 onClick={(e) => {
                   e.stopPropagation();
                   handleShare();
