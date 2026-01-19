@@ -133,10 +133,10 @@ export default function SettingsPage() {
         <div className="flex gap-2">
           <Select value={sparkCategory} onValueChange={setSparkCategory}>
             <SelectTrigger className="flex-1 bg-transparent border-white/20 focus:border-white rounded-none">
-              <SelectValue placeholder="Random topic" />
+              <SelectValue placeholder="Select topic" />
             </SelectTrigger>
             <SelectContent className="bg-black border-white/20">
-              <SelectItem value="">Random</SelectItem>
+              <SelectItem value="random">Random</SelectItem>
               <SelectItem value="music">Music</SelectItem>
               <SelectItem value="tech">Tech</SelectItem>
               <SelectItem value="culture">Culture</SelectItem>
