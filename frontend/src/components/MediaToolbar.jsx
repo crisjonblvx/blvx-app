@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Image, X, Loader2 } from 'lucide-react';
+import { Image, Video, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { GifPicker } from '@/components/GifPicker';
 import { toast } from 'sonner';
@@ -11,26 +11,37 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 export const MediaToolbar = ({ onMediaSelect, selectedMedia, onRemoveMedia }) => {
   const [gifPickerOpen, setGifPickerOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef(null);
+  const videoInputRef = useRef(null);
 
-  const handleFileSelect = async (e) => {
+  const handleFileSelect = async (e, isVideo = false) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     // Validate file type
-    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'video/mp4', 'video/webm'];
+    const imageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+    const videoTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
+    const validTypes = [...imageTypes, ...videoTypes];
+    
     if (!validTypes.includes(file.type)) {
-      toast.error('Unsupported file type. Use JPG, PNG, GIF, WebP, MP4, or WebM.');
+      toast.error('Unsupported file type. Use JPG, PNG, GIF, WebP, MP4, WebM, or MOV.');
       return;
     }
 
-    // Validate file size (10MB limit)
-    if (file.size > 10 * 1024 * 1024) {
-      toast.error('File too large. Maximum size is 10MB.');
+    // Validate file size (50MB for videos, 10MB for images)
+    const isVideoFile = videoTypes.includes(file.type);
+    const maxSize = isVideoFile ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
+    const maxSizeMB = maxSize / (1024 * 1024);
+    
+    if (file.size > maxSize) {
+      toast.error(`File too large. Maximum size is ${maxSizeMB}MB.`);
       return;
     }
 
     setUploading(true);
+    setUploadProgress(0);
+    
     try {
       // Create FormData for upload
       const formData = new FormData();
@@ -41,31 +52,33 @@ export const MediaToolbar = ({ onMediaSelect, selectedMedia, onRemoveMedia }) =>
         headers: {
           'Content-Type': 'multipart/form-data',
         },
+        onUploadProgress: (progressEvent) => {
+          const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(progress);
+        }
       });
 
       onMediaSelect({
         url: response.data.url,
-        type: file.type.startsWith('video/') ? 'video' : 'image',
+        type: isVideoFile ? 'video' : 'image',
         preview: URL.createObjectURL(file),
+        width: response.data.width,
+        height: response.data.height,
+        duration: response.data.duration,
+        storage: response.data.storage,
       });
       
-      toast.success('Media uploaded!');
+      const storageText = response.data.storage === 'cloudinary' ? ' to cloud' : '';
+      toast.success(`${isVideoFile ? 'Video' : 'Image'} uploaded${storageText}!`);
     } catch (error) {
       console.error('Upload error:', error);
-      // For MVP, create local preview URL
-      onMediaSelect({
-        url: URL.createObjectURL(file),
-        type: file.type.startsWith('video/') ? 'video' : 'image',
-        preview: URL.createObjectURL(file),
-        isLocal: true, // Flag for local-only preview
-      });
-      toast.success('Media attached (local preview)');
+      toast.error(error.response?.data?.detail || 'Upload failed');
     } finally {
       setUploading(false);
-      // Reset input
-      if (fileInputRef.current) {
-        fileInputRef.current.value = '';
-      }
+      setUploadProgress(0);
+      // Reset inputs
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      if (videoInputRef.current) videoInputRef.current.value = '';
     }
   };
 
