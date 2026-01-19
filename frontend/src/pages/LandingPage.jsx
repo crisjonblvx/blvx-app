@@ -133,7 +133,7 @@ export default function LandingPage() {
           
           <div className="relative z-10 text-center max-w-md mx-auto">
             <img 
-              src="https://customer-assets.emergentagent.com/job_blackvoices-1/artifacts/vepdsom9_BLVX%20logo%20white.png"
+              src="/assets/logo-white.png"
               alt="BLVX"
               className="h-16 sm:h-20 mx-auto mb-8 animate-fade-in"
               data-testid="landing-logo"
