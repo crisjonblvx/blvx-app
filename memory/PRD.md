@@ -103,6 +103,22 @@ Build **BLVX**, a "High-Context Social Network" designed to be a "Group Chat" ra
 - [x] Post count ("Plates served") display
 - [x] Fallback default trends
 
+#### "The Lookout" (Safety Alerts) (NEW)
+- [x] Alert types: Police, Safety Hazard, Protest, Vibe Check, Other
+- [x] Location-based alerts with city/neighborhood
+- [x] Vouch (confirm) / Cap (dispute) verification mechanic
+- [x] Status: Pending → Verified (3+ vouches) or Dismissed (3+ caps)
+- [x] Auto-expiry (2 hours)
+- [x] Ticker bar at top of feed for verified alerts
+- [x] Full alert panel with create modal and filter tabs
+- [x] Color-coded alert types with icons
+
+#### Rich Link Previews (NEW)
+- [x] BeautifulSoup OG tag scraping
+- [x] Graceful fallbacks for domains
+- [x] Special handling for Google Search URLs
+- [x] Spark posts use non-404 Google Search links
+
 #### Bonita's "Receipts" (Rich Media) (NEW)
 - [x] Spark posts include reference_url field
 - [x] Link preview cards (OpenGraph-style)
