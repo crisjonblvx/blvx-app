@@ -813,12 +813,13 @@ async def get_feed(limit: int = 20, before: Optional[str] = None, user: UserBase
     
     following_ids = [f["following_id"] for f in following]
     following_ids.append(user.user_id)
+    following_ids.append("bonita")  # Always include Bonita/system spark posts
     
     query = {
-        "user_id": {"$in": following_ids},
         "$or": [
-            {"visibility": "block"},
-            {"visibility": "cookout", "user_id": user.user_id}
+            {"user_id": {"$in": following_ids}, "visibility": "block"},
+            {"visibility": "cookout", "user_id": user.user_id},
+            {"is_spark": True, "visibility": "block"}  # Always show spark posts
         ]
     }
     
