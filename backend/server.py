@@ -2500,8 +2500,8 @@ async def websocket_gc_endpoint(websocket: WebSocket, gc_id: str):
 @app.websocket("/ws/stoop/{stoop_id}")
 async def websocket_stoop_endpoint(websocket: WebSocket, stoop_id: str):
     """WebSocket endpoint for Stoop signaling (WebRTC coordination)"""
-    token = websocket.query_params.get("token")
-    user = await get_user_from_token(token)
+    # Get user from token or cookies
+    user = await get_user_from_websocket(websocket)
     
     if not user:
         await websocket.close(code=4001, reason="Unauthorized")
