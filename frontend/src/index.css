@@ -7,7 +7,8 @@
 @layer base {
     /* Dark Mode (Cinema) - Default */
     :root,
-    .theme-dark {
+    .theme-dark,
+    [data-theme="dark"] {
         --background: 0 0% 0%;
         --foreground: 0 0% 100%;
         --card: 0 0% 0%;
@@ -28,10 +29,17 @@
         --input: 0 0% 15%;
         --ring: 0 0% 100%;
         --radius: 0.125rem;
+        
+        /* Custom theme colors */
+        --theme-bg: #000000;
+        --theme-text: #ffffff;
+        --theme-border: rgba(255, 255, 255, 0.1);
+        --theme-text-muted: rgba(255, 255, 255, 0.5);
     }
     
     /* Light Mode (Editorial) */
-    .theme-light {
+    .theme-light,
+    [data-theme="light"] {
         --background: 0 0% 100%;
         --foreground: 0 0% 0%;
         --card: 0 0% 100%;
@@ -51,7 +59,84 @@
         --border: 0 0% 80%;
         --input: 0 0% 85%;
         --ring: 0 0% 0%;
+        
+        /* Custom theme colors */
+        --theme-bg: #ffffff;
+        --theme-text: #000000;
+        --theme-border: rgba(0, 0, 0, 0.1);
+        --theme-text-muted: rgba(0, 0, 0, 0.5);
     }
+}
+
+/* Force light mode colors */
+.light-mode,
+body.theme-light,
+body[data-theme="light"] {
+    background-color: #ffffff !important;
+    color: #000000 !important;
+}
+
+.light-mode .bg-black,
+body.theme-light .bg-black,
+body[data-theme="light"] .bg-black {
+    background-color: #ffffff !important;
+}
+
+.light-mode .text-white,
+body.theme-light .text-white,
+body[data-theme="light"] .text-white {
+    color: #000000 !important;
+}
+
+.light-mode .text-white\/60,
+.light-mode .text-white\/50,
+.light-mode .text-white\/40,
+.light-mode .text-white\/30,
+body.theme-light .text-white\/60,
+body.theme-light .text-white\/50,
+body.theme-light .text-white\/40,
+body.theme-light .text-white\/30 {
+    color: rgba(0, 0, 0, 0.6) !important;
+}
+
+.light-mode .border-white\/10,
+.light-mode .border-white\/20,
+body.theme-light .border-white\/10,
+body.theme-light .border-white\/20 {
+    border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+.light-mode .bg-white\/5,
+.light-mode .bg-white\/10,
+body.theme-light .bg-white\/5,
+body.theme-light .bg-white\/10 {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+.light-mode .hover\:bg-white\/5:hover,
+body.theme-light .hover\:bg-white\/5:hover {
+    background-color: rgba(0, 0, 0, 0.05) !important;
+}
+
+/* Glass effect for light mode */
+.light-mode .glass,
+body.theme-light .glass {
+    background: rgba(255, 255, 255, 0.85) !important;
+    backdrop-filter: blur(12px);
+}
+
+/* Sidebar in light mode */
+.light-mode aside.bg-black,
+body.theme-light aside.bg-black {
+    background-color: #fafafa !important;
+    border-color: rgba(0, 0, 0, 0.1) !important;
+}
+
+/* Active nav item in light mode */
+.light-mode .bg-white.text-black,
+body.theme-light .bg-white.text-black {
+    background-color: #000000 !important;
+    color: #ffffff !important;
 }
 
 @layer base {
