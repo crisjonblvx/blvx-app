@@ -233,7 +233,7 @@ class BLVXAPITester:
             "post_type": "original", 
             "visibility": "cookout"
         }
-        success2, response2 = self.run_test("Create Cookout Post", "POST", "posts", 200, cookout_post_data)
+        success2, response2 = self.run_test("Create Cookout Post", "POST", "posts", 201, cookout_post_data)
         
         if success1 and response1.get('post_id'):
             self.test_post_id = response1['post_id']
