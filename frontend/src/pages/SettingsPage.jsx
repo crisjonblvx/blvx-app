@@ -121,10 +121,14 @@ export default function SettingsPage() {
       items: [
         {
           icon: Bell,
-          label: 'Notifications',
+          label: 'Push Notifications',
+          description: pushSupported 
+            ? (pushPermission === 'denied' ? 'Blocked in browser settings' : (pushSubscribed ? 'Enabled' : 'Disabled'))
+            : 'Not supported in this browser',
           toggle: true,
-          value: notifications,
-          onChange: setNotifications,
+          value: pushSubscribed,
+          onChange: handlePushToggle,
+          disabled: !pushSupported || pushLoading || pushPermission === 'denied',
         },
         {
           icon: isDark ? Moon : Sun,
