@@ -2061,12 +2061,53 @@ from pathlib import Path as PathLib
 UPLOAD_DIR = PathLib("/app/uploads")
 UPLOAD_DIR.mkdir(exist_ok=True)
 
+# Cloud Storage Configuration
+AWS_ACCESS_KEY_ID = os.environ.get('AWS_ACCESS_KEY_ID')
+AWS_SECRET_ACCESS_KEY = os.environ.get('AWS_SECRET_ACCESS_KEY')
+AWS_S3_BUCKET = os.environ.get('AWS_S3_BUCKET')
+AWS_S3_REGION = os.environ.get('AWS_S3_REGION', 'us-east-1')
+
+def is_s3_configured():
+    """Check if S3 credentials are configured"""
+    return all([AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_BUCKET])
+
+async def upload_to_s3(contents: bytes, filename: str, content_type: str) -> str:
+    """Upload file to AWS S3 and return the public URL"""
+    import boto3
+    from botocore.exceptions import ClientError
+    
+    try:
+        s3_client = boto3.client(
+            's3',
+            aws_access_key_id=AWS_ACCESS_KEY_ID,
+            aws_secret_access_key=AWS_SECRET_ACCESS_KEY,
+            region_name=AWS_S3_REGION
+        )
+        
+        # Upload to S3 with public-read ACL
+        s3_client.put_object(
+            Bucket=AWS_S3_BUCKET,
+            Key=f"uploads/{filename}",
+            Body=contents,
+            ContentType=content_type,
+            ACL='public-read'
+        )
+        
+        # Return the public URL
+        url = f"https://{AWS_S3_BUCKET}.s3.{AWS_S3_REGION}.amazonaws.com/uploads/{filename}"
+        logger.info(f"Uploaded to S3: {url}")
+        return url
+        
+    except ClientError as e:
+        logger.error(f"S3 upload error: {e}")
+        raise HTTPException(status_code=500, detail="Cloud storage upload failed")
+
 @upload_router.post("")
 async def upload_file(
     request: Request,
     user: UserBase = Depends(get_current_user)
 ):
-    """Upload media file (images, videos)"""
+    """Upload media file (images, videos) - Uses S3 if configured, local storage otherwise"""
     from fastapi import UploadFile, File
     
     # Parse multipart form data
