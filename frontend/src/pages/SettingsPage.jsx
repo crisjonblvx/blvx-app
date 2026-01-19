@@ -37,7 +37,7 @@ export default function SettingsPage() {
         `${API}/spark/drop`,
         null,
         { 
-          params: sparkCategory ? { category: sparkCategory } : {},
+          params: sparkCategory !== 'random' ? { category: sparkCategory } : {},
           withCredentials: true 
         }
       );
