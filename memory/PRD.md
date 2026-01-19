@@ -93,6 +93,21 @@ Build **BLVX**, a "High-Context Social Network" designed to be a "Group Chat" ra
 - [x] Host/Speaker/Listener roles
 - [x] "Pass the Aux" feature
 - [x] Pin posts to Stoop
+- [x] **Mic error handling with toast notifications** (NEW)
+- [x] Browser permission detection (NotAllowedError, NotFoundError, etc.)
+
+#### "The Word" (Trending Widget) (NEW)
+- [x] Desktop: Right sidebar with trending hashtags
+- [x] Mobile: Search tab with "The Word" view
+- [x] Hashtag aggregation from posts
+- [x] Post count ("Plates served") display
+- [x] Fallback default trends
+
+#### Bonita's "Receipts" (Rich Media) (NEW)
+- [x] Spark posts include reference_url field
+- [x] Link preview cards (OpenGraph-style)
+- [x] Domain-specific mock images for known sources
+- [x] Title, description, and domain display
 
 #### User Profiles
 - [x] Profile page with posts
