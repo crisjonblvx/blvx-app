@@ -225,7 +225,7 @@ class BLVXAPITester:
             "post_type": "original",
             "visibility": "block"
         }
-        success1, response1 = self.run_test("Create Block Post", "POST", "posts", 200, block_post_data)
+        success1, response1 = self.run_test("Create Block Post", "POST", "posts", 201, block_post_data)
         
         # Test Cookout (private) post
         cookout_post_data = {
