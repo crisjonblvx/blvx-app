@@ -217,18 +217,82 @@ class BLVXAPITester:
         """Test getting current user"""
         return self.run_test("Get Current User", "GET", "auth/me", 200)
 
-    def test_create_post(self):
-        """Test creating a post"""
-        post_data = {
-            "content": "This is a test BLVX post from the testing suite! 🚀",
-            "post_type": "original"
+    def test_create_post_with_visibility(self):
+        """Test creating posts with different visibility settings"""
+        # Test Block (public) post
+        block_post_data = {
+            "content": "This is a public Block post! 🌍",
+            "post_type": "original",
+            "visibility": "block"
         }
-        # Backend returns 200 instead of 201, but post is created successfully
-        success, response = self.run_test("Create Post", "POST", "posts", 200, post_data)
-        if success and response.get('post_id'):
-            self.test_post_id = response['post_id']
-            self.log(f"✅ Created test post: {self.test_post_id}")
-        return success, response
+        success1, response1 = self.run_test("Create Block Post", "POST", "posts", 200, block_post_data)
+        
+        # Test Cookout (private) post
+        cookout_post_data = {
+            "content": "This is a private Cookout post! 🏠",
+            "post_type": "original", 
+            "visibility": "cookout"
+        }
+        success2, response2 = self.run_test("Create Cookout Post", "POST", "posts", 200, cookout_post_data)
+        
+        if success1 and response1.get('post_id'):
+            self.test_post_id = response1['post_id']
+            self.log(f"✅ Created test Block post: {self.test_post_id}")
+            
+        return success1 and success2, response1
+
+    def test_vouch_system(self):
+        """Test The Vouch (Plates) system"""
+        # Create a plate
+        success1, plate_response = self.run_test("Create Plate", "POST", "vouch/plate/create", 200)
+        
+        if not success1:
+            return False, {}
+            
+        # Get my plates
+        success2, _ = self.run_test("Get My Plates", "GET", "vouch/plate/my-plates", 200)
+        
+        return success1 and success2, plate_response
+
+    def test_gc_system(self):
+        """Test The GC (Group Chat) system"""
+        # Create a GC (need at least 2 other members, using fake IDs for test)
+        gc_data = {
+            "name": "Test GC Chat",
+            "member_ids": ["fake_user_1", "fake_user_2"]
+        }
+        success1, gc_response = self.run_test("Create GC", "POST", "gc/create", 200, gc_data)
+        
+        # Get my GCs
+        success2, _ = self.run_test("Get My GCs", "GET", "gc/my-gcs", 200)
+        
+        # Test sending a message if GC was created
+        if success1 and gc_response.get('gc_id'):
+            gc_id = gc_response['gc_id']
+            success3, _ = self.run_test("Send GC Message", "POST", f"gc/{gc_id}/message?content=Test message", 200)
+            return success1 and success2 and success3, gc_response
+            
+        return success1 and success2, gc_response
+
+    def test_stoop_system(self):
+        """Test The Stoop (Audio Rooms) system"""
+        # Create a Stoop
+        stoop_data = {
+            "title": "Test Audio Room",
+            "pinned_post_id": None
+        }
+        success1, stoop_response = self.run_test("Create Stoop", "POST", "stoop/create", 200, stoop_data)
+        
+        # Get live Stoops
+        success2, _ = self.run_test("Get Live Stoops", "GET", "stoop/live", 200)
+        
+        # Test joining the Stoop if it was created
+        if success1 and stoop_response.get('stoop_id'):
+            stoop_id = stoop_response['stoop_id']
+            success3, _ = self.run_test("Join Stoop", "POST", f"stoop/{stoop_id}/join", 200)
+            return success1 and success2 and success3, stoop_response
+            
+        return success1 and success2, stoop_response
 
     def test_get_feed(self):
         """Test getting user feed"""
