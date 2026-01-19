@@ -7,13 +7,12 @@ import { Label } from '@/components/ui/label';
 import { ArrowRight, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
-import { cn } from '@/lib/utils';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export default function LandingPage() {
   const navigate = useNavigate();
-  const { login, isAuthenticated, loading: authLoading } = useAuth();
+  const { login, isAuthenticated, loading: authLoading, setAuthenticatedUser } = useAuth();
   const [authMode, setAuthMode] = useState('landing'); // landing, login, signup, verify
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -76,7 +75,9 @@ export default function LandingPage() {
         password: formData.password
       }, { withCredentials: true });
       
-      navigate('/home', { replace: true, state: { user: response.data } });
+      // Set authenticated user and navigate
+      setAuthenticatedUser(response.data);
+      navigate('/home', { replace: true });
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Login failed');
     } finally {
@@ -99,7 +100,9 @@ export default function LandingPage() {
       }, { withCredentials: true });
       
       toast.success('Email verified!');
-      navigate('/home', { replace: true, state: { user: response.data.user } });
+      // Set authenticated user and navigate
+      setAuthenticatedUser(response.data.user);
+      navigate('/home', { replace: true });
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Verification failed');
     } finally {

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import axios from 'axios';
 
@@ -20,21 +20,19 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
+  const authCheckRef = useRef(false);
 
-  const checkAuth = useCallback(async () => {
-    // Skip auth check on landing page or if processing auth callback
-    if (location.pathname === '/' || location.hash?.includes('session_id=')) {
+  // Check authentication on mount and when user state changes
+  const checkAuth = useCallback(async (skipIfUser = false) => {
+    // If we already have user data passed from login, use it
+    if (skipIfUser && user) {
       setLoading(false);
       return;
     }
-
-    // If user was passed from auth callback, use it
-    if (location.state?.user) {
-      setUser(location.state.user);
-      setIsAuthenticated(true);
+    
+    // Skip auth check on landing page
+    if (location.pathname === '/') {
       setLoading(false);
-      // Clear state to prevent stale data
-      window.history.replaceState({}, document.title);
       return;
     }
 
@@ -45,20 +43,43 @@ export const AuthProvider = ({ children }) => {
       setUser(response.data);
       setIsAuthenticated(true);
     } catch (error) {
+      console.log('Auth check failed:', error.response?.status);
       setUser(null);
       setIsAuthenticated(false);
-      // Redirect to landing if trying to access protected route
+      // Only redirect if on a protected route
       if (location.pathname !== '/') {
         navigate('/', { replace: true });
       }
     } finally {
       setLoading(false);
     }
-  }, [location.pathname, location.hash, location.state, navigate]);
+  }, [location.pathname, navigate, user]);
 
+  // Initial auth check on mount
   useEffect(() => {
-    checkAuth();
-  }, [checkAuth]);
+    if (!authCheckRef.current) {
+      authCheckRef.current = true;
+      
+      // Check if user was passed in location state (from login)
+      if (location.state?.user) {
+        setUser(location.state.user);
+        setIsAuthenticated(true);
+        setLoading(false);
+        // Clear state to prevent issues on refresh
+        window.history.replaceState({}, document.title);
+      } else {
+        checkAuth();
+      }
+    }
+  }, []);
+
+  // Re-check auth when location changes (but not for every tiny change)
+  useEffect(() => {
+    // Only re-check if we don't have a user and we're not on landing
+    if (!user && !loading && location.pathname !== '/') {
+      checkAuth();
+    }
+  }, [location.pathname]);
 
   const login = () => {
     // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
@@ -80,6 +101,14 @@ export const AuthProvider = ({ children }) => {
 
   const updateUser = (userData) => {
     setUser(userData);
+    setIsAuthenticated(true);
+  };
+
+  // Expose a method to set user after successful login
+  const setAuthenticatedUser = (userData) => {
+    setUser(userData);
+    setIsAuthenticated(true);
+    setLoading(false);
   };
 
   const value = {
@@ -89,7 +118,8 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     updateUser,
-    checkAuth
+    checkAuth,
+    setAuthenticatedUser
   };
 
   return (

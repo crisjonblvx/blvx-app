@@ -30,19 +30,24 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const AuthCallbackHandler = ({ children }) => {
   const location = useLocation();
   const navigate = useNavigate();
+  const { setAuthenticatedUser } = useAuth();
   const hasProcessed = useRef(false);
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
-    // Check for session_id in URL hash
-    if (location.hash?.includes('session_id=') && !hasProcessed.current) {
+    // Check for session_id in URL hash on ANY page (could be /home#session_id=...)
+    const hash = window.location.hash;
+    
+    if (hash && hash.includes('session_id=') && !hasProcessed.current) {
       hasProcessed.current = true;
       setProcessing(true);
 
       const processAuth = async () => {
         try {
-          const params = new URLSearchParams(location.hash.replace('#', ''));
+          const params = new URLSearchParams(hash.replace('#', ''));
           const sessionId = params.get('session_id');
+
+          console.log('Processing OAuth callback with session_id:', sessionId?.substring(0, 10) + '...');
 
           if (sessionId) {
             const response = await axios.get(`${API}/auth/session`, {
@@ -50,12 +55,20 @@ const AuthCallbackHandler = ({ children }) => {
               withCredentials: true
             });
 
-            // Clear hash and navigate to home with user data
+            console.log('OAuth successful, user:', response.data.email);
+
+            // Clear hash from URL
             window.history.replaceState(null, '', window.location.pathname);
-            navigate('/home', { replace: true, state: { user: response.data } });
+            
+            // Set authenticated user in context
+            setAuthenticatedUser(response.data);
+            
+            // Navigate to home
+            navigate('/home', { replace: true });
           }
         } catch (error) {
           console.error('Auth callback error:', error);
+          window.history.replaceState(null, '', window.location.pathname);
           navigate('/', { replace: true });
         } finally {
           setProcessing(false);
@@ -64,7 +77,7 @@ const AuthCallbackHandler = ({ children }) => {
 
       processAuth();
     }
-  }, [location.hash, navigate]);
+  }, [navigate, setAuthenticatedUser]);
 
   if (processing) {
     return (

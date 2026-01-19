@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { BottomNav } from '@/components/BottomNav';
@@ -8,15 +8,22 @@ import { FAB } from '@/components/FAB';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export const AppShell = ({ children }) => {
-  const { user, loading, isAuthenticated } = useAuth();
+  const { user, loading, isAuthenticated, checkAuth } = useAuth();
   const navigate = useNavigate();
+  const checkedRef = useRef(false);
 
   useEffect(() => {
-    if (!loading && !isAuthenticated) {
-      navigate('/', { replace: true });
+    // Only redirect if we've finished loading and confirmed not authenticated
+    if (!loading && !isAuthenticated && !checkedRef.current) {
+      checkedRef.current = true;
+      // Double-check auth status before redirecting
+      checkAuth().then(() => {
+        // checkAuth will handle redirect if needed
+      });
     }
-  }, [loading, isAuthenticated, navigate]);
+  }, [loading, isAuthenticated, checkAuth]);
 
+  // Show loading state while checking auth
   if (loading) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
@@ -30,8 +37,15 @@ export const AppShell = ({ children }) => {
     );
   }
 
+  // If not authenticated after loading, show nothing (redirect will happen)
   if (!isAuthenticated) {
-    return null;
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-10 h-10 border-2 border-white/20 border-t-white rounded-full animate-spin mx-auto" />
+        </div>
+      </div>
+    );
   }
 
   return (
