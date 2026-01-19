@@ -377,10 +377,23 @@ export default function StoopPage() {
           </div>
           
           {/* WebRTC Status Debug */}
-          <div className="mt-3 text-[10px] text-white/30">
-            {wsConnected ? '🟢 Connected' : '🔴 Disconnected'} • 
-            {Object.keys(peers).length} peer(s) • 
-            {isSpeaker ? 'Speaker' : 'Listener'}
+          <div className="mt-3 p-2 bg-black/50 rounded text-[10px] text-white/50 space-y-1">
+            <div>
+              WebSocket: {wsConnected ? '🟢 Connected' : '🔴 Disconnected'} • 
+              Peers: {Object.keys(peers).length} • 
+              Role: {isSpeaker ? 'Speaker' : 'Listener'} •
+              Mic: {isLocalMicActive ? '🎤 ON' : '🔇 OFF'}
+            </div>
+            {Object.keys(peers).length > 0 && (
+              <div className="pl-2 border-l border-white/20">
+                {Object.entries(peers).map(([peerId, peer]) => (
+                  <div key={peerId}>
+                    {peer.name || peerId.slice(0, 8)}: {peer.connectionState || 'new'} 
+                    {peer.hasAudio && ' 🔊'}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
       )}
