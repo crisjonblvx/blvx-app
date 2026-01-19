@@ -1285,9 +1285,26 @@ async def send_gc_message(gc_id: str, content: str, post_id: Optional[str] = Non
     await db.gc_messages.insert_one(message)
     message.pop("_id", None)
     
+    # Get user info for WebSocket broadcast
+    user_info = await db.users.find_one({"user_id": user.user_id}, {"_id": 0, "name": 1, "username": 1, "picture": 1})
+    message["user"] = user_info
+    
+    # Broadcast via WebSocket for real-time updates
+    await ws_manager.broadcast_to_gc(gc_id, {
+        "type": "new_message",
+        "message": message
+    })
+    
     for member_id in gc["members"]:
         if member_id != user.user_id:
             await create_notification(member_id, "gc_message", user.user_id, post_id, gc_id)
+            # Also send via WebSocket if user is connected
+            await ws_manager.send_to_user(member_id, {
+                "type": "notification",
+                "notification_type": "gc_message",
+                "gc_id": gc_id,
+                "from_user": user_info
+            })
     
     return message
 
