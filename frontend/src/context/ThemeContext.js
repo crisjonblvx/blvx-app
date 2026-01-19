@@ -33,10 +33,31 @@ export const ThemeProvider = ({ children }) => {
     }
   }, []);
 
-  // Apply theme class to document
+  // Apply theme class to document and body
   useEffect(() => {
-    document.documentElement.classList.remove('theme-dark', 'theme-light');
+    // Remove old classes
+    document.documentElement.classList.remove('theme-dark', 'theme-light', 'dark', 'light');
+    document.body.classList.remove('theme-dark', 'theme-light', 'light-mode', 'dark-mode');
+    
+    // Add new classes
     document.documentElement.classList.add(`theme-${theme}`);
+    document.documentElement.classList.add(theme);
+    document.body.classList.add(`${theme}-mode`);
+    document.body.classList.add(`theme-${theme}`);
+    
+    // Set data attribute for CSS selectors
+    document.documentElement.setAttribute('data-theme', theme);
+    document.body.setAttribute('data-theme', theme);
+    
+    // Force style updates
+    if (theme === 'light') {
+      document.body.style.backgroundColor = '#ffffff';
+      document.body.style.color = '#000000';
+    } else {
+      document.body.style.backgroundColor = '#000000';
+      document.body.style.color = '#ffffff';
+    }
+    
     localStorage.setItem('blvx-theme', theme);
   }, [theme]);
 

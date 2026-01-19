@@ -122,3 +122,6 @@ watchfiles==1.1.1
 websockets==15.0.1
 yarl==1.22.0
 zipp==3.23.0
+beautifulsoup4==4.14.3
+httpx==0.28.1
+lxml==6.0.2
