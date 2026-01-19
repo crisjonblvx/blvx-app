@@ -149,16 +149,15 @@ export function useWebRTC({
       return;
     }
     
-    const token = getSessionToken();
-    if (!token) {
-      setConnectionError('Not authenticated');
-      return;
-    }
-    
-    // Build WebSocket URL
+    // Build WebSocket URL - rely on cookies for auth
     const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     const backendUrl = process.env.REACT_APP_BACKEND_URL.replace(/^https?:\/\//, '');
-    const wsUrl = `${wsProtocol}//${backendUrl}/ws/stoop/${stoopId}?token=${token}`;
+    
+    // Try to get token from cookies (might be null if httpOnly)
+    const token = getSessionToken();
+    const wsUrl = token 
+      ? `${wsProtocol}//${backendUrl}/ws/stoop/${stoopId}?token=${token}`
+      : `${wsProtocol}//${backendUrl}/ws/stoop/${stoopId}`;
     
     console.log('[WebRTC] Connecting to:', wsUrl);
     
