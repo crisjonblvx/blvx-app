@@ -2414,6 +2414,25 @@ async def get_user_from_token(token: str) -> Optional[dict]:
     user = await db.users.find_one({"user_id": session["user_id"]}, {"_id": 0})
     return user
 
+async def get_user_from_websocket(websocket: WebSocket) -> Optional[dict]:
+    """Get user from WebSocket - checks both query params and cookies"""
+    # First try query params
+    token = websocket.query_params.get("token")
+    if token:
+        user = await get_user_from_token(token)
+        if user:
+            return user
+    
+    # Then try cookies
+    cookies = websocket.cookies
+    session_id = cookies.get("session_id")
+    if session_id:
+        user = await get_user_from_token(session_id)
+        if user:
+            return user
+    
+    return None
+
 @app.websocket("/ws/gc/{gc_id}")
 async def websocket_gc_endpoint(websocket: WebSocket, gc_id: str):
     """WebSocket endpoint for real-time GC messaging"""
