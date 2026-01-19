@@ -2141,6 +2141,7 @@ api_router.include_router(gc_router)
 api_router.include_router(stoop_router)
 api_router.include_router(spark_router)
 api_router.include_router(upload_router)
+api_router.include_router(lookout_router)
 
 app.include_router(api_router)
 
