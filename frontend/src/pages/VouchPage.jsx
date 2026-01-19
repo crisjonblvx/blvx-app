@@ -63,12 +63,15 @@ export default function VouchPage() {
 
     setRedeeming(true);
     try {
-      await axios.post(`${API}/vouch/plate/redeem`, { code: redeemCode.toUpperCase() }, { withCredentials: true });
+      await axios.post(`${API}/vouch/plate/redeem?code=${encodeURIComponent(redeemCode.toUpperCase())}`, {}, { withCredentials: true });
       toast.success('Plate redeemed! You\'re now vouched for.');
       setRedeemCode('');
       checkAuth(); // Refresh user
     } catch (error) {
-      toast.error(error.response?.data?.detail || 'Invalid plate code');
+      // Handle error message - could be string or object
+      const errorDetail = error.response?.data?.detail;
+      const errorMessage = typeof errorDetail === 'string' ? errorDetail : 'Invalid plate code';
+      toast.error(errorMessage);
     } finally {
       setRedeeming(false);
     }
