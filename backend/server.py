@@ -2044,6 +2044,85 @@ async def get_spark_categories():
         "topics": SPARK_TOPIC_CATEGORIES
     }
 
+@spark_router.get("/calendar")
+async def get_culture_calendar():
+    """Get today's cultural event if any"""
+    event = get_culture_calendar_post()
+    
+    if event:
+        return {
+            "has_event": True,
+            "event": event
+        }
+    
+    # Return upcoming events within the next 7 days
+    upcoming = []
+    today = datetime.now()
+    for i in range(1, 8):
+        future_date = today + timedelta(days=i)
+        future_event = get_culture_calendar_post(future_date)
+        if future_event:
+            upcoming.append({
+                **future_event,
+                "days_away": i
+            })
+    
+    return {
+        "has_event": False,
+        "upcoming": upcoming
+    }
+
+@spark_router.post("/calendar/post")
+async def post_culture_calendar(user: UserBase = Depends(get_current_user)):
+    """Post today's cultural calendar event as Bonita"""
+    calendar_post = await generate_culture_calendar_post()
+    
+    if not calendar_post:
+        raise HTTPException(status_code=404, detail="No cultural event today")
+    
+    # Create Bonita user if doesn't exist
+    bonita_user = await db.users.find_one({"user_id": "bonita"})
+    if not bonita_user:
+        await db.users.insert_one({
+            "user_id": "bonita",
+            "email": "bonita@blvx.app",
+            "name": "Bonita",
+            "username": "Bonita",
+            "picture": "",
+            "bio": "BLVX's cultural compass. I'm here to add context, not chaos.",
+            "verified": True,
+            "is_day_one": True,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+    
+    post_id = f"post_{secrets.token_urlsafe(8)}"
+    calendar_spark_post = {
+        "post_id": post_id,
+        "user_id": "bonita",
+        "content": calendar_post["content"],
+        "reference_url": calendar_post.get("reference_url"),
+        "post_type": "original",
+        "visibility": "block",
+        "is_spark": True,
+        "is_culture_calendar": True,
+        "event_name": calendar_post["event_name"],
+        "reply_count": 0,
+        "repost_count": 0,
+        "like_count": 0,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.posts.insert_one(calendar_spark_post)
+    calendar_spark_post.pop("_id", None)
+    
+    enriched = await get_post_with_user(calendar_spark_post)
+    
+    return {
+        "message": f"Culture Calendar post created for {calendar_post['event_name']}!",
+        "post": enriched,
+        "event_name": calendar_post["event_name"]
+    }
+
 @spark_router.get("/trending")
 async def get_trending_news():
     """Get trending news headlines for dynamic spark topics"""
