@@ -2157,14 +2157,15 @@ async def upload_file(
         f.write(contents)
     
     # For MVP, return local file URL
-    # In production, this would upload to cloud storage (S3, GCS, etc.)
+    # In production with S3 configured, files will be stored in the cloud
     file_url = f"{os.environ.get('REACT_APP_BACKEND_URL', '')}/api/media/{filename}"
     
     return {
         "url": file_url,
         "filename": filename,
         "content_type": content_type,
-        "size": len(contents)
+        "size": len(contents),
+        "storage": "local"  # Indicates local storage is being used
     }
 
 @api_router.get("/media/{filename}")
