@@ -1766,18 +1766,23 @@ async def search_real_news(query: str) -> Optional[Dict]:
         return None
 
 async def generate_spark_post(topic_category: str = None) -> dict:
-    """Generate a BLVX-style post with REAL reference URL using DuckDuckGo search"""
+    """Generate a BLVX-style post with REAL FRESH reference URL using DuckDuckGo search"""
     import random
     
+    # Get current date for time anchoring
+    now = datetime.now()
+    current_date = now.strftime("%B %d, %Y")  # e.g., "January 19, 2026"
+    current_year = now.year
+    
     # Select random category if not specified
-    if not topic_category or topic_category not in SPARK_SEARCH_QUERIES:
-        topic_category = random.choice(list(SPARK_SEARCH_QUERIES.keys()))
+    if not topic_category or topic_category not in SPARK_TOPIC_CATEGORIES:
+        topic_category = random.choice(list(SPARK_TOPIC_CATEGORIES.keys()))
     
-    # Select random search query from category
-    search_query = random.choice(SPARK_SEARCH_QUERIES[topic_category])
+    # Select random base query from category
+    base_query = random.choice(SPARK_TOPIC_CATEGORIES[topic_category])
     
-    # Search for real news
-    search_result = await search_real_news(search_query)
+    # Search for FRESH real news
+    search_result = await search_real_news(base_query)
     
     # Get headline and URL from real search result
     if search_result:
@@ -1785,12 +1790,22 @@ async def generate_spark_post(topic_category: str = None) -> dict:
         reference_url = search_result["url"]
         extra_context = search_result.get("body", "")
     else:
-        # Fallback: No link is better than a dead link
-        headline = f"Latest {topic_category} news trending today"
+        # Fallback: No link is better than a dead/stale link
+        headline = f"What's happening in {topic_category} this week"
         reference_url = None
         extra_context = ""
     
-    # Generate BLVX-style post using Bonita
+    # TIME-ANCHORED system prompt - critical for preventing stale content
+    time_anchor = f"""
+CURRENT DATE: {current_date}
+IMPORTANT TIME RULES:
+- You are strictly forbidden from discussing events older than 14 days unless explicitly doing a 'Throwback'.
+- All news and references must be from THIS MONTH ({now.strftime('%B')} {current_year}).
+- Do NOT mention events from 2023 or 2024 as current news.
+- If unsure about the date of an event, present it as "recent" without specific year references.
+"""
+
+    # Generate BLVX-style post using Bonita with time anchor
     town_crier_prompt = f"""You are Bonita in "Town Crier" mode. Your job is to take a headline and turn it into a BLVX-style post that:
 1. Asks a question or adds cultural context
 2. Uses culturally relevant language without being corny
@@ -1798,14 +1813,23 @@ async def generate_spark_post(topic_category: str = None) -> dict:
 4. Keeps it under 280 characters
 5. May include 1-2 relevant hashtags
 
+{time_anchor}
+
 Headline: {headline}
 {f'Context: {extra_context[:200]}' if extra_context else ''}
 
-Generate a single BLVX-style post. Output ONLY the post text, nothing else."""
+Generate a single BLVX-style post. Output ONLY the post text, nothing else. Do NOT reference old dates or years."""
 
     try:
         response = await call_bonita(town_crier_prompt, "conversation", "block")
         content = response.strip()
+        
+        # Final safety check - remove any stale year references from output
+        for stale_year in ["2023", "2024"]:
+            if stale_year in content:
+                content = content.replace(stale_year, str(current_year))
+                logger.warning(f"Replaced stale year {stale_year} with {current_year} in Spark content")
+        
     except Exception as e:
         logger.error(f"Spark generation error: {e}")
         # Fallback to basic template
