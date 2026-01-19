@@ -1504,28 +1504,28 @@ async def ask_bonita(request: BonitaRequest, user: UserBase = Depends(get_curren
 
 spark_router = APIRouter(prefix="/spark", tags=["The Spark"])
 
-# Topic categories for content generation with reference URLs
+# Topic categories with VERIFIED REAL URLs (Google Search fallback)
 SPARK_TOPICS = {
     "music": [
-        {"headline": "Kendrick Lamar announces tour", "reference_url": "https://pitchfork.com/news/kendrick-lamar-tour"},
-        {"headline": "New album drops at midnight", "reference_url": "https://complex.com/music/new-album"},
-        {"headline": "Grammy nominations announced", "reference_url": "https://grammy.com/nominations"},
-        {"headline": "Festival lineup revealed", "reference_url": "https://rollingstone.com/music/festival"},
-        {"headline": "Artist goes viral on TikTok", "reference_url": "https://billboard.com/tiktok-viral"},
+        {"headline": "Kendrick Lamar announces tour", "reference_url": "https://www.google.com/search?q=Kendrick+Lamar+tour+2025"},
+        {"headline": "New album drops at midnight", "reference_url": "https://www.google.com/search?q=new+music+album+release+today"},
+        {"headline": "Grammy nominations announced", "reference_url": "https://www.google.com/search?q=Grammy+nominations+2025"},
+        {"headline": "Festival lineup revealed", "reference_url": "https://www.google.com/search?q=music+festival+lineup+2025"},
+        {"headline": "Artist goes viral on TikTok", "reference_url": "https://www.google.com/search?q=viral+artist+TikTok+music"},
     ],
     "tech": [
-        {"headline": "New iPhone features leaked", "reference_url": "https://techcrunch.com/apple-iphone"},
-        {"headline": "AI tool breaks the internet", "reference_url": "https://theverge.com/ai-viral"},
-        {"headline": "App update changes everything", "reference_url": "https://wired.com/app-update"},
-        {"headline": "Tech company under fire", "reference_url": "https://nytimes.com/tech-accountability"},
-        {"headline": "Viral tech hack discovered", "reference_url": "https://mashable.com/tech-hack"},
+        {"headline": "New iPhone features leaked", "reference_url": "https://www.google.com/search?q=iPhone+features+leaked+2025"},
+        {"headline": "AI tool breaks the internet", "reference_url": "https://www.google.com/search?q=viral+AI+tool+news"},
+        {"headline": "App update changes everything", "reference_url": "https://www.google.com/search?q=major+app+update+news"},
+        {"headline": "Tech company under fire", "reference_url": "https://www.google.com/search?q=tech+company+controversy+news"},
+        {"headline": "Viral tech hack discovered", "reference_url": "https://www.google.com/search?q=viral+tech+hack+tips"},
     ],
     "culture": [
-        {"headline": "Reality show drama escalates", "reference_url": "https://vulture.com/reality-tv"},
-        {"headline": "Celebrity couple spotted together", "reference_url": "https://tmz.com/celebrity"},
-        {"headline": "Viral tweet sparks debate", "reference_url": "https://twitter.com/viral"},
-        {"headline": "Fashion week highlights", "reference_url": "https://vogue.com/fashion-week"},
-        {"headline": "Movie trailer drops online", "reference_url": "https://deadline.com/movie-trailer"},
+        {"headline": "Reality show drama escalates", "reference_url": "https://www.google.com/search?q=reality+show+drama+news"},
+        {"headline": "Celebrity couple spotted together", "reference_url": "https://www.google.com/search?q=celebrity+couple+news+today"},
+        {"headline": "Viral tweet sparks debate", "reference_url": "https://www.google.com/search?q=viral+tweet+debate+trending"},
+        {"headline": "Fashion week highlights", "reference_url": "https://www.google.com/search?q=fashion+week+highlights+2025"},
+        {"headline": "Movie trailer drops online", "reference_url": "https://www.google.com/search?q=new+movie+trailer+viral"},
     ],
 }
 
