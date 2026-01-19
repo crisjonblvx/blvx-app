@@ -228,22 +228,22 @@ class TestStoopEndpoints:
         token = result.stdout.strip().split('\n')[-1]
         return token
     
-    def test_stoop_list_requires_auth(self):
-        """Test that stoop list requires authentication"""
-        response = requests.get(f"{BASE_URL}/api/stoop/list")
+    def test_stoop_live_requires_auth(self):
+        """Test that stoop live list requires authentication"""
+        response = requests.get(f"{BASE_URL}/api/stoop/live")
         assert response.status_code == 401
-        print("✓ Stoop list requires authentication")
+        print("✓ Stoop live list requires authentication")
     
-    def test_stoop_list_with_auth(self, session_token):
-        """Test stoop list with authentication"""
+    def test_stoop_live_with_auth(self, session_token):
+        """Test stoop live list with authentication"""
         response = requests.get(
-            f"{BASE_URL}/api/stoop/list",
+            f"{BASE_URL}/api/stoop/live",
             headers={"Authorization": f"Bearer {session_token}"}
         )
         assert response.status_code == 200
         data = response.json()
         assert isinstance(data, list)
-        print(f"✓ Stoop list returns {len(data)} stoops")
+        print(f"✓ Stoop live list returns {len(data)} stoops")
     
     def test_stoop_create_and_join(self, session_token):
         """Test creating and joining a stoop"""
