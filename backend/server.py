@@ -2601,13 +2601,15 @@ async def delete_alert(alert_id: str, user: UserBase = Depends(get_current_user)
 @api_router.get("/health")
 async def health_check():
     """Health check endpoint"""
+    storage = "cloudinary" if is_cloudinary_configured() else "local"
     return {
         "status": "healthy",
         "service": "BLVX API",
         "bonita": "online",
         "spark": "ready",
         "websocket": "enabled",
-        "storage": "s3" if is_s3_configured() else "local"
+        "storage": storage,
+        "cloudinary": is_cloudinary_configured()
     }
 
 # ========================
