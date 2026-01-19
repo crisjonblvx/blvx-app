@@ -130,3 +130,5 @@ ddgs==9.10.0
 newsapi-python==0.2.7
 boto3==1.42.21
 cloudinary==1.44.1
+py-vapid==1.9.4
+pywebpush==2.2.0
