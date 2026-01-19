@@ -1921,8 +1921,8 @@ async def drop_spark(
 async def get_spark_categories():
     """Get available spark topic categories"""
     return {
-        "categories": list(SPARK_TOPICS.keys()),
-        "topics": SPARK_TOPICS
+        "categories": list(SPARK_TOPIC_CATEGORIES.keys()),
+        "topics": SPARK_TOPIC_CATEGORIES
     }
 
 # ========================
