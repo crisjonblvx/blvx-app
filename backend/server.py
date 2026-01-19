@@ -1896,6 +1896,229 @@ async def get_link_preview(url: str, user: UserBase = Depends(get_current_user))
         raise HTTPException(status_code=400, detail="Could not fetch link preview")
 
 # ========================
+# THE LOOKOUT (Crowdsourced Safety Alerts)
+# ========================
+
+lookout_router = APIRouter(prefix="/lookout", tags=["The Lookout"])
+
+class AlertType(str):
+    POLICE = "police"
+    SAFETY_HAZARD = "safety_hazard"
+    PROTEST = "protest"
+    VIBE_CHECK = "vibe_check"
+    OTHER = "other"
+
+class AlertStatus(str):
+    PENDING = "pending"
+    VERIFIED = "verified"
+    DISMISSED = "dismissed"
+
+class AlertCreate(BaseModel):
+    alert_type: str  # police, safety_hazard, protest, vibe_check, other
+    description: str
+    location: str  # City/Neighborhood
+    coordinates: Optional[Dict] = None  # {"lat": 0, "lng": 0}
+
+class AlertResponse(BaseModel):
+    alert_id: str
+    user_id: str
+    alert_type: str
+    description: str
+    location: str
+    coordinates: Optional[Dict]
+    vouches: int
+    caps: int
+    status: str
+    created_at: datetime
+    expires_at: datetime
+    user: Optional[Dict] = None
+
+ALERT_VERIFICATION_THRESHOLD = 3  # Vouches needed to verify
+ALERT_DISMISSAL_THRESHOLD = 3     # Caps needed to dismiss
+ALERT_EXPIRY_HOURS = 2            # Hours until alert expires
+
+@lookout_router.post("", status_code=201)
+async def create_alert(alert: AlertCreate, user: UserBase = Depends(get_current_user)):
+    """Create a new safety alert"""
+    if len(alert.description) > 500:
+        raise HTTPException(status_code=400, detail="Description too long (max 500 chars)")
+    
+    if alert.alert_type not in ["police", "safety_hazard", "protest", "vibe_check", "other"]:
+        raise HTTPException(status_code=400, detail="Invalid alert type")
+    
+    alert_id = f"alert_{uuid.uuid4().hex[:12]}"
+    now = datetime.now(timezone.utc)
+    expires_at = now + timedelta(hours=ALERT_EXPIRY_HOURS)
+    
+    alert_data = {
+        "alert_id": alert_id,
+        "user_id": user.user_id,
+        "alert_type": alert.alert_type,
+        "description": alert.description,
+        "location": alert.location,
+        "coordinates": alert.coordinates,
+        "vouches": 0,
+        "caps": 0,
+        "vouch_users": [],  # Track who vouched
+        "cap_users": [],    # Track who capped
+        "status": "pending",
+        "created_at": now.isoformat(),
+        "expires_at": expires_at.isoformat()
+    }
+    
+    await db.alerts.insert_one(alert_data)
+    alert_data.pop("_id", None)
+    alert_data.pop("vouch_users", None)
+    alert_data.pop("cap_users", None)
+    
+    # Get user info
+    user_info = await db.users.find_one({"user_id": user.user_id}, {"_id": 0, "name": 1, "username": 1, "picture": 1})
+    alert_data["user"] = user_info
+    
+    return alert_data
+
+@lookout_router.get("")
+async def get_alerts(
+    location: Optional[str] = None,
+    status: Optional[str] = None,
+    user: UserBase = Depends(get_current_user)
+):
+    """Get active alerts, optionally filtered by location or status"""
+    now = datetime.now(timezone.utc).isoformat()
+    
+    # Base query: not expired
+    query = {"expires_at": {"$gt": now}}
+    
+    # Filter by location if provided
+    if location:
+        query["location"] = {"$regex": location, "$options": "i"}
+    
+    # Filter by status if provided
+    if status:
+        query["status"] = status
+    else:
+        # Default: show pending and verified, hide dismissed
+        query["status"] = {"$in": ["pending", "verified"]}
+    
+    alerts = await db.alerts.find(query, {"_id": 0, "vouch_users": 0, "cap_users": 0}).sort("created_at", -1).to_list(50)
+    
+    # Enrich with user info
+    for alert in alerts:
+        user_info = await db.users.find_one({"user_id": alert["user_id"]}, {"_id": 0, "name": 1, "username": 1, "picture": 1})
+        alert["user"] = user_info
+        if isinstance(alert.get("created_at"), str):
+            alert["created_at"] = datetime.fromisoformat(alert["created_at"])
+        if isinstance(alert.get("expires_at"), str):
+            alert["expires_at"] = datetime.fromisoformat(alert["expires_at"])
+    
+    return alerts
+
+@lookout_router.get("/active")
+async def get_active_verified_alerts(user: UserBase = Depends(get_current_user)):
+    """Get count and summary of active verified alerts (for The Ticker)"""
+    now = datetime.now(timezone.utc).isoformat()
+    
+    alerts = await db.alerts.find({
+        "status": "verified",
+        "expires_at": {"$gt": now}
+    }, {"_id": 0}).to_list(100)
+    
+    # Group by location
+    locations = {}
+    for alert in alerts:
+        loc = alert.get("location", "Unknown")
+        if loc not in locations:
+            locations[loc] = 0
+        locations[loc] += 1
+    
+    return {
+        "total_active": len(alerts),
+        "by_location": locations,
+        "alerts": alerts[:5]  # Return first 5 for preview
+    }
+
+@lookout_router.post("/{alert_id}/vouch")
+async def vouch_alert(alert_id: str, user: UserBase = Depends(get_current_user)):
+    """Vouch (confirm) an alert"""
+    alert = await db.alerts.find_one({"alert_id": alert_id})
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    
+    # Check if already vouched
+    if user.user_id in alert.get("vouch_users", []):
+        raise HTTPException(status_code=400, detail="Already vouched for this alert")
+    
+    # Can't vouch and cap same alert
+    if user.user_id in alert.get("cap_users", []):
+        raise HTTPException(status_code=400, detail="You already capped this alert")
+    
+    # Add vouch
+    new_vouches = alert.get("vouches", 0) + 1
+    update_data = {
+        "$inc": {"vouches": 1},
+        "$push": {"vouch_users": user.user_id}
+    }
+    
+    # Check if threshold reached
+    if new_vouches >= ALERT_VERIFICATION_THRESHOLD:
+        update_data["$set"] = {"status": "verified"}
+    
+    await db.alerts.update_one({"alert_id": alert_id}, update_data)
+    
+    return {
+        "message": "Vouched!",
+        "vouches": new_vouches,
+        "status": "verified" if new_vouches >= ALERT_VERIFICATION_THRESHOLD else "pending"
+    }
+
+@lookout_router.post("/{alert_id}/cap")
+async def cap_alert(alert_id: str, user: UserBase = Depends(get_current_user)):
+    """Cap (dispute) an alert"""
+    alert = await db.alerts.find_one({"alert_id": alert_id})
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    
+    # Check if already capped
+    if user.user_id in alert.get("cap_users", []):
+        raise HTTPException(status_code=400, detail="Already capped this alert")
+    
+    # Can't vouch and cap same alert
+    if user.user_id in alert.get("vouch_users", []):
+        raise HTTPException(status_code=400, detail="You already vouched for this alert")
+    
+    # Add cap
+    new_caps = alert.get("caps", 0) + 1
+    update_data = {
+        "$inc": {"caps": 1},
+        "$push": {"cap_users": user.user_id}
+    }
+    
+    # Check if dismissal threshold reached
+    if new_caps >= ALERT_DISMISSAL_THRESHOLD:
+        update_data["$set"] = {"status": "dismissed"}
+    
+    await db.alerts.update_one({"alert_id": alert_id}, update_data)
+    
+    return {
+        "message": "Capped!",
+        "caps": new_caps,
+        "status": "dismissed" if new_caps >= ALERT_DISMISSAL_THRESHOLD else alert.get("status", "pending")
+    }
+
+@lookout_router.delete("/{alert_id}")
+async def delete_alert(alert_id: str, user: UserBase = Depends(get_current_user)):
+    """Delete an alert (only by creator)"""
+    alert = await db.alerts.find_one({"alert_id": alert_id})
+    if not alert:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    
+    if alert["user_id"] != user.user_id:
+        raise HTTPException(status_code=403, detail="Can only delete your own alerts")
+    
+    await db.alerts.delete_one({"alert_id": alert_id})
+    return {"message": "Alert deleted"}
+
+# ========================
 # HEALTH CHECK
 # ========================
 
