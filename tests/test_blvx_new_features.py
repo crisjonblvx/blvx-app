@@ -228,11 +228,13 @@ class TestStoopEndpoints:
         token = result.stdout.strip().split('\n')[-1]
         return token
     
-    def test_stoop_live_requires_auth(self):
-        """Test that stoop live list requires authentication"""
+    def test_stoop_live_is_public(self):
+        """Test that stoop live list is public (no auth required)"""
         response = requests.get(f"{BASE_URL}/api/stoop/live")
-        assert response.status_code == 401
-        print("✓ Stoop live list requires authentication")
+        assert response.status_code == 200
+        data = response.json()
+        assert isinstance(data, list)
+        print("✓ Stoop live list is public (no auth required)")
     
     def test_stoop_live_with_auth(self, session_token):
         """Test stoop live list with authentication"""
