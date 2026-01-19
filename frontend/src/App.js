@@ -107,6 +107,8 @@ function AppRouter() {
         <Route path="/gc" element={<AppShell><GCPage /></AppShell>} />
         <Route path="/bonita" element={<AppShell><BonitaPage /></AppShell>} />
         <Route path="/vouch" element={<AppShell><VouchPage /></AppShell>} />
+        <Route path="/sidebar" element={<AppShell><SidebarPage /></AppShell>} />
+        <Route path="/sidebar/:sidebarId" element={<AppShell><SidebarPage /></AppShell>} />
         <Route path="/profile/:username" element={<AppShell><ProfilePage /></AppShell>} />
         <Route path="/post/:postId" element={<AppShell><ThreadPage /></AppShell>} />
         <Route path="/settings" element={<AppShell><SettingsPage /></AppShell>} />
