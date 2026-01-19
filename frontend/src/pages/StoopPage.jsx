@@ -258,9 +258,18 @@ export default function StoopPage() {
           
           {/* Connection Status */}
           {connectionError && (
-            <div className="mb-3 p-2 bg-red-500/10 border border-red-500/30 flex items-center gap-2 text-xs text-red-400">
-              <AlertCircle className="h-4 w-4 flex-shrink-0" />
-              <span>Connection error: {connectionError}</span>
+            <div className="mb-3 p-3 bg-yellow-500/10 border border-yellow-500/30 text-xs text-yellow-400">
+              <div className="flex items-center gap-2 mb-2">
+                <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                <span className="font-medium">Real-time audio not available</span>
+              </div>
+              <p className="text-yellow-400/70 text-[10px]">
+                WebSocket connection failed. This may be due to network configuration. 
+                In deployed environment, make sure WebSocket routing is enabled.
+              </p>
+              <p className="text-yellow-400/50 text-[10px] mt-1">
+                Error: {connectionError}
+              </p>
             </div>
           )}
           
