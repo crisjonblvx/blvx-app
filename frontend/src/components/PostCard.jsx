@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ComposerModal } from '@/components/ComposerModal';
+import { LinkPreviewCard } from '@/components/TrendingWidget';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
