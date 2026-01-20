@@ -60,6 +60,8 @@ class ConnectionManager:
         self.stoop_connections: Dict[str, List[WebSocket]] = {}
         # Map of user_id -> WebSocket for direct notifications
         self.user_connections: Dict[str, WebSocket] = {}
+        # Map of sidebar_id -> list of active connections for 1-on-1 chats
+        self.sidebar_connections: Dict[str, List[WebSocket]] = {}
     
     async def connect_gc(self, websocket: WebSocket, gc_id: str, user_id: str):
         """Connect a user to a GC channel"""
