@@ -189,6 +189,20 @@ export const MediaToolbar = ({ onMediaSelect, selectedMedia, onRemoveMedia }) =>
           <span className="hidden sm:inline">POV</span>
         </Button>
 
+        {/* Record Video Button */}
+        <Button
+          type="button"
+          variant="ghost"
+          size="sm"
+          onClick={() => setVideoRecorderOpen(true)}
+          disabled={uploading || !!selectedMedia}
+          className="text-white/40 hover:text-white text-xs gap-2"
+          data-testid="record-video-btn"
+        >
+          <Circle className="h-4 w-4 text-red-500" />
+          <span className="hidden sm:inline">Record</span>
+        </Button>
+
         {/* The Reaction (GIF Picker) */}
         <Button
           type="button"
