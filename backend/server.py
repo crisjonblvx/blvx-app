@@ -3571,13 +3571,15 @@ async def startup_event():
             "created_at": datetime.now(timezone.utc).isoformat()
         })
     else:
+        # Ensure picture and created_at are set (for existing users that might be missing fields)
         await db.users.update_one(
             {"user_id": "bonita_ai"},
-            {"$set": {
-                "picture": BONITA_AVATAR_URL,
-                "created_at": datetime.now(timezone.utc).isoformat()
-            },
-            "$setOnInsert": {"created_at": datetime.now(timezone.utc).isoformat()}}
+            {"$set": {"picture": BONITA_AVATAR_URL}}
+        )
+        # Add created_at if missing
+        await db.users.update_one(
+            {"user_id": "bonita_ai", "created_at": {"$exists": False}},
+            {"$set": {"created_at": datetime.now(timezone.utc).isoformat()}}
         )
     logger.info("Startup: Bonita's profile initialized")
 
