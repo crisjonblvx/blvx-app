@@ -98,11 +98,16 @@ Build **BLVX**, a "High-Context Social Network" designed to be a "Group Chat" ra
 - [x] Pin posts to Stoop
 - [x] **Mic error handling with toast notifications**
 - [x] Browser permission detection (NotAllowedError, NotFoundError, etc.)
-- [x] **WebRTC signaling infrastructure** (NEW)
-- [x] **Full WebRTC peer-to-peer audio streaming** (NEW - Jan 19, 2026)
-- [x] **WebSocket connection for signaling** (NEW)
-- [x] **Peer connection status display** (NEW)
-- [x] **Live speaker indicators** (NEW)
+- [x] **LiveKit Integration** (NEW - Jan 20, 2026)
+  - [x] Backend token generation endpoint (/api/stoop/{id}/livekit-token)
+  - [x] LiveKit client SDK integration (livekit-client, @livekit/components-react)
+  - [x] Real-time audio streaming via LiveKit cloud
+  - [x] Speaker/Listener permissions in JWT tokens
+  - [x] Connection state management (connecting, connected, reconnecting)
+  - [x] Participant tracking and active speaker detection
+  - [x] Audio track attachment/detachment
+- [x] **Live speaker indicators** (GREEN)
+- [x] Debug panel showing connection status
 
 #### "The Word" (Trending Widget) (NEW)
 - [x] Desktop: Right sidebar with trending hashtags
