@@ -1565,21 +1565,21 @@ Your knowledge:
 
 Keep responses conversational and not too long (2-3 sentences usually, unless they need more). Be genuine, not corporate."""
 
-        # Initialize chat with correct API
+        # Build conversation history for context (excluding the latest message since we'll send it)
+        initial_messages = []
+        for msg in recent_messages[:-1]:
+            if msg["user_id"] == "bonita_ai":
+                initial_messages.append({"role": "assistant", "content": msg["content"]})
+            else:
+                initial_messages.append({"role": "user", "content": msg["content"]})
+        
+        # Initialize chat with correct API and conversation history
         chat = LlmChat(
             api_key=os.environ.get("EMERGENT_LLM_KEY"),
             session_id=f"bonita_sidebar_{sidebar_id}_{uuid.uuid4().hex[:8]}",
-            system_message=bonita_persona
+            system_message=bonita_persona,
+            initial_messages=initial_messages if initial_messages else None
         ).with_model("anthropic", "claude-sonnet-4-20250514")
-        
-        # Add conversation history (excluding the latest since we'll send it)
-        for msg in recent_messages[:-1]:
-            if msg["user_id"] == "bonita_ai":
-                # Add as assistant message
-                chat._messages.append({"role": "assistant", "content": msg["content"]})
-            else:
-                # Add as user message
-                chat._messages.append({"role": "user", "content": msg["content"]})
         
         # Generate response
         user_msg = UserMessage(text=user_message)
