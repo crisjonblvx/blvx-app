@@ -19,9 +19,9 @@ export const MediaToolbar = ({ onMediaSelect, selectedMedia, onRemoveMedia }) =>
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type
-    const imageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
-    const videoTypes = ['video/mp4', 'video/webm', 'video/quicktime'];
+    // Validate file type - expanded for mobile device formats
+    const imageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif'];
+    const videoTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v', 'video/3gpp', 'video/3gpp2'];
     const validTypes = [...imageTypes, ...videoTypes];
     
     if (!validTypes.includes(file.type)) {
