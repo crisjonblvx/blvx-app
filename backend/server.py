@@ -1419,6 +1419,19 @@ async def ask_bonita_in_gc(gc_id: str, question: str, user: UserBase = Depends(g
     await db.gc_messages.insert_one(message)
     message.pop("_id", None)
     
+    # Add Bonita's user info for the frontend
+    message["user"] = {
+        "name": "Bonita",
+        "username": "bonita",
+        "picture": BONITA_AVATAR_URL
+    }
+    
+    # Broadcast via WebSocket
+    await ws_manager.broadcast_to_gc(gc_id, {
+        "type": "new_message",
+        "message": message
+    })
+    
     return message
 
 # ========================
