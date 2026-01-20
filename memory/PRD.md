@@ -2,8 +2,8 @@
 
 ## Product Requirements Document
 
-**Version:** 1.1.0  
-**Last Updated:** January 19, 2026  
+**Version:** 1.2.0  
+**Last Updated:** January 20, 2026  
 **Status:** MVP In Development
 
 ---
