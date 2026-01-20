@@ -82,7 +82,7 @@ export default function StoopPage() {
 
   const fetchStoops = async () => {
     try {
-      const response = await axios.get(`${API}/stoop/live`, { withCredentials: true });
+      const response = await axios.get(`${API}/api/stoop/live`, { withCredentials: true });
       setStoops(response.data);
     } catch (error) {
       console.error('Error fetching stoops:', error);
