@@ -1597,6 +1597,28 @@ Keep responses conversational and not too long (2-3 sentences usually, unless th
                 "created_at": datetime.now(timezone.utc).isoformat()
             }
             await db.sidebar_messages.insert_one(bonita_message)
+            bonita_message.pop("_id", None)
+            
+            # Add Bonita's user info for the frontend
+            bonita_message["user"] = {
+                "name": "Bonita",
+                "username": "bonita",
+                "picture": BONITA_AVATAR_URL
+            }
+            
+            # Broadcast to sidebar via WebSocket if connected
+            await ws_manager.broadcast_to_sidebar(sidebar_id, {
+                "type": "new_message",
+                "message": bonita_message
+            })
+            
+            # Also notify the user directly if connected
+            await ws_manager.send_to_user(user_id, {
+                "type": "sidebar_message",
+                "sidebar_id": sidebar_id,
+                "message": bonita_message
+            })
+            
             logger.info(f"[Bonita] Responded in sidebar {sidebar_id}")
             
     except Exception as e:
