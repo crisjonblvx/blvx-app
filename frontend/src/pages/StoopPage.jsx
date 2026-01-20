@@ -72,13 +72,19 @@ export default function StoopPage() {
     fetchStoops();
   }, []);
 
-  // Connect LiveKit when joining a stoop
+  // Store connect function in ref to avoid dependency issues
+  const connectRef = useRef(connectLiveKit);
+  useEffect(() => {
+    connectRef.current = connectLiveKit;
+  }, [connectLiveKit]);
+
+  // Connect LiveKit when joining a stoop - only trigger on activeStoopId change
   useEffect(() => {
     if (activeStoopId && user?.user_id) {
       console.log('[Stoop] Connecting LiveKit for stoop:', activeStoopId);
-      connectLiveKit();
+      connectRef.current();
     }
-  }, [activeStoopId, user?.user_id, connectLiveKit]);
+  }, [activeStoopId, user?.user_id]);
 
   const fetchStoops = async () => {
     try {
