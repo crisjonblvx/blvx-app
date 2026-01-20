@@ -105,7 +105,7 @@ export function useLiveKit({
       // Get LiveKit token from backend
       console.log('[LiveKit] Fetching token for stoop:', stoopId);
       const response = await axios.get(
-        `${API}/stoop/${stoopId}/livekit-token`,
+        `${API}/api/stoop/${stoopId}/livekit-token`,
         { withCredentials: true }
       );
       
