@@ -1335,7 +1335,7 @@ async def get_gc_messages(gc_id: str, limit: int = 50, user: UserBase = Depends(
     
     for msg in messages:
         if msg["user_id"] == "bonita":
-            msg["user"] = {"name": "Bonita", "username": "bonita", "picture": ""}
+            msg["user"] = {"name": "Bonita", "username": "bonita", "picture": BONITA_AVATAR_URL}
         else:
             msg_user = await db.users.find_one({"user_id": msg["user_id"]}, {"_id": 0, "name": 1, "username": 1, "picture": 1})
             msg["user"] = msg_user
