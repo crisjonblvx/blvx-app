@@ -24,6 +24,23 @@ export function useLiveKit({
   
   const roomRef = useRef(null);
   const audioElementsRef = useRef({});
+  const isConnectingRef = useRef(false);
+  
+  // Store callbacks in refs to avoid dependency issues
+  const callbacksRef = useRef({
+    onParticipantJoined,
+    onParticipantLeft,
+    onSpeakingChange
+  });
+  
+  // Update callbacks ref when they change
+  useEffect(() => {
+    callbacksRef.current = {
+      onParticipantJoined,
+      onParticipantLeft,
+      onSpeakingChange
+    };
+  }, [onParticipantJoined, onParticipantLeft, onSpeakingChange]);
   
   // Clean up audio elements
   const cleanupAudioElements = useCallback(() => {
@@ -85,10 +102,16 @@ export function useLiveKit({
     console.log('[LiveKit] Detached audio track for:', participantId);
   }, []);
 
-  // Connect to LiveKit room
+  // Connect to LiveKit room - stable reference
   const connect = useCallback(async () => {
     if (!stoopId || !userId) {
       console.log('[LiveKit] Missing stoopId or userId');
+      return;
+    }
+    
+    // Prevent multiple simultaneous connection attempts
+    if (isConnectingRef.current) {
+      console.log('[LiveKit] Already connecting, skipping...');
       return;
     }
     
@@ -97,6 +120,19 @@ export function useLiveKit({
       console.log('[LiveKit] Already connected');
       return;
     }
+    
+    // If there's an existing room that's not connected, disconnect it first
+    if (roomRef.current) {
+      console.log('[LiveKit] Cleaning up previous room...');
+      try {
+        await roomRef.current.disconnect();
+      } catch (e) {
+        // Ignore disconnect errors
+      }
+      roomRef.current = null;
+    }
+    
+    isConnectingRef.current = true;
     
     try {
       setConnectionError(null);
@@ -133,6 +169,7 @@ export function useLiveKit({
         setIsConnected(true);
         setConnectionState('connected');
         setConnectionError(null);
+        isConnectingRef.current = false;
         updateParticipants(room);
       });
       
@@ -140,6 +177,7 @@ export function useLiveKit({
         console.log('[LiveKit] Disconnected:', reason);
         setIsConnected(false);
         setConnectionState('disconnected');
+        isConnectingRef.current = false;
         cleanupAudioElements();
       });
       
@@ -156,7 +194,7 @@ export function useLiveKit({
       room.on(RoomEvent.ParticipantConnected, (participant) => {
         console.log('[LiveKit] Participant connected:', participant.identity);
         updateParticipants(room);
-        onParticipantJoined?.({
+        callbacksRef.current.onParticipantJoined?.({
           user_id: participant.identity,
           name: participant.name || participant.identity
         });
@@ -170,7 +208,7 @@ export function useLiveKit({
           delete audioElementsRef.current[participant.identity];
         }
         updateParticipants(room);
-        onParticipantLeft?.({
+        callbacksRef.current.onParticipantLeft?.({
           user_id: participant.identity
         });
       });
@@ -193,7 +231,7 @@ export function useLiveKit({
       
       room.on(RoomEvent.ActiveSpeakersChanged, (speakers) => {
         const speakerIds = speakers.map(s => s.identity);
-        onSpeakingChange?.(speakerIds);
+        callbacksRef.current.onSpeakingChange?.(speakerIds);
         updateParticipants(room);
       });
       
@@ -223,8 +261,9 @@ export function useLiveKit({
       setConnectionError(error.message || 'Failed to connect');
       setConnectionState('disconnected');
       setIsConnected(false);
+      isConnectingRef.current = false;
     }
-  }, [stoopId, userId, updateParticipants, attachAudioTrack, detachAudioTrack, cleanupAudioElements, onParticipantJoined, onParticipantLeft, onSpeakingChange]);
+  }, [stoopId, userId, updateParticipants, attachAudioTrack, detachAudioTrack, cleanupAudioElements]);
 
   // Toggle microphone
   const toggleMute = useCallback(async () => {
@@ -261,6 +300,7 @@ export function useLiveKit({
   // Disconnect from room
   const disconnect = useCallback(async () => {
     console.log('[LiveKit] Disconnecting...');
+    isConnectingRef.current = false;
     const room = roomRef.current;
     if (room) {
       await room.disconnect();
