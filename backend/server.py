@@ -1784,6 +1784,30 @@ SPARK_TOPIC_CATEGORIES = {
         "Latina entrepreneurs business",
         "minority small business news",
     ],
+    "sports": [
+        "college football championship",
+        "NFL playoffs Black quarterbacks",
+        "NBA news Black athletes",
+        "Black women sports news",
+        "HBCU athletics news",
+        "Black coaches NFL NBA",
+        "soccer Black Latino players",
+        "sports news racial equity",
+    ],
+    "entertainment": [
+        "Black films movies awards",
+        "TV shows Black cast news",
+        "streaming Black content",
+        "comedy Black comedians tour",
+        "award shows diversity",
+        "Hollywood representation news",
+    ],
+    "breaking": [
+        "breaking news today",
+        "trending news today",
+        "viral news social media",
+        "major news headlines today",
+    ],
 }
 
 # ========================
