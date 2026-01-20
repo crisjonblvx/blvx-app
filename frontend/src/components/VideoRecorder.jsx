@@ -13,18 +13,34 @@ export const VideoRecorder = ({ open, onClose, onVideoRecorded }) => {
   const [recordedUrl, setRecordedUrl] = useState(null);
   const [timeElapsed, setTimeElapsed] = useState(0);
   const [hasPermission, setHasPermission] = useState(null);
-  const [facingMode, setFacingMode] = useState('user'); // 'user' = front, 'environment' = back
+  const [facingMode, setFacingMode] = useState('user');
   
   const videoRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const streamRef = useRef(null);
   const chunksRef = useRef([]);
   const timerRef = useRef(null);
+  const isRecordingRef = useRef(false); // Use ref to avoid stale closure
+
+  // Get supported mimeType
+  const getSupportedMimeType = () => {
+    const types = [
+      'video/webm;codecs=vp9,opus',
+      'video/webm;codecs=vp8,opus',
+      'video/webm',
+      'video/mp4',
+    ];
+    for (const type of types) {
+      if (MediaRecorder.isTypeSupported(type)) {
+        return type;
+      }
+    }
+    return 'video/webm'; // fallback
+  };
 
   // Start camera preview
   const startCamera = useCallback(async () => {
     try {
-      // Stop any existing stream
       if (streamRef.current) {
         streamRef.current.getTracks().forEach(track => track.stop());
       }
@@ -61,61 +77,105 @@ export const VideoRecorder = ({ open, onClose, onVideoRecorded }) => {
     }
   }, []);
 
+  // Stop recording - defined before startRecording to avoid hoisting issues
+  const stopRecording = useCallback(() => {
+    console.log('[VideoRecorder] stopRecording called, isRecording:', isRecordingRef.current);
+    
+    if (!isRecordingRef.current) {
+      console.log('[VideoRecorder] Not recording, ignoring stop');
+      return;
+    }
+    
+    // Clear timer first
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+    
+    // Stop the media recorder
+    if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
+      console.log('[VideoRecorder] Stopping MediaRecorder, state:', mediaRecorderRef.current.state);
+      try {
+        mediaRecorderRef.current.stop();
+      } catch (e) {
+        console.error('[VideoRecorder] Error stopping recorder:', e);
+      }
+    }
+    
+    isRecordingRef.current = false;
+    setIsRecording(false);
+  }, []);
+
   // Start recording
   const startRecording = useCallback(() => {
-    if (!streamRef.current) return;
+    if (!streamRef.current) {
+      toast.error('Camera not ready');
+      return;
+    }
 
+    console.log('[VideoRecorder] Starting recording...');
+    
     chunksRef.current = [];
     setRecordedBlob(null);
     setRecordedUrl(null);
     setTimeElapsed(0);
 
-    const mediaRecorder = new MediaRecorder(streamRef.current, {
-      mimeType: 'video/webm;codecs=vp9,opus'
-    });
+    const mimeType = getSupportedMimeType();
+    console.log('[VideoRecorder] Using mimeType:', mimeType);
 
-    mediaRecorder.ondataavailable = (e) => {
-      if (e.data.size > 0) {
-        chunksRef.current.push(e.data);
-      }
-    };
+    try {
+      const mediaRecorder = new MediaRecorder(streamRef.current, { mimeType });
 
-    mediaRecorder.onstop = () => {
-      const blob = new Blob(chunksRef.current, { type: 'video/webm' });
-      setRecordedBlob(blob);
-      setRecordedUrl(URL.createObjectURL(blob));
-    };
-
-    mediaRecorderRef.current = mediaRecorder;
-    mediaRecorder.start(100); // Collect data every 100ms
-    setIsRecording(true);
-
-    // Start timer
-    timerRef.current = setInterval(() => {
-      setTimeElapsed(prev => {
-        const newTime = prev + 1;
-        // Auto-stop at max time
-        if (newTime >= MAX_RECORDING_SECONDS) {
-          stopRecording();
-          toast.info(`Recording stopped - ${MAX_RECORDING_SECONDS} second limit reached`);
+      mediaRecorder.ondataavailable = (e) => {
+        console.log('[VideoRecorder] Data available:', e.data.size);
+        if (e.data.size > 0) {
+          chunksRef.current.push(e.data);
         }
-        return newTime;
-      });
-    }, 1000);
-  }, []);
+      };
 
-  // Stop recording
-  const stopRecording = useCallback(() => {
-    if (mediaRecorderRef.current && isRecording) {
-      mediaRecorderRef.current.stop();
-      setIsRecording(false);
+      mediaRecorder.onstop = () => {
+        console.log('[VideoRecorder] MediaRecorder stopped, chunks:', chunksRef.current.length);
+        if (chunksRef.current.length > 0) {
+          const blob = new Blob(chunksRef.current, { type: mimeType.split(';')[0] });
+          console.log('[VideoRecorder] Created blob:', blob.size);
+          setRecordedBlob(blob);
+          setRecordedUrl(URL.createObjectURL(blob));
+        } else {
+          toast.error('No video data recorded');
+        }
+      };
+
+      mediaRecorder.onerror = (e) => {
+        console.error('[VideoRecorder] MediaRecorder error:', e);
+        toast.error('Recording error occurred');
+        stopRecording();
+      };
+
+      mediaRecorderRef.current = mediaRecorder;
+      mediaRecorder.start(1000); // Collect data every 1 second for more reliable chunks
       
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
-      }
+      isRecordingRef.current = true;
+      setIsRecording(true);
+      console.log('[VideoRecorder] Recording started');
+
+      // Start timer
+      timerRef.current = setInterval(() => {
+        setTimeElapsed(prev => {
+          const newTime = prev + 1;
+          if (newTime >= MAX_RECORDING_SECONDS) {
+            console.log('[VideoRecorder] Max time reached, stopping...');
+            stopRecording();
+            toast.info(`Recording stopped - ${MAX_RECORDING_SECONDS} second limit reached`);
+          }
+          return newTime;
+        });
+      }, 1000);
+      
+    } catch (err) {
+      console.error('[VideoRecorder] Failed to start recording:', err);
+      toast.error('Failed to start recording');
     }
-  }, [isRecording]);
+  }, [stopRecording]);
 
   // Reset recording
   const resetRecording = useCallback(() => {
@@ -125,6 +185,7 @@ export const VideoRecorder = ({ open, onClose, onVideoRecorded }) => {
     setRecordedBlob(null);
     setRecordedUrl(null);
     setTimeElapsed(0);
+    chunksRef.current = [];
   }, [recordedUrl]);
 
   // Flip camera
@@ -135,7 +196,6 @@ export const VideoRecorder = ({ open, onClose, onVideoRecorded }) => {
   // Use recorded video
   const useVideo = useCallback(() => {
     if (recordedBlob) {
-      // Create a File object from the blob
       const file = new File([recordedBlob], `pov_${Date.now()}.webm`, { type: 'video/webm' });
       onVideoRecorded(file, recordedUrl);
       onClose();
@@ -149,8 +209,15 @@ export const VideoRecorder = ({ open, onClose, onVideoRecorded }) => {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-  // Calculate progress percentage
   const progressPercent = (timeElapsed / MAX_RECORDING_SECONDS) * 100;
+
+  // Handle dialog close
+  const handleClose = useCallback(() => {
+    if (isRecordingRef.current) {
+      stopRecording();
+    }
+    onClose();
+  }, [stopRecording, onClose]);
 
   // Start camera when dialog opens
   useEffect(() => {
@@ -159,25 +226,27 @@ export const VideoRecorder = ({ open, onClose, onVideoRecorded }) => {
     } else {
       stopCamera();
       resetRecording();
+      isRecordingRef.current = false;
+      setIsRecording(false);
     }
     
     return () => {
-      stopCamera();
       if (timerRef.current) {
         clearInterval(timerRef.current);
       }
+      stopCamera();
     };
   }, [open, startCamera, stopCamera, resetRecording]);
 
   // Restart camera when facing mode changes
   useEffect(() => {
-    if (open && hasPermission) {
+    if (open && hasPermission && !isRecording) {
       startCamera();
     }
-  }, [facingMode, open, hasPermission, startCamera]);
+  }, [facingMode, open, hasPermission, isRecording, startCamera]);
 
   return (
-    <Dialog open={open} onOpenChange={onClose}>
+    <Dialog open={open} onOpenChange={handleClose}>
       <DialogContent className="bg-black border border-white/20 sm:max-w-[500px] p-0 overflow-hidden">
         <DialogHeader className="p-4 border-b border-white/10">
           <DialogTitle className="font-display text-sm tracking-widest uppercase flex items-center gap-2">
@@ -190,13 +259,13 @@ export const VideoRecorder = ({ open, onClose, onVideoRecorded }) => {
         </DialogHeader>
 
         <div className="relative aspect-[9/16] max-h-[60vh] bg-black">
-          {/* Video Preview / Playback */}
           {recordedUrl ? (
             <video
               src={recordedUrl}
               controls
               className="w-full h-full object-contain"
               autoPlay
+              playsInline
             />
           ) : (
             <video
@@ -206,7 +275,7 @@ export const VideoRecorder = ({ open, onClose, onVideoRecorded }) => {
               playsInline
               className={cn(
                 "w-full h-full object-cover",
-                facingMode === 'user' && "scale-x-[-1]" // Mirror front camera
+                facingMode === 'user' && "scale-x-[-1]"
               )}
             />
           )}
