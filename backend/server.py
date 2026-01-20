@@ -2624,12 +2624,6 @@ async def get_trending(user: UserBase = Depends(get_current_user)):
                 {"hashtag": "#BonitaSays", "post_count": 318, "change": "new"},
             ]
         }
-                {"hashtag": "#MusicCulture", "post_count": 892, "change": "+8%"},
-                {"hashtag": "#TheBlock", "post_count": 654, "change": "+5%"},
-                {"hashtag": "#StoopTalk", "post_count": 421, "change": "+3%"},
-                {"hashtag": "#BonitaSays", "post_count": 318, "change": "new"},
-            ]
-        }
 
 @api_router.get("/link-preview")
 async def get_link_preview(url: str, user: UserBase = Depends(get_current_user)):
