@@ -430,6 +430,18 @@ Build **BLVX**, a "High-Context Social Network" designed to be a "Group Chat" ra
 
 ## Changelog
 
+### v1.5.0 (January 20, 2026)
+- **Bonita Conversational AI in Sidebar**: Complete 1-on-1 chat with AI auntie
+  - Claude claude-sonnet-4-20250514 integration via Emergent LLM Key
+  - Real-time polling for responses (1.5 second intervals)
+  - Amber/gold styled messages with typing indicator
+  - Multi-turn conversation with context awareness
+  - Detailed BLVX feature knowledge in system prompt
+- **Bonita's New Avatar**: Updated profile picture (red headwrap photo)
+- **WebSocket Sidebar Endpoint**: `/ws/sidebar/{sidebar_id}` for real-time messaging
+- **Enhanced @Bonita in GC**: Added avatar to GC Bonita responses
+- **"Chat with Bonita" CTA**: Prominent card on Sidebar page to start Bonita chat
+
 ### v1.4.0 (January 19, 2026)
 - **WebSocket Real-Time Messaging**: Added WebSocket endpoints for GC and Stoop
   - `/ws/gc/{gc_id}` - Real-time GC messaging with typing indicators
