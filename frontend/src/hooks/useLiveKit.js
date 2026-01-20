@@ -263,7 +263,12 @@ export function useLiveKit({
       });
       
       // Connect to the room
+      console.log('[LiveKit] Attempting to connect to room:', stoopId);
+      console.log('[LiveKit] Using URL:', url);
       await room.connect(url, token);
+      console.log('[LiveKit] Connection complete, room state:', room.state);
+      console.log('[LiveKit] Room SID:', room.sid);
+      console.log('[LiveKit] Room metadata:', room.metadata);
       
     } catch (error) {
       console.error('[LiveKit] Connection error:', error);
