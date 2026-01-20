@@ -18,6 +18,7 @@ import re
 import asyncio
 import json
 import random
+from livekit import api
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
