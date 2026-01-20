@@ -1,22 +1,29 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Radio, Users, Plus, Mic, MicOff, PhoneOff, AlertCircle, Wifi, WifiOff, Volume2 } from 'lucide-react';
-import { useAuth } from '@/context/AuthContext';
-import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Skeleton } from '@/components/ui/skeleton';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
+import { useAuth } from '../context/AuthContext';
+import { useLiveKit } from '../hooks/useLiveKit';
+import { Button } from '../components/ui/button';
+import { Input } from '../components/ui/input';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
+import { Avatar, AvatarFallback, AvatarImage } from '../components/ui/avatar';
+import { Skeleton } from '../components/ui/skeleton';
 import { toast } from 'sonner';
+import { cn } from '../lib/utils';
 import axios from 'axios';
-import { cn } from '@/lib/utils';
-import { useWebRTC } from '@/hooks/useWebRTC';
+import { 
+  Radio, 
+  Plus, 
+  Mic, 
+  MicOff, 
+  PhoneOff, 
+  Users, 
+  Volume2,
+  AlertCircle,
+  Wifi,
+  WifiOff,
+  Loader2
+} from 'lucide-react';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const API = process.env.REACT_APP_BACKEND_URL;
 
 export default function StoopPage() {
   const { user } = useAuth();
@@ -26,43 +33,38 @@ export default function StoopPage() {
   const [newStoopTitle, setNewStoopTitle] = useState('');
   const [activeStoopId, setActiveStoopId] = useState(null);
   const [activeStoopData, setActiveStoopData] = useState(null);
-  const [isSpeaker, setIsSpeaker] = useState(false);
+  const [activeSpeakers, setActiveSpeakers] = useState([]);
   const [micError, setMicError] = useState(null);
-  const [peerMicStatus, setPeerMicStatus] = useState({}); // Track who is speaking
-
-  // WebRTC hook for real-time audio
+  
+  // LiveKit hook
   const {
-    isConnected: wsConnected,
-    peers,
+    isConnected,
+    connectionState,
+    participants,
     isMuted,
+    isSpeaker,
     connectionError,
-    connect: connectWebRTC,
-    disconnect: disconnectWebRTC,
+    connect: connectLiveKit,
+    disconnect: disconnectLiveKit,
     toggleMute
-  } = useWebRTC({
+  } = useLiveKit({
     stoopId: activeStoopId,
     userId: user?.user_id,
-    onPeerJoined: (data) => {
-      console.log('[Stoop] Peer joined:', data);
-      toast.success(`${data.name || data.username} joined the Stoop`);
-      // Refresh stoop data
+    onParticipantJoined: (data) => {
+      console.log('[Stoop] Participant joined:', data);
+      toast.success(`${data.name} joined the Stoop`);
       if (activeStoopId) {
         fetchStoopData(activeStoopId);
       }
     },
-    onPeerLeft: (data) => {
-      console.log('[Stoop] Peer left:', data.user_id);
-      // Refresh stoop data
+    onParticipantLeft: (data) => {
+      console.log('[Stoop] Participant left:', data.user_id);
       if (activeStoopId) {
         fetchStoopData(activeStoopId);
       }
     },
-    onMicStatusChange: (data) => {
-      console.log('[Stoop] Mic status change:', data);
-      setPeerMicStatus(prev => ({
-        ...prev,
-        [data.user_id]: !data.is_muted
-      }));
+    onSpeakingChange: (speakerIds) => {
+      setActiveSpeakers(speakerIds);
     }
   });
 
@@ -70,13 +72,13 @@ export default function StoopPage() {
     fetchStoops();
   }, []);
 
-  // Connect WebRTC when joining a stoop
+  // Connect LiveKit when joining a stoop
   useEffect(() => {
     if (activeStoopId && user?.user_id) {
-      console.log('[Stoop] Connecting WebRTC for stoop:', activeStoopId);
-      connectWebRTC();
+      console.log('[Stoop] Connecting LiveKit for stoop:', activeStoopId);
+      connectLiveKit();
     }
-  }, [activeStoopId, user?.user_id, connectWebRTC]);
+  }, [activeStoopId, user?.user_id, connectLiveKit]);
 
   const fetchStoops = async () => {
     try {
@@ -93,7 +95,6 @@ export default function StoopPage() {
     try {
       const response = await axios.get(`${API}/stoop/${stoopId}`, { withCredentials: true });
       setActiveStoopData(response.data);
-      setIsSpeaker(response.data.speakers.includes(user.user_id));
     } catch (error) {
       console.error('Error fetching stoop data:', error);
     }
@@ -125,7 +126,6 @@ export default function StoopPage() {
       const response = await axios.get(`${API}/stoop/${stoopId}`, { withCredentials: true });
       setActiveStoopId(stoopId);
       setActiveStoopData(response.data);
-      setIsSpeaker(response.data.speakers.includes(user.user_id));
       setMicError(null);
     } catch (error) {
       toast.error('Failed to join Stoop');
@@ -135,15 +135,14 @@ export default function StoopPage() {
   const leaveStoop = async () => {
     if (!activeStoopId) return;
     
-    // Disconnect WebRTC
-    disconnectWebRTC();
+    // Disconnect LiveKit
+    await disconnectLiveKit();
     
     try {
       await axios.post(`${API}/stoop/${activeStoopId}/leave`, {}, { withCredentials: true });
       setActiveStoopId(null);
       setActiveStoopData(null);
-      setIsSpeaker(false);
-      setPeerMicStatus({});
+      setActiveSpeakers([]);
       fetchStoops();
     } catch (error) {
       toast.error('Failed to leave Stoop');
@@ -153,13 +152,14 @@ export default function StoopPage() {
   const endStoop = async () => {
     if (!activeStoopId || activeStoopData?.host_id !== user.user_id) return;
     
-    // Disconnect WebRTC
-    disconnectWebRTC();
+    // Disconnect LiveKit
+    await disconnectLiveKit();
     
     try {
       await axios.post(`${API}/stoop/${activeStoopId}/end`, {}, { withCredentials: true });
       setActiveStoopId(null);
       setActiveStoopData(null);
+      setActiveSpeakers([]);
       fetchStoops();
       toast.success('Stoop ended');
     } catch (error) {
@@ -176,7 +176,6 @@ export default function StoopPage() {
     setMicError(null);
     
     try {
-      // Always try WebRTC first - it handles everything
       await toggleMute();
       
       if (isMuted) {
@@ -194,6 +193,8 @@ export default function StoopPage() {
         errorMsg = 'No microphone found. Please connect a microphone.';
       } else if (error.name === 'NotReadableError') {
         errorMsg = 'Microphone is already in use by another application.';
+      } else if (error.message) {
+        errorMsg = error.message;
       }
       
       setMicError(errorMsg);
@@ -204,16 +205,33 @@ export default function StoopPage() {
     }
   }, [isSpeaker, isMuted, toggleMute]);
 
-  // Check if a speaker is currently live
+  // Check if a speaker is currently live (speaking)
   const isSpeakerLive = (speakerUserId) => {
     if (speakerUserId === user.user_id) {
       return !isMuted;
     }
-    return peerMicStatus[speakerUserId] || false;
+    // Check if they're in the active speakers list from LiveKit
+    return activeSpeakers.includes(speakerUserId);
   };
   
   // Determine if local user has mic active
   const isLocalMicActive = !isMuted;
+
+  // Connection status indicator
+  const getConnectionStatus = () => {
+    switch (connectionState) {
+      case 'connected':
+        return { icon: <Wifi className="h-3 w-3 text-green-500" />, text: 'Connected' };
+      case 'connecting':
+        return { icon: <Loader2 className="h-3 w-3 text-yellow-500 animate-spin" />, text: 'Connecting...' };
+      case 'reconnecting':
+        return { icon: <Loader2 className="h-3 w-3 text-yellow-500 animate-spin" />, text: 'Reconnecting...' };
+      default:
+        return { icon: <WifiOff className="h-3 w-3 text-red-500" />, text: 'Disconnected' };
+    }
+  };
+
+  const connectionStatus = getConnectionStatus();
 
   return (
     <div className="mb-safe" data-testid="stoop-page">
@@ -234,7 +252,7 @@ export default function StoopPage() {
             Start
           </Button>
         </div>
-        <p className="text-[10px] text-white/40 mt-2">Live audio rooms anchored to the culture</p>
+        <p className="text-[10px] text-white/40 mt-2">Live audio rooms powered by LiveKit</p>
       </div>
 
       {/* Active Stoop */}
@@ -246,11 +264,7 @@ export default function StoopPage() {
               <h2 className="font-display text-lg">{activeStoopData.title}</h2>
             </div>
             <div className="flex items-center gap-2">
-              {wsConnected ? (
-                <Wifi className="h-3 w-3 text-green-500" />
-              ) : (
-                <WifiOff className="h-3 w-3 text-red-500" />
-              )}
+              {connectionStatus.icon}
               <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
               <span className="text-xs text-white/50">LIVE</span>
             </div>
@@ -258,18 +272,12 @@ export default function StoopPage() {
           
           {/* Connection Status */}
           {connectionError && (
-            <div className="mb-3 p-3 bg-yellow-500/10 border border-yellow-500/30 text-xs text-yellow-400">
+            <div className="mb-3 p-3 bg-red-500/10 border border-red-500/30 text-xs text-red-400">
               <div className="flex items-center gap-2 mb-2">
                 <AlertCircle className="h-4 w-4 flex-shrink-0" />
-                <span className="font-medium">Real-time audio not available</span>
+                <span className="font-medium">Connection Error</span>
               </div>
-              <p className="text-yellow-400/70 text-[10px]">
-                WebSocket connection failed. This may be due to network configuration. 
-                In deployed environment, make sure WebSocket routing is enabled.
-              </p>
-              <p className="text-yellow-400/50 text-[10px] mt-1">
-                Error: {connectionError}
-              </p>
+              <p className="text-red-400/70 text-[10px]">{connectionError}</p>
             </div>
           )}
           
@@ -325,6 +333,30 @@ export default function StoopPage() {
             </div>
           )}
           
+          {/* Remote Participants (from LiveKit) */}
+          {participants.length > 0 && (
+            <div className="mb-4">
+              <p className="text-[10px] text-white/40 uppercase tracking-wider mb-2">
+                Connected ({participants.length})
+              </p>
+              <div className="flex flex-wrap gap-2">
+                {participants.map((p) => (
+                  <div 
+                    key={p.identity}
+                    className={cn(
+                      "px-2 py-1 text-[10px] rounded-full border",
+                      p.isSpeaking 
+                        ? "bg-green-500/20 border-green-500/50 text-green-400" 
+                        : "bg-white/5 border-white/20 text-white/60"
+                    )}
+                  >
+                    {p.name} {p.audioEnabled ? '🎤' : ''}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          
           {/* Mic Error Message */}
           {micError && (
             <div className="mb-3 p-2 bg-red-500/10 border border-red-500/30 flex items-center gap-2 text-xs text-red-400">
@@ -339,7 +371,7 @@ export default function StoopPage() {
               variant="ghost"
               size="sm"
               onClick={handleToggleMic}
-              disabled={!isSpeaker}
+              disabled={!isSpeaker || !isConnected}
               className={cn(
                 "flex-1 text-xs transition-all",
                 isLocalMicActive
@@ -385,24 +417,14 @@ export default function StoopPage() {
             )}
           </div>
           
-          {/* WebRTC Status Debug */}
+          {/* LiveKit Status Debug */}
           <div className="mt-3 p-2 bg-black/50 rounded text-[10px] text-white/50 space-y-1">
             <div>
-              WebSocket: {wsConnected ? '🟢 Connected' : '🔴 Disconnected'} • 
-              Peers: {Object.keys(peers).length} • 
+              LiveKit: {connectionState} • 
+              Participants: {participants.length} • 
               Role: {isSpeaker ? 'Speaker' : 'Listener'} •
               Mic: {isLocalMicActive ? '🎤 ON' : '🔇 OFF'}
             </div>
-            {Object.keys(peers).length > 0 && (
-              <div className="pl-2 border-l border-white/20">
-                {Object.entries(peers).map(([peerId, peer]) => (
-                  <div key={peerId}>
-                    {peer.name || peerId.slice(0, 8)}: {peer.connectionState || 'new'} 
-                    {peer.hasAudio && ' 🔊'}
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
         </div>
       )}
