@@ -367,6 +367,7 @@ export function useLiveKit({
     connectionError,
     connect,
     disconnect,
-    toggleMute
+    toggleMute,
+    debugRoomState
   };
 }
