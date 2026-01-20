@@ -1610,7 +1610,11 @@ async def get_livekit_token(stoop_id: str, user: UserBase = Depends(get_current_
         raise HTTPException(status_code=500, detail="LiveKit not configured")
     
     # Determine if user is a speaker (can publish) or just listener
-    is_speaker = user.user_id in stoop.get("speakers", []) or user.user_id == stoop["host_id"]
+    speakers_list = stoop.get("speakers", [])
+    host_id = stoop.get("host_id")
+    is_speaker = user.user_id in speakers_list or user.user_id == host_id
+    
+    logger.info(f"[LiveKit] Token check - user: {user.user_id}, host: {host_id}, speakers: {speakers_list}, is_speaker: {is_speaker}")
     
     # Create LiveKit access token with room creation capability
     token = api.AccessToken(livekit_api_key, livekit_api_secret) \
