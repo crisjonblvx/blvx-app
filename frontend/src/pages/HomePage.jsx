@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { usePosts } from '@/hooks/usePosts';
 import { PostCard } from '@/components/PostCard';
@@ -7,13 +7,36 @@ import { RefreshCw, Lock, Globe } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import axios from 'axios';
+
+const API = process.env.REACT_APP_BACKEND_URL;
 
 export default function HomePage() {
   const { user } = useAuth();
   const { posts, loading, fetchFeed, fetchExploreFeed } = usePosts();
-  const [feedType, setFeedType] = useState('block'); // block (following) or explore
+  const [feedType, setFeedType] = useState('block');
   const [refreshing, setRefreshing] = useState(false);
   const [lastFetch, setLastFetch] = useState(null);
+  const hasGeneratedFreshContent = useRef(false);
+
+  // Generate fresh Bonita content on first load
+  const generateFreshContent = useCallback(async () => {
+    if (hasGeneratedFreshContent.current) return;
+    hasGeneratedFreshContent.current = true;
+    
+    try {
+      console.log('[Feed] Generating fresh Bonita content...');
+      // Generate 2-3 fresh sparks in parallel
+      const promises = [
+        axios.post(`${API}/api/spark/drop`, {}, { withCredentials: true }).catch(() => null),
+        axios.post(`${API}/api/spark/drop`, {}, { withCredentials: true }).catch(() => null),
+      ];
+      await Promise.all(promises);
+      console.log('[Feed] Fresh content generated!');
+    } catch (error) {
+      console.log('[Feed] Could not generate fresh content:', error);
+    }
+  }, []);
 
   // Load feed function
   const loadFeed = useCallback(async (showToast = false) => {
@@ -34,16 +57,26 @@ export default function HomePage() {
     }
   }, [feedType, fetchFeed, fetchExploreFeed]);
 
-  // Initial load and when feed type changes
+  // Initial load - generate fresh content then load feed
   useEffect(() => {
-    loadFeed();
-  }, [feedType]); // Only depend on feedType, not loadFeed to avoid loops
+    const initFeed = async () => {
+      await generateFreshContent();
+      await loadFeed();
+    };
+    initFeed();
+  }, []); // Run once on mount
 
-  // Auto-refresh when page becomes visible (e.g., switching tabs)
+  // Reload feed when feed type changes
+  useEffect(() => {
+    if (lastFetch) { // Only if we've already done initial load
+      loadFeed();
+    }
+  }, [feedType]);
+
+  // Auto-refresh when page becomes visible
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        // Refresh if last fetch was more than 30 seconds ago
         if (!lastFetch || (new Date() - lastFetch) > 30000) {
           console.log('[Feed] Page visible, refreshing...');
           loadFeed();
@@ -57,20 +90,22 @@ export default function HomePage() {
     };
   }, [lastFetch, loadFeed]);
 
-  // Auto-refresh every 2 minutes while page is active
+  // Auto-refresh every 2 minutes
   useEffect(() => {
     const interval = setInterval(() => {
       if (document.visibilityState === 'visible') {
-        console.log('[Feed] Auto-refresh...');
         loadFeed();
       }
-    }, 120000); // 2 minutes
+    }, 120000);
 
     return () => clearInterval(interval);
   }, [loadFeed]);
 
   const handleRefresh = async () => {
     setRefreshing(true);
+    // Also generate fresh content on manual refresh
+    await generateFreshContent();
+    hasGeneratedFreshContent.current = false; // Allow regeneration next time
     await loadFeed(true);
     setRefreshing(false);
   };
