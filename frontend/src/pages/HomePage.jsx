@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { usePosts } from '@/hooks/usePosts';
 import { PostCard } from '@/components/PostCard';
@@ -13,29 +13,66 @@ export default function HomePage() {
   const { posts, loading, fetchFeed, fetchExploreFeed } = usePosts();
   const [feedType, setFeedType] = useState('block'); // block (following) or explore
   const [refreshing, setRefreshing] = useState(false);
+  const [lastFetch, setLastFetch] = useState(null);
 
-  useEffect(() => {
-    if (feedType === 'block') {
-      fetchFeed();
-    } else {
-      fetchExploreFeed();
-    }
-  }, [feedType, fetchFeed, fetchExploreFeed]);
-
-  const handleRefresh = async () => {
-    setRefreshing(true);
+  // Load feed function
+  const loadFeed = useCallback(async (showToast = false) => {
     try {
       if (feedType === 'block') {
         await fetchFeed();
       } else {
         await fetchExploreFeed();
       }
-      toast.success('Feed refreshed!');
+      setLastFetch(new Date());
+      if (showToast) {
+        toast.success('Feed refreshed!');
+      }
     } catch (error) {
-      toast.error('Failed to refresh feed');
-    } finally {
-      setRefreshing(false);
+      if (showToast) {
+        toast.error('Failed to refresh feed');
+      }
     }
+  }, [feedType, fetchFeed, fetchExploreFeed]);
+
+  // Initial load and when feed type changes
+  useEffect(() => {
+    loadFeed();
+  }, [feedType]); // Only depend on feedType, not loadFeed to avoid loops
+
+  // Auto-refresh when page becomes visible (e.g., switching tabs)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        // Refresh if last fetch was more than 30 seconds ago
+        if (!lastFetch || (new Date() - lastFetch) > 30000) {
+          console.log('[Feed] Page visible, refreshing...');
+          loadFeed();
+        }
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [lastFetch, loadFeed]);
+
+  // Auto-refresh every 2 minutes while page is active
+  useEffect(() => {
+    const interval = setInterval(() => {
+      if (document.visibilityState === 'visible') {
+        console.log('[Feed] Auto-refresh...');
+        loadFeed();
+      }
+    }, 120000); // 2 minutes
+
+    return () => clearInterval(interval);
+  }, [loadFeed]);
+
+  const handleRefresh = async () => {
+    setRefreshing(true);
+    await loadFeed(true);
+    setRefreshing(false);
   };
 
   return (
