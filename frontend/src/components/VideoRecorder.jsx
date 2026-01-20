@@ -320,7 +320,15 @@ export const VideoRecorder = ({ open, onClose, onVideoRecorded }) => {
               controls
               autoPlay
               playsInline
+              webkit-playsinline="true"
               className="w-full h-full object-contain"
+              onError={(e) => {
+                console.error('[VideoRecorder] Video playback error:', e);
+                toast.error('Video preview failed to load');
+              }}
+              onLoadedData={() => {
+                console.log('[VideoRecorder] Video preview loaded');
+              }}
             />
           ) : (
             <video
