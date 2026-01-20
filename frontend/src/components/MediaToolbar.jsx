@@ -22,21 +22,17 @@ export const MediaToolbar = ({ onMediaSelect, selectedMedia, onRemoveMedia }) =>
 
     // Validate file type - images only (videos go through recorder)
     const imageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif'];
-    const videoTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v', 'video/3gpp', 'video/3gpp2'];
-    const validTypes = [...imageTypes, ...videoTypes];
     
-    if (!validTypes.includes(file.type)) {
-      toast.error('Unsupported file type. Use JPG, PNG, GIF, WebP, MP4, WebM, or MOV.');
+    if (!imageTypes.includes(file.type)) {
+      toast.error('Unsupported file type. Use JPG, PNG, GIF, or WebP for images. Use POV button to record video.');
       return;
     }
 
-    // Validate file size (50MB for videos, 10MB for images)
-    const isVideoFile = videoTypes.includes(file.type);
-    const maxSize = isVideoFile ? 50 * 1024 * 1024 : 10 * 1024 * 1024;
-    const maxSizeMB = maxSize / (1024 * 1024);
+    // Validate file size (10MB for images)
+    const maxSize = 10 * 1024 * 1024;
     
     if (file.size > maxSize) {
-      toast.error(`File too large. Maximum size is ${maxSizeMB}MB.`);
+      toast.error('Image too large. Maximum size is 10MB.');
       return;
     }
 
@@ -44,7 +40,6 @@ export const MediaToolbar = ({ onMediaSelect, selectedMedia, onRemoveMedia }) =>
     setUploadProgress(0);
     
     try {
-      // Create FormData for upload
       const formData = new FormData();
       formData.append('file', file);
 
@@ -61,23 +56,22 @@ export const MediaToolbar = ({ onMediaSelect, selectedMedia, onRemoveMedia }) =>
 
       onMediaSelect({
         url: response.data.url,
-        type: isVideoFile ? 'video' : 'image',
+        type: 'image',
         preview: URL.createObjectURL(file),
         width: response.data.width,
         height: response.data.height,
-        duration: response.data.duration,
         storage: response.data.storage,
       });
       
       const storageText = response.data.storage === 'cloudinary' ? ' to cloud' : '';
-      toast.success(`${isVideoFile ? 'Video' : 'Image'} uploaded${storageText}!`);
+      toast.success(`Image uploaded${storageText}!`);
     } catch (error) {
       console.error('Upload error:', error);
       toast.error(error.response?.data?.detail || 'Upload failed');
     } finally {
       setUploading(false);
       setUploadProgress(0);
-      // Reset inputs
+      // Reset input
       if (fileInputRef.current) fileInputRef.current.value = '';
       if (videoInputRef.current) videoInputRef.current.value = '';
     }
