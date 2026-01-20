@@ -66,10 +66,10 @@ export default function SidebarPage() {
       
       const newMessages = response.data;
       
-      // Check if we got a new message from Bonita
+      // Check if we got a new message from Bonita (handle both bonita and bonita_ai)
       if (newMessages.length > messages.length) {
         const lastMessage = newMessages[newMessages.length - 1];
-        if (lastMessage.user_id === 'bonita_ai') {
+        if (lastMessage.user_id === 'bonita_ai' || lastMessage.user_id === 'bonita') {
           setWaitingForBonita(false);
           if (pollingRef.current) {
             clearInterval(pollingRef.current);
