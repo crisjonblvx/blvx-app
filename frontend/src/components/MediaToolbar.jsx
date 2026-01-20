@@ -163,33 +163,7 @@ export const MediaToolbar = ({ onMediaSelect, selectedMedia, onRemoveMedia }) =>
           <span className="hidden sm:inline">Receipts</span>
         </Button>
 
-        {/* POV (Video Upload from file) */}
-        <input
-          ref={videoInputRef}
-          type="file"
-          accept="video/mp4,video/webm,video/quicktime,video/x-m4v,video/3gpp,.mov,.mp4,.webm"
-          onChange={(e) => handleFileSelect(e, true)}
-          className="hidden"
-          id="video-upload"
-        />
-        <Button
-          type="button"
-          variant="ghost"
-          size="sm"
-          onClick={() => videoInputRef.current?.click()}
-          disabled={uploading || !!selectedMedia}
-          className="text-white/40 hover:text-white text-xs gap-2"
-          data-testid="video-upload-btn"
-        >
-          {uploading && videoInputRef.current?.files?.length ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <Video className="h-4 w-4" />
-          )}
-          <span className="hidden sm:inline">POV</span>
-        </Button>
-
-        {/* Record Video Button */}
+        {/* POV (Record Video with 60s limit) */}
         <Button
           type="button"
           variant="ghost"
@@ -199,8 +173,8 @@ export const MediaToolbar = ({ onMediaSelect, selectedMedia, onRemoveMedia }) =>
           className="text-white/40 hover:text-white text-xs gap-2"
           data-testid="record-video-btn"
         >
-          <Circle className="h-4 w-4 text-red-500" />
-          <span className="hidden sm:inline">Record</span>
+          <Video className="h-4 w-4" />
+          <span className="hidden sm:inline">POV</span>
         </Button>
 
         {/* The Reaction (GIF Picker) */}
