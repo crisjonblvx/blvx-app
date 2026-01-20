@@ -59,11 +59,19 @@ export default function SidebarPage() {
       const response = await axios.get(`${API}/sidebar/${id}/messages`, { withCredentials: true });
       setMessages(response.data);
       
-      // Find the sidebar info
-      const sb = sidebars.find(s => s.sidebar_id === id);
-      if (sb) {
-        setActiveSidebar(sb);
+      // Find the sidebar info from list, or fetch it directly
+      let sb = sidebars.find(s => s.sidebar_id === id);
+      if (!sb) {
+        // Fetch sidebar info directly
+        try {
+          const sidebarResponse = await axios.get(`${API}/sidebar/${id}`, { withCredentials: true });
+          sb = sidebarResponse.data;
+        } catch (e) {
+          // If that fails, create a minimal sidebar object
+          sb = { sidebar_id: id };
+        }
       }
+      setActiveSidebar(sb);
     } catch (error) {
       toast.error('Failed to load messages');
     } finally {
