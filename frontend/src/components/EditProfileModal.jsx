@@ -54,14 +54,6 @@ export const EditProfileModal = ({ open, onOpenChange, profile, onUpdate }) => {
             <DialogTitle className="font-display text-lg tracking-wide uppercase">
               Edit Profile
             </DialogTitle>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => onOpenChange(false)}
-              className="text-white/60 hover:text-white"
-            >
-              <X className="h-5 w-5" />
-            </Button>
           </div>
         </DialogHeader>
 
