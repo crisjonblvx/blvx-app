@@ -5,106 +5,115 @@ The user wants to build **BLVX**, a High-Context Social Network designed to be a
 
 *   **Tech Stack:** React (PWA), FastAPI, MongoDB, Cloud Storage for media.
 *   **Authentication:** JWT with both Google OAuth and verified email/password login.
-*   **UI/UX:** Mobile-first, A24 Film Studio meets Minimalist Streetwear aesthetic (high-contrast black & white, cinematic typography with Inter & Oswald fonts). Supports a dark Cinema mode and a light Editorial mode.
+*   **UI/UX:** Mobile-first, A24 Film Studio meets Minimalist Streetwear aesthetic.
 *   **Core Social Mechanics:**
-    1.  **The Vouch:** An invite-only system.
+    1.  **The Vouch:** An invite-only system (10 plates per user).
     2.  **The Cookout:** A dynamic privacy filter for posts.
-    3.  **The GC (Group Chat):** Persistent group messaging with real-time updates.
-    4.  **The Sidebar:** A whisper feature for 1-on-1 chats.
-    5.  **The Stoop:** Live audio conversation rooms (WebRTC).
-    6.  **POV:** Native in-feed video.
+    3.  **The GC (Group Chat):** Persistent group messaging.
+    4.  **The Sidebar:** 1-on-1 whisper chats, including with Bonita AI.
+    5.  **The Stoop:** Live audio conversation rooms (LiveKit).
+    6.  **POV:** Native in-feed video recording (60-second limit).
     7.  **The Spark:** An AI-powered content seeder () posting culturally relevant conversation starters.
     8.  **The Lookout:** A real-time safety/community alert system.
     9.  **The Word:** A trending topics widget.
-    10. **Culture Calendar:** An AI-driven feature to post about culturally significant dates.
-*   **AI Integration (Bonita):** A culturally fluent AI assistant (Claude 3.5 Sonnet) providing context, not moderation.
+    10. **Culture Calendar:** An AI-driven feature.
+*   **AI Integration (Bonita):** A culturally fluent AI assistant (Claude 3.5 Sonnet) that can hold conversations in chats.
 *   **Media Support:** Image/video uploads and a GIF picker.
+*   **Founder Easter Egg:** A special modal triggered by searching for CJ Nurse.
 
 **User's preferred language**: English
 
 **what currently exists?**
-A full-stack application with a FastAPI backend and a React frontend. The application includes user authentication, light/dark theming, and several core features:
--   **The Spark:** Bonita AI generates culturally relevant and time-sensitive content using real-time search. Content is now focused on POC/BIPOC topics.
--   **The Lookout, The Word, The GC:** These social features are implemented and functional.
--   **Media Uploads:** Cloudinary is fully integrated for persistent image and video uploads. The UI supports POV (video) uploads.
--   **The Vouch:** The invite system backend is complete, and a dedicated frontend page has been created for users to manage and redeem invites (Plates).
--   **The Sidebar:** The backend for 1-on-1 whisper chats is implemented, and a basic frontend page exists.
--   **Culture Calendar:** A new feature that allows Bonita to post about culturally significant events.
--   **Push Notifications:** The backend and frontend infrastructure for web push notifications is in place.
--   **The Stoop:** A custom WebRTC implementation was built but failed due to preview environment limitations. The project is now pivoting to a LiveKit integration for real-time audio.
+A full-stack application (FastAPI backend, React frontend) with most core features implemented and functional. This includes user authentication, light/dark theming, media uploads via Cloudinary, and the main social features (The Spark, The Lookout, The Word, The GC, The Vouch).
+- **The Stoop (Audio Rooms):** Now fully functional using LiveKit for stable, multi-user WebRTC audio.
+- **POV (Video Recording):** Users can now record 60-second videos directly in the app, replacing the file upload option.
+- **Bonita AI:** The AI content seeder (The Spark) now generates fresher, more diverse content (including mainstream news and sports) and refreshes automatically. Bonita also has a profile picture.
+- **Sidebar Chat:** The UI and backend for 1-on-1 chats are complete.
+- **Founder Easter Egg:** A modal with a link to  appears when searching for CJ Nurse.
+- **Bonita Conversational AI:** The backend is partially implemented to detect messages sent to Bonita in a sidebar chat.
 
 **Last working item**:
-- **Last item agent was working:** Integrating the LiveKit SDK to fix The Stoop (WebRTC audio) feature. The user reported that the custom-built WebRTC solution did not transmit audio between users. After diagnosing the issue as a preview environment limitation (WebSocket proxy failure), the agent recommended using a hosted service. The user agreed and provided API keys for LiveKit. The agent was in the process of setting up the integration.
-- **Status:** BLOCKED
+- **Last item agent was working:** Implementing a set of user requests:
+    1.  Updating Bonita's avatar. (DONE)
+    2.  Creating a Founder Easter Egg modal. (DONE)
+    3.  Enabling 1-on-1 conversational chat with Bonita in The Sidebar. The agent updated the backend to detect messages to Bonita and trigger an AI response task.
+- **Status:** IN PROGRESS
 - **Agent Testing Done:** N
-- **Which testing method agent to use?**: testing_agent_v3_fork (after the LiveKit integration is complete).
-- **User Testing Done:** Y (User confirmed the audio issue in the custom implementation).
+- **Which testing method agent to use?**: backend testing agent (to verify API and WebSocket logic), followed by a screenshot test for the frontend UI.
+- **User Testing Done:** N
 
 **All Pending/In progress Issue list**:
-*   **Issue 1: Blocked LiveKit Integration for The Stoop (P0)**
+*   **Issue 1: Complete Bonita Conversational AI in Sidebars (P0)**
 *   **Issue 2: Unaddressed Frontend ESLint Warnings (P2)**
 
 **Issues Detail:**
 - **Issue 1:**
-    - **Description:** The agent needs to integrate LiveKit to provide stable WebRTC audio for The Stoop. The user has provided the API Key and API Secret. However, the integration is blocked because the agent needs one more piece of information: the **LiveKit project URL** (e.g., ).
-    - **Attempted fixes:** A full custom WebRTC solution was built but failed to work in the multi-user test due to WebSocket proxy issues in the preview environment.
+    - **Description:** When a user messages Bonita in a sidebar, the backend detects it and queues an AI response task. However, the end-to-end flow is incomplete. The AI's response needs to be generated and delivered back to the user's chat UI in real-time.
+    - **Attempted fixes:** Logic was added to the  function in  to check if the recipient is Bonita () and, if so, call an async task ().
     - **Next debug checklist:**
-        1.  Use  to request the **LiveKit project URL** from the user.
-        2.  Add the URL to the  file.
-        3.  Update  to use the LiveKit server SDK to generate access tokens for users joining a Stoop.
-        4.  Rewrite  and  to use the LiveKit client SDK, removing the custom peer connection logic.
-    - **Why fix this issue and what will be achieved with the fix?** This is a core feature for the user. Fixing it will enable real-time audio chat rooms, a key part of the social experience.
-    - **Status:** BLOCKED
-    - **Is recurring issue?** Y (The underlying feature has been a focus for two sessions).
+        1.  In , ensure the  task correctly generates a response and sends it back to the appropriate sidebar chat via the WebSocket manager.
+        2.  In , modify the  hook that fetches messages to use a WebSocket listener or periodic polling to display new messages (like Bonita's reply) in real-time without requiring a page refresh.
+        3.  Test the full flow: send a message to Bonita and verify her response appears in the UI automatically.
+    - **Why fix this issue and what will be achieved with the fix?** This implements a core user request for an interactive AI assistant, a key feature for the app's high-context feel.
+    - **Status:** IN PROGRESS
+    - **Is recurring issue?** N
     - **Should Test frontend/backend/both after fix?** both
-    - **Blocked on other issue:** User input (LiveKit project URL).
+    - **Blocked on other issue:** None
+
 - **Issue 2:**
-    - **Description:** Several frontend files (e.g., , , ) have  ESLint warnings.
+    - **Description:** Several frontend files (e.g., , ) have  ESLint warnings that should be resolved.
     - **Next debug checklist:**
         1.  Run yarn run v1.22.22
-info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command. (or check the webpack output) to find all occurrences.
-        2.  For each warning, review the , , etc., and add the missing dependencies to the dependency array.
-    - **Why fix this issue and what will be achieved with the fix?** To prevent potential stale state bugs and improve code quality.
+info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this command. to identify all files with this warning.
+        2.  Review each  or  and add the missing dependencies to the dependency array.
+    - **Why fix this issue and what will be achieved with the fix?** Prevents potential stale state bugs and improves overall code quality and stability.
     - **Status:** NOT STARTED
     - **Is recurring issue?** Y
     - **Should Test frontend/backend/both after fix?** Frontend
+    - **Blocked on other issue:** None
 
 **In progress Task List**:
-- There are no other in-progress tasks. The primary task is blocked.
+- **Task 1: Bonita Conversational AI in Sidebars**
+    - **Where to resume:** Focus on the real-time delivery of Bonita's response to the frontend. The backend trigger is in place; the next step is implementing the WebSocket push and the frontend listener.
+    - **What will be achieved with this?** A fully interactive AI chat experience in the Sidebar.
+    - **Status:** IN PROGRESS
+    - **Should Test frontend/backend/both after fix?** both
+    - **Blocked on something:** None
 
 **Upcoming and Future Tasks**
 *   **Upcoming Tasks (P1):**
-    *   **POV (Native Video):** The backend supports video uploads to Cloudinary, and the frontend can render videos. This needs end-to-end user testing to ensure the playback experience is smooth.
-    *   **Push Notifications:** The infrastructure is complete. This needs to be tested in a production environment, as browser permissions are blocked in the test environment.
+    *   **Tag Bonita in Group Chats (The GC):** Extend the conversational AI logic to allow users to  in group chats to get a response.
+    *   **Push Notifications (Production Testing):** The infrastructure is complete, but it needs to be tested in a production-like environment to verify browser permissions and delivery.
 *   **Future Tasks (P2):**
-    *   **The Sidebar (1-on-1 Chat):** The backend is done, and a  exists. The UI needs to be built out to display chat history and allow sending messages.
-    *   **Search Improvements:** Enhance the search functionality beyond the current basic implementation.
-    *   **Admin Dashboard:** Create a dashboard for administrative tasks.
+    *   **Admin Dashboard:** Build a dashboard for administrative tasks.
+    *   **Refactor :** Break down the monolithic  file into a more maintainable, modular structure (e.g., , , ).
 
 **Completed work in this session**
-- **Bonita AI Overhaul:**
-    - **Time Synchronization:** Fixed the AI to generate content relevant to the current date (Jan 2026), eliminating stale posts from 2023/2024.
-    - **Cultural Diversity:** Updated AI prompts and search queries to focus on culturally relevant topics for POC/BIPOC communities, as requested by the user.
-- **Cloud Media Storage:** Integrated **Cloudinary** for all image and video uploads, replacing temporary local storage.
-- **The Vouch System (Frontend):** Created a new  to allow users to redeem invite codes and view their Plates.
-- **Dynamic Spark Topics:** Implemented a backend service to fetch trending news headlines, making Bonita's content more dynamic and current.
-- **Culture Calendar Feature:** Added a new feature for Bonita to post about culturally significant dates (e.g., MLK Day).
-- **POV (Native Video) Support:** Enhanced the backend to allow larger file uploads for video and updated the frontend  to render video players.
-- **Push Notifications:** Implemented the full backend (VAPID keys, subscription endpoints) and frontend (service worker, UI toggle in settings) infrastructure.
-- **Bug Fixes:**
-    - Fixed the non-functional Refresh button on the feed by adding a toast notification for user feedback.
-    - Addressed the disabled Mic button on the Stoop page by implementing a fallback (which is now being replaced by the more robust LiveKit solution).
-- **WebRTC Debugging:** Built and thoroughly debugged a custom WebRTC solution, successfully isolating the failure to the preview environment's infrastructure, which led to the strategic decision to switch to LiveKit.
+- **Fixed The Stoop:** Successfully integrated LiveKit, resolving the audio room blocker. Fixed connection loops, participant detection, and host permissions for a stable experience.
+- **Fixed & Enhanced POV Video:**
+    - Fixed file-type upload errors and implemented a new  component with a 60-second time limit.
+    - Removed the confusing file-upload button, keeping only the time-limited recorder.
+    - Fixed bugs preventing video from saving or previewing, especially on iOS/Safari.
+- **Improved Feed Content & UI:**
+    - Fixed feed refresh issues and enhanced Bonita AI to generate fresher, more diverse content (mainstream news, sports).
+    - Differentiated the Explore and Block feeds and made the The Word trending widget dynamic.
+    - Simplified post replies by adding a View Replies button and fixed UI bugs like duplicate close buttons.
+- **Sidebar & Vouch Fixes:**
+    - Fixed a bug preventing messages from being sent in the Sidebar.
+    - Added the Sidebar link to the mobile navigation and increased the default Vouch plates to 10.
+- **Implemented Founder Easter Egg & Bonita Profile:**
+    - Created a modal for the founder, triggered via search.
+    - Updated Bonita's profile with a user-provided avatar.
 
 **Earlier issues found/mentioned but not fixed**
 - **Issue 1:  warnings**
-    - **Debug checklist:** Locate warnings in files like ,  and add missing variables to dependency arrays.
+    - **Debug checklist:** Locate warnings in frontend files and add missing variables to dependency arrays.
     - **Why to solve this issue and what will be achieved with this?** Improves code quality and prevents potential state-related bugs.
     - **Should Test frontend/backend/both after fix:** Frontend
     - **Is recurring issue?** Y
 
 **Known issue recurrence from previous fork**
-- None. The previous authentication blocker was resolved.
+- None.
 
 **Code Architecture**
 
@@ -115,72 +124,68 @@ info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this comm
 *   **Database:** MongoDB
 *   **AI:** Claude 3.5 Sonnet via 
 *   **Media Storage:** Cloudinary
-*   **Real-time Audio:** LiveKit (in progress)
+*   **Real-time Audio:** LiveKit
 *   **External APIs:** GIPHY, DuckDuckGo Search (), NewsAPI
 *   **Notifications:** Web Push API (with )
 
 **key DB schema**
-*   **users:** Profile info, .
+*   **users:** Profile info,  (default 10).
 *   **posts:** Content, author, media details.
-*   **alerts:** Data for The Lookout.
-*   **chats, vouches, stoops, sidebars:** Collections exist for these features.
-*   **push_subscriptions:** Stores user subscriptions for push notifications (, ).
+*   **sidebars:** Stores 1-on-1 chat metadata and messages.
+*   Other collections for , , , , .
 
 **changes in tech stack**
-*   **Media Storage:** Migrated from temporary local file storage to a persistent **Cloudinary** solution.
-*   **WebRTC:** Pivoting from a custom WebSocket-based signaling implementation to the managed **LiveKit** service.
+*   **WebRTC:** Pivoted from a custom implementation to the managed **LiveKit** service.
 
 **All files of reference**
-*   : Heavily modified to add Cloudinary, LiveKit token logic (planned), Culture Calendar, Push Notifications, and improved AI prompts.
-*   : The main UI for audio rooms. Needs to be rewritten to use the LiveKit SDK.
-*   : Custom WebRTC hook. Needs to be rewritten for LiveKit.
-*   : New page for the invite system.
-*   : New page for 1-on-1 chats.
-*   : Updated with UI for Push Notifications and Culture Calendar.
-*   : New service worker for handling push events.
-*   : New hook for managing push subscriptions.
-*   : Updated with Cloudinary credentials.
-*   : Updated with all completed features.
+*   : Heavily modified for LiveKit, media-only posts, diverse AI content, real-time trending topics, and the Bonita chat trigger.
+*   : Rewritten to use the LiveKit SDK.
+*   : New hook for LiveKit integration.
+*   : Rewritten to remove file upload for video and use the new .
+*   : New component for time-limited video recording.
+*   : Updated to auto-refresh feed content.
+*   : Updated to allow posts with only media (no text).
+*   : Modified to handle chat state more robustly.
+*   : Updated to include the  trigger.
+*   : New component for the founder easter egg.
+*   : Added Sidebar icon.
 
 **Areas that need refactoring**:
-*   The  file is now over 3000 lines long. It should be broken down into a more modular structure (e.g., , , ) to improve maintainability.
+*   The  file is now extremely large and complex. It is the top candidate for refactoring into a modular structure (e.g., , , ) to improve long-term maintainability.
 
 **key api endpoints**
-*   : Now uploads files to Cloudinary.
-*   : New endpoint to get dynamic news headlines.
-*   : New endpoint to trigger a Culture Calendar post.
-*   : Provides the public key for push subscriptions.
-*   : Endpoint for users to submit their push subscription.
-*   : WebSocket endpoint for Stoop signaling (will be used for LiveKit token generation).
+*   : Generates access tokens for LiveKit audio rooms.
+*   : Now accepts posts with only media and no text content.
+*   : Enhanced to generate more diverse and current content.
+*   : Now pulls from news headlines for more dynamic trends.
+*   : New GET endpoint to fetch details of a single sidebar chat.
+*   : POST endpoint updated to trigger a conversational response from Bonita AI if she is the recipient.
 
 **Critical Info for New Agent**
-*   **The IMMEDIATE task is blocked.** You must get the **LiveKit Project URL** from the user before you can proceed with fixing The Stoop. The user has already provided the API Key and Secret.
-*   The custom WebRTC code in  and  should be considered deprecated and will be replaced entirely by the LiveKit client SDK. Do not try to fix the old implementation.
-*   The backend file  is very large. Be careful when editing it. Consider planning a refactor into smaller modules after the current high-priority tasks are complete.
+*   The immediate task is to complete the **Bonita conversational AI** feature. The backend trigger is in place; you need to implement the WebSocket logic to deliver her response to the user's UI in real-time and ensure the frontend listens for it.
+*   The user is very conscious of credit usage. Prioritize efficiency and avoid unnecessary operations.
+*   After fixing the sidebar chat, the next logical step is implementing the user's request to allow tagging  in group chats ().
+*   The  file is a high-priority refactoring target for a future task. Be careful when editing it.
 
 **documents and test reports created in this job**
 *   
 *   
-*   
 
 **Last 10 User Messages and any pending HUMAN messages**
-1.  **User (latest):** Provided Cloudinary cloud name (). - **Status: HANDLED**
-2.  **Agent:** Asked for the Cloudinary cloud name. - **Status: HANDLED**
-3.  **User:** Provided LiveKit API Key and Secret. - **Status: HANDLED**
-4.  **Agent:** Explained the options (LiveKit vs. Daily.co vs. skip) and recommended LiveKit. - **Status: HANDLED**
-5.  **User:** Confirmed the custom WebRTC implementation is over their head. - **Status: HANDLED**
-6.  **Agent:** Summarized the WebRTC issue is due to the preview environment and proposed using a hosted service like LiveKit. - **Status: HANDLED**
-7.  **User:** Reported that the Stoop audio is still not working between multiple users. - **Status: IN PROGRESS**
-8.  **Agent:** Finished implementing all requested features and summarized the work. - **Status: HANDLED**
-9.  **User:** Approved the plan to add a Culture Calendar and proceed with other features (S3, POV, Push Notifications). - **Status: HANDLED**
-10. **Agent:** Finished implementing Vouch and Sidebar UI, ran tests, and proposed next steps including a Culture Calendar feature. - **Status: HANDLED**
-
-**Pending Human Message:** The agent has asked the user for the LiveKit Cloud Name (Project URL) and is waiting for a response.
+1.  **User (latest):** Approved of sidebar message fix, provided a photo for Bonita's profile, and requested new features: a Founder Easter Egg linking to , and 1-on-1 conversational chat with Bonita. - **Status: IN PROGRESS**
+2.  **Agent:** Summarized fixes for sidebar send and increased plates. - **Status: HANDLED**
+3.  **User:** Reported sidebar message send button didn't work and suggested increasing initial plates to 10. - **Status: HANDLED**
+4.  **Agent:** Summarized fixes for mobile navigation and vouch plates. - **Status: HANDLED**
+5.  **User:** Reported not seeing a way to click user profiles, mobile nav issues, and having no plates to share. - **Status: HANDLED**
+6.  **Agent:** Confirmed Sidebar and Push Notification features are complete and provided a final summary. - **Status: HANDLED**
+7.  **User:** Appreciated the work, asked to proceed with Sidebar UI and Push Notifications, and requested to be frugal with credits. - **Status: HANDLED**
+8.  **Agent:** Summarized fixes for POV, feed content, and UI bugs. - **Status: HANDLED**
+9.  **User:** Confirmed POV video post worked, but pointed out duplicate 'X' close buttons. Also requested better reply visibility, more diverse feed content, a fix for the static trending widget, and differentiation between Block and Explore feeds. - **Status: HANDLED**
+10. **Agent:** Summarized fixes for POV video posting and feed content. - **Status: HANDLED**
 
 **Project Health Check:**
-*   **Working:** Authentication, Theming, Bonita AI Content (The Spark), Cloudinary Media Uploads, Link Previews, Safety Alerts (The Lookout), Trending Topics (The Word), Real-time Chat (The GC), Vouch System, Culture Calendar, Push Notification backend.
-*   **Broken:**
-    *   **The Stoop:** Real-time audio is non-functional. The feature is blocked pending a full integration with LiveKit.
+*   **Working:** Authentication, Theming, Bonita AI Content (The Spark), Cloudinary Media Uploads, The Stoop (LiveKit Audio), POV (Video Recording), The Vouch, Sidebar Chat, Founder Easter Egg.
+*   **Broken:** None.
 *   **Mocked:** No features are currently mocked.
 
 **3rd Party Integrations**
@@ -188,20 +193,21 @@ info Visit https://yarnpkg.com/en/docs/cli/run for documentation about this comm
 *   **Claude 3.5 Sonnet** (for Bonita AI) — uses Emergent LLM Key.
 *   **GIPHY** — integrated for GIF picker.
 *   **DuckDuckGo Search ()** — used for sourcing real-time information for Bonita.
-*   **NewsAPI** () — integrated for Dynamic Spark Topics.
+*   **NewsAPI** () — integrated for Dynamic Spark Topics and The Word.
 *   **Cloudinary** — fully integrated for all image and video storage.
-*   **LiveKit** — **IN PROGRESS**. Awaiting project URL from user to complete integration for real-time audio.
+*   **LiveKit** — **COMPLETED**. Fully integrated for real-time audio in The Stoop.
 
 **Testing status**
-- **Testing agent used after significant changes:** YES. The last run () reported a 100% success rate on 45 backend and 25 frontend tests, covering all new features except the broken Stoop.
+- **Testing agent used after significant changes:** YES. The last run () passed all tests after the LiveKit integration.
 - **Troubleshoot agent used after agent stuck in loop:** NO
 - **Test files created:** None
-- **Known regressions:** The Stoop feature is broken, which is a regression from a partially working state, but this was an intentional trade-off to move to a more robust solution (LiveKit).
+- **Known regressions:** None.
 
 **Credentials to test flow:**
-*   **Test User:**  (password can be reset via API if needed, or create a new user).
+*   **Test User 1:**  (password can be reset or a new user created).
+*   **Test User 2:**  (password can be reset or a new user created).
 *   **Cloudinary:** , , .
-*   **LiveKit:** , .
+*   **LiveKit:** , , .
 
 **What agent forgot to execute**
-*   The agent did not forget any tasks but is currently blocked waiting for the user to provide the LiveKit project URL.</analysis>
+*   The agent implemented the backend trigger for Bonita's conversational AI but did not complete the full end-to-end flow to deliver the response back to the frontend UI in real-time via WebSockets.</analysis>
