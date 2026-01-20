@@ -950,15 +950,40 @@ async def get_feed(limit: int = 20, before: Optional[str] = None, user: UserBase
 
 @posts_router.get("/explore")
 async def get_explore_feed(limit: int = 20, before: Optional[str] = None, user: UserBase = Depends(get_current_user)):
-    """Get public explore feed (The Block only)"""
+    """Get public explore feed - varied topics and users (different from Block)"""
+    # Get a diverse mix of posts
     query = {"visibility": "block"}
     if before:
         query["created_at"] = {"$lt": before}
     
-    posts = await db.posts.find(query, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+    # Get more posts than needed, then diversify
+    posts = await db.posts.find(query, {"_id": 0}).sort("created_at", -1).limit(limit * 3).to_list(limit * 3)
+    
+    # Diversify: limit posts per user to 2, prioritize variety
+    user_post_count = {}
+    diverse_posts = []
+    
+    for post in posts:
+        post_user_id = post.get("user_id", "")
+        user_post_count[post_user_id] = user_post_count.get(post_user_id, 0) + 1
+        
+        # Allow max 2 posts per user in explore
+        if user_post_count[post_user_id] <= 2:
+            diverse_posts.append(post)
+        
+        if len(diverse_posts) >= limit:
+            break
+    
+    # If not enough diverse posts, fill with remaining
+    if len(diverse_posts) < limit:
+        for post in posts:
+            if post not in diverse_posts:
+                diverse_posts.append(post)
+                if len(diverse_posts) >= limit:
+                    break
     
     result = []
-    for post in posts:
+    for post in diverse_posts[:limit]:
         if isinstance(post.get("created_at"), str):
             post["created_at"] = datetime.fromisoformat(post["created_at"])
         enriched = await get_post_with_user(post)
