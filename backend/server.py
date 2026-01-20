@@ -1444,6 +1444,11 @@ async def get_sidebar(sidebar_id: str, user: UserBase = Depends(get_current_user
     # Get other user info
     other_id = sidebar["user_2"] if sidebar["user_1"] == user.user_id else sidebar["user_1"]
     other_user = await db.users.find_one({"user_id": other_id}, {"_id": 0, "user_id": 1, "name": 1, "username": 1, "picture": 1})
+    
+    # Handle case where other user might not exist (like bonita_ai)
+    if not other_user:
+        other_user = {"user_id": other_id, "name": other_id, "username": other_id}
+    
     sidebar["other_user"] = other_user
     
     return sidebar
