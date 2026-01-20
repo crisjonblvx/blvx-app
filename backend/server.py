@@ -2366,7 +2366,7 @@ async def post_culture_calendar(user: UserBase = Depends(get_current_user)):
             "email": "bonita@blvx.app",
             "name": "Bonita",
             "username": "Bonita",
-            "picture": "",
+            "picture": BONITA_AVATAR_URL,
             "bio": "BLVX's cultural compass. I'm here to add context, not chaos.",
             "verified": True,
             "is_day_one": True,
