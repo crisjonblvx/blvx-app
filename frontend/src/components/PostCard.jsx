@@ -289,6 +289,22 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
                 )}
               </Button>
 
+              {/* View Replies Link (if there are replies) */}
+              {post.reply_count > 0 && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  className="text-blue-400 hover:text-blue-300 text-xs h-8 px-2"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(`/post/${post.post_id}`);
+                  }}
+                  data-testid={`post-${post.post_id}-view-replies`}
+                >
+                  View {post.reply_count} {post.reply_count === 1 ? 'reply' : 'replies'}
+                </Button>
+              )}
+
               {/* Repost / Quote */}
               <Button
                 variant="ghost"
