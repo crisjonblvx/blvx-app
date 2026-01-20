@@ -1561,10 +1561,21 @@ async def join_stoop(stoop_id: str, user: UserBase = Depends(get_current_user)):
 @stoop_router.post("/{stoop_id}/leave")
 async def leave_stoop(stoop_id: str, user: UserBase = Depends(get_current_user)):
     """Leave a Stoop"""
-    await db.stoops.update_one(
-        {"stoop_id": stoop_id},
-        {"$pull": {"listeners": user.user_id, "speakers": user.user_id}}
-    )
+    stoop = await db.stoops.find_one({"stoop_id": stoop_id})
+    
+    # Don't remove the host from speakers, just from listeners
+    if stoop and stoop.get("host_id") == user.user_id:
+        # Host is leaving - just remove from listeners
+        await db.stoops.update_one(
+            {"stoop_id": stoop_id},
+            {"$pull": {"listeners": user.user_id}}
+        )
+    else:
+        # Regular user leaving - remove from both
+        await db.stoops.update_one(
+            {"stoop_id": stoop_id},
+            {"$pull": {"listeners": user.user_id, "speakers": user.user_id}}
+        )
     
     return {"message": "Left the Stoop"}
 
