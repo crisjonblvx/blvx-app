@@ -229,18 +229,28 @@ Build **BLVX**, a "High-Context Social Network" designed to be a "Group Chat" ra
 
 #### P1 - High Priority
 - [ ] Email verification flow completion
-- [ ] WebRTC audio streaming deployment (infrastructure ready)
+- [ ] Push Notifications production testing (infrastructure complete)
 
 #### P2 - Medium Priority
 - [ ] News API integration for more dynamic Spark topics
 - [ ] Full WebRTC testing in deployed environment
-- [ ] Admin dashboard
+- [ ] Refactor server.py into modular structure (/routes, /models, /services)
 
 #### P3 - Future
 - [ ] Explore page with trending posts
 - [ ] Hashtag system
 - [ ] Search improvements
 - [ ] Analytics
+- [ ] Voice messages for Bonita chats
+
+#### ✅ Recently Completed
+- [x] Admin Dashboard (Jan 20, 2026)
+  - Platform stats overview (users, posts, GCs, stoops, alerts)
+  - User management (search, ban/unban)
+  - Post moderation (view, delete)
+  - Alert management
+  - Admin-only access via hardcoded user IDs
+  - Settings integration for admin link
 
 ---
 
