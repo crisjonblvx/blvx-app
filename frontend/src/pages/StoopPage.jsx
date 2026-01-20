@@ -93,7 +93,7 @@ export default function StoopPage() {
 
   const fetchStoopData = async (stoopId) => {
     try {
-      const response = await axios.get(`${API}/stoop/${stoopId}`, { withCredentials: true });
+      const response = await axios.get(`${API}/api/stoop/${stoopId}`, { withCredentials: true });
       setActiveStoopData(response.data);
     } catch (error) {
       console.error('Error fetching stoop data:', error);
@@ -104,7 +104,7 @@ export default function StoopPage() {
     if (!newStoopTitle.trim()) return;
     
     try {
-      const response = await axios.post(`${API}/stoop/create`, {
+      const response = await axios.post(`${API}/api/stoop/create`, {
         title: newStoopTitle.trim()
       }, { withCredentials: true });
       
@@ -122,8 +122,8 @@ export default function StoopPage() {
 
   const joinStoop = async (stoopId) => {
     try {
-      await axios.post(`${API}/stoop/${stoopId}/join`, {}, { withCredentials: true });
-      const response = await axios.get(`${API}/stoop/${stoopId}`, { withCredentials: true });
+      await axios.post(`${API}/api/stoop/${stoopId}/join`, {}, { withCredentials: true });
+      const response = await axios.get(`${API}/api/stoop/${stoopId}`, { withCredentials: true });
       setActiveStoopId(stoopId);
       setActiveStoopData(response.data);
       setMicError(null);
@@ -139,7 +139,7 @@ export default function StoopPage() {
     await disconnectLiveKit();
     
     try {
-      await axios.post(`${API}/stoop/${activeStoopId}/leave`, {}, { withCredentials: true });
+      await axios.post(`${API}/api/stoop/${activeStoopId}/leave`, {}, { withCredentials: true });
       setActiveStoopId(null);
       setActiveStoopData(null);
       setActiveSpeakers([]);
@@ -156,7 +156,7 @@ export default function StoopPage() {
     await disconnectLiveKit();
     
     try {
-      await axios.post(`${API}/stoop/${activeStoopId}/end`, {}, { withCredentials: true });
+      await axios.post(`${API}/api/stoop/${activeStoopId}/end`, {}, { withCredentials: true });
       setActiveStoopId(null);
       setActiveStoopData(null);
       setActiveSpeakers([]);
