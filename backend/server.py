@@ -3520,6 +3520,42 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database and ensure Bonita's profile is set up"""
+    # Update Bonita's avatar if she exists
+    await db.users.update_one(
+        {"user_id": "bonita"},
+        {"$set": {"picture": BONITA_AVATAR_URL}}
+    )
+    # Also update bonita_ai for sidebar chats
+    bonita_ai = await db.users.find_one({"user_id": "bonita_ai"})
+    if not bonita_ai:
+        await db.users.insert_one({
+            "user_id": "bonita_ai",
+            "email": "bonita.ai@blvx.app",
+            "name": "Bonita",
+            "picture": BONITA_AVATAR_URL,
+            "username": "bonita",
+            "bio": "Your culturally fluent AI companion. The Auntie of The Block. Slide into my DMs!",
+            "verified": True,
+            "email_verified": True,
+            "reputation_score": 1000,
+            "plates_remaining": 0,
+            "is_day_one": True,
+            "followers_count": 0,
+            "following_count": 0,
+            "posts_count": 0,
+            "vouched_by": None,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+    else:
+        await db.users.update_one(
+            {"user_id": "bonita_ai"},
+            {"$set": {"picture": BONITA_AVATAR_URL}}
+        )
+    logger.info("Startup: Bonita's profile initialized")
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
     client.close()
