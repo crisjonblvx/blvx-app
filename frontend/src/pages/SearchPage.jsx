@@ -9,6 +9,7 @@ import { useUsers } from '@/hooks/useUsers';
 import { usePosts } from '@/hooks/usePosts';
 import { PostCard } from '@/components/PostCard';
 import { TrendingWidget } from '@/components/TrendingWidget';
+import { FounderModal } from '@/components/FounderModal';
 import { Link } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 
@@ -18,8 +19,17 @@ export default function SearchPage() {
   const [searchType, setSearchType] = useState('trending');
   const [users, setUsers] = useState([]);
   const [posts, setPosts] = useState([]);
+  const [showFounder, setShowFounder] = useState(false);
   const { searchUsers, loading: usersLoading } = useUsers();
   const { searchPosts, loading: postsLoading } = usePosts();
+
+  // Check for founder easter egg
+  useEffect(() => {
+    const lowerQuery = query.toLowerCase().trim();
+    if (lowerQuery === 'cj nurse' || lowerQuery === 'cjnurse' || lowerQuery === 'founder') {
+      setShowFounder(true);
+    }
+  }, [query]);
 
   // Handle incoming query from URL (e.g., clicking hashtag)
   useEffect(() => {
