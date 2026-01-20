@@ -602,14 +602,16 @@ async def exchange_session(session_id: str, response: Response):
         }
         await db.users.insert_one(new_user)
     
-    await create_session(user_id, response)
+    session_token = await create_session(user_id, response)
     
     user = await db.users.find_one({"user_id": user_id}, {"_id": 0, "password_hash": 0})
     if isinstance(user.get("created_at"), str):
         user["created_at"] = datetime.fromisoformat(user["created_at"])
     
     logger.info(f"User authenticated: {user.get('email')}")
-    return user
+    
+    # Return user data with session token for localStorage fallback
+    return {**user, "session_token": session_token}
 
 @auth_router.get("/me")
 async def get_me(user: UserBase = Depends(get_current_user)):
