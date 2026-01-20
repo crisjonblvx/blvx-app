@@ -1564,6 +1564,47 @@ async def end_stoop(stoop_id: str, user: UserBase = Depends(get_current_user)):
     
     return {"message": "Stoop ended"}
 
+@stoop_router.get("/{stoop_id}/livekit-token")
+async def get_livekit_token(stoop_id: str, user: UserBase = Depends(get_current_user)):
+    """Generate a LiveKit access token for a user to join a Stoop"""
+    # Verify stoop exists and is live
+    stoop = await db.stoops.find_one({"stoop_id": stoop_id})
+    if not stoop or not stoop.get("is_live"):
+        raise HTTPException(status_code=404, detail="Stoop not found or not live")
+    
+    # Get LiveKit credentials from environment
+    livekit_api_key = os.environ.get("LIVEKIT_API_KEY")
+    livekit_api_secret = os.environ.get("LIVEKIT_API_SECRET")
+    livekit_url = os.environ.get("LIVEKIT_URL")
+    
+    if not livekit_api_key or not livekit_api_secret or not livekit_url:
+        raise HTTPException(status_code=500, detail="LiveKit not configured")
+    
+    # Determine if user is a speaker (can publish) or just listener
+    is_speaker = user.user_id in stoop.get("speakers", []) or user.user_id == stoop["host_id"]
+    
+    # Create LiveKit access token
+    token = api.AccessToken(livekit_api_key, livekit_api_secret) \
+        .with_identity(user.user_id) \
+        .with_name(user.name or user.username) \
+        .with_grants(api.VideoGrants(
+            room_join=True,
+            room=stoop_id,
+            can_publish=is_speaker,
+            can_subscribe=True
+        ))
+    
+    jwt_token = token.to_jwt()
+    
+    logger.info(f"[LiveKit] Generated token for user {user.user_id} in stoop {stoop_id} (speaker={is_speaker})")
+    
+    return {
+        "token": jwt_token,
+        "url": livekit_url,
+        "room": stoop_id,
+        "is_speaker": is_speaker
+    }
+
 # ========================
 # BONITA AI ROUTES
 # ========================
