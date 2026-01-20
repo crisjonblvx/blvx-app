@@ -3327,6 +3327,71 @@ async def websocket_notifications_endpoint(websocket: WebSocket):
         logger.error(f"WebSocket notification error: {e}")
         await ws_manager.disconnect_user(user["user_id"])
 
+@app.websocket("/ws/sidebar/{sidebar_id}")
+async def websocket_sidebar_endpoint(websocket: WebSocket, sidebar_id: str):
+    """WebSocket endpoint for real-time sidebar messaging"""
+    user = await get_user_from_websocket(websocket)
+    
+    if not user:
+        await websocket.close(code=4001, reason="Unauthorized")
+        return
+    
+    # Verify user is part of this sidebar
+    sidebar = await db.sidebars.find_one({"sidebar_id": sidebar_id})
+    if not sidebar or (user["user_id"] not in [sidebar["user_1"], sidebar["user_2"]]):
+        await websocket.close(code=4003, reason="Not a member of this sidebar")
+        return
+    
+    await ws_manager.connect_sidebar(websocket, sidebar_id, user["user_id"])
+    
+    try:
+        while True:
+            data = await websocket.receive_json()
+            
+            if data.get("type") == "message":
+                content = data.get("content", "").strip()
+                if content:
+                    # Save message
+                    message = {
+                        "message_id": f"msg_{uuid.uuid4().hex[:12]}",
+                        "sidebar_id": sidebar_id,
+                        "user_id": user["user_id"],
+                        "content": content,
+                        "created_at": datetime.now(timezone.utc).isoformat()
+                    }
+                    await db.sidebar_messages.insert_one(message)
+                    message.pop("_id", None)
+                    
+                    # Get user info
+                    user_info = await db.users.find_one(
+                        {"user_id": user["user_id"]}, 
+                        {"_id": 0, "name": 1, "username": 1, "picture": 1}
+                    )
+                    message["user"] = user_info
+                    
+                    # Broadcast to sidebar
+                    await ws_manager.broadcast_to_sidebar(sidebar_id, {
+                        "type": "new_message",
+                        "message": message
+                    })
+                    
+                    # Check if messaging Bonita - trigger AI response
+                    other_id = sidebar["user_2"] if sidebar["user_1"] == user["user_id"] else sidebar["user_1"]
+                    if other_id == "bonita_ai":
+                        asyncio.create_task(generate_bonita_sidebar_response(sidebar_id, content, user["user_id"]))
+            
+            elif data.get("type") == "typing":
+                await ws_manager.broadcast_to_sidebar(sidebar_id, {
+                    "type": "typing",
+                    "user_id": user["user_id"]
+                })
+    
+    except WebSocketDisconnect:
+        await ws_manager.disconnect_sidebar(websocket, sidebar_id, user["user_id"])
+    except Exception as e:
+        logger.error(f"WebSocket sidebar error: {e}")
+        await ws_manager.disconnect_sidebar(websocket, sidebar_id, user["user_id"])
+
 # ========================
 # PUSH NOTIFICATIONS
 # ========================
