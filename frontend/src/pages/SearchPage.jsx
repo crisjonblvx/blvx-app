@@ -214,6 +214,9 @@ export default function SearchPage() {
           )}
         </TabsContent>
       </Tabs>
+      
+      {/* Founder Easter Egg Modal */}
+      <FounderModal open={showFounder} onOpenChange={setShowFounder} />
     </div>
   );
 }
