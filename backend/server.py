@@ -1473,7 +1473,7 @@ async def get_sidebar_messages(sidebar_id: str, limit: int = 50, user: UserBase 
     return messages
 
 @api_router.post("/sidebar/{sidebar_id}/message")
-async def send_sidebar_message(sidebar_id: str, content: str, user: UserBase = Depends(get_current_user)):
+async def send_sidebar_message(sidebar_id: str, content: str, background_tasks: BackgroundTasks, user: UserBase = Depends(get_current_user)):
     """Send a message in a sidebar"""
     sidebar = await db.sidebars.find_one({"sidebar_id": sidebar_id})
     if not sidebar or (user.user_id not in [sidebar["user_1"], sidebar["user_2"]]):
@@ -1491,9 +1491,80 @@ async def send_sidebar_message(sidebar_id: str, content: str, user: UserBase = D
     message.pop("_id", None)
     
     other_id = sidebar["user_2"] if sidebar["user_1"] == user.user_id else sidebar["user_1"]
-    await create_notification(other_id, "sidebar_message", user.user_id, None)
+    
+    # Check if messaging Bonita - trigger AI response
+    if other_id == "bonita_ai":
+        background_tasks.add_task(generate_bonita_sidebar_response, sidebar_id, content, user.user_id)
+    else:
+        await create_notification(other_id, "sidebar_message", user.user_id, None)
     
     return message
+
+async def generate_bonita_sidebar_response(sidebar_id: str, user_message: str, user_id: str):
+    """Generate Bonita's conversational AI response in sidebar"""
+    try:
+        from emergentintegrations.llm.chat import LlmChat
+        
+        # Get last 5 messages for context
+        recent_messages = await db.sidebar_messages.find(
+            {"sidebar_id": sidebar_id}
+        ).sort("created_at", -1).limit(5).to_list(5)
+        recent_messages.reverse()
+        
+        # Build conversation history
+        chat_history = []
+        for msg in recent_messages:
+            role = "assistant" if msg["user_id"] == "bonita_ai" else "user"
+            chat_history.append({"role": role, "content": msg["content"]})
+        
+        # Bonita's persona
+        bonita_persona = """You are Bonita, the AI "auntie" of BLVX - a high-context social network for Black and Brown communities.
+
+Your personality:
+- Warm, wise, and culturally fluent - like that cool auntie everyone loves
+- You keep it real but with love
+- You're helpful but also fun to talk to
+- You use AAVE naturally when appropriate, but you're not performative about it
+- You have opinions but you're respectful
+- You can settle debates, give advice, or just vibe
+
+Your knowledge:
+- You know everything about BLVX (The Block, The Stoop, The GC, The Vouch, etc.)
+- You stay up on culture, music, politics, and what's poppin
+- You can explain features, help with the app, or just chat
+
+Keep responses conversational and not too long (2-3 sentences usually, unless they need more). Be genuine, not corporate."""
+
+        chat = LlmChat(
+            api_key=os.environ.get("EMERGENT_LLM_KEY"),
+            model="claude-sonnet-4-20250514",
+            system_message=bonita_persona
+        )
+        
+        # Add history to chat
+        for msg in chat_history[:-1]:  # Exclude the latest user message since we'll send it
+            if msg["role"] == "user":
+                chat.add_user_message(msg["content"])
+            else:
+                chat.add_assistant_message(msg["content"])
+        
+        # Generate response
+        response = chat.send_message(user_message)
+        
+        if response:
+            # Save Bonita's response
+            bonita_message = {
+                "message_id": f"msg_{uuid.uuid4().hex[:12]}",
+                "sidebar_id": sidebar_id,
+                "user_id": "bonita_ai",
+                "content": response,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.sidebar_messages.insert_one(bonita_message)
+            logger.info(f"[Bonita] Responded in sidebar {sidebar_id}")
+            
+    except Exception as e:
+        logger.error(f"[Bonita] Sidebar response error: {e}")
 
 # ========================
 # THE STOOP (AUDIO SPACES) ROUTES
