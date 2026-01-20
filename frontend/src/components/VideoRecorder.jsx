@@ -164,17 +164,27 @@ export const VideoRecorder = ({ open, onClose, onVideoRecorded }) => {
       mediaRecorder.onstop = () => {
         console.log('[VideoRecorder] onstop - chunks:', chunksRef.current.length);
         
+        // Stop camera tracks to prevent "capture failure" warnings
+        if (streamRef.current) {
+          streamRef.current.getTracks().forEach(track => track.stop());
+        }
+        
         if (chunksRef.current.length > 0) {
-          // Use the actual mimeType from the recorder
-          const blobType = actualMimeType.split(';')[0] || 'video/webm';
+          const blobType = actualMimeType.split(';')[0] || 'video/mp4';
           const blob = new Blob(chunksRef.current, { type: blobType });
           console.log('[VideoRecorder] Created blob:', blob.size, 'bytes, type:', blobType);
           
           if (blob.size > 0) {
             setRecordedBlob(blob);
-            const url = URL.createObjectURL(blob);
-            setRecordedUrl(url);
-            console.log('[VideoRecorder] Video ready for preview');
+            // Create blob URL properly
+            try {
+              const blobUrl = URL.createObjectURL(blob);
+              console.log('[VideoRecorder] Blob URL created:', blobUrl);
+              setRecordedUrl(blobUrl);
+            } catch (e) {
+              console.error('[VideoRecorder] Failed to create blob URL:', e);
+              toast.error('Failed to create video preview');
+            }
           } else {
             toast.error('Recording failed - no data captured');
           }
