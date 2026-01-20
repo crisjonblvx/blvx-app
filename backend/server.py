@@ -474,14 +474,14 @@ async def email_login(data: EmailLogin, response: Response):
     if not verify_password(data.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     
-    await create_session(user["user_id"], response)
+    session_token = await create_session(user["user_id"], response)
     
-    # Return user without password
+    # Return user without password, with session token
     user_data = {k: v for k, v in user.items() if k not in ["_id", "password_hash"]}
     if isinstance(user_data.get("created_at"), str):
         user_data["created_at"] = datetime.fromisoformat(user_data["created_at"])
     
-    return user_data
+    return {**user_data, "session_token": session_token}
 
 @auth_router.post("/verify-email")
 async def verify_email(data: VerifyEmail, response: Response):
