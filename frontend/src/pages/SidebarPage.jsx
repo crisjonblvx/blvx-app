@@ -1,5 +1,5 @@
-import { useState, useEffect, useRef } from 'react';
-import { MessageSquare, Send, ArrowLeft, User, Loader2 } from 'lucide-react';
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { MessageSquare, Send, ArrowLeft, Loader2, Sparkles } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -11,6 +11,9 @@ import { cn } from '@/lib/utils';
 import { useNavigate, useParams } from 'react-router-dom';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+// Bonita's avatar URL
+const BONITA_AVATAR = "https://customer-assets.emergentagent.com/job_high-context/artifacts/on1dw2e3_Real%20Bonita%202%20avatar.jpg";
 
 export default function SidebarPage() {
   const { user } = useAuth();
@@ -24,8 +27,10 @@ export default function SidebarPage() {
   const [messagesLoading, setMessagesLoading] = useState(false);
   const [newMessage, setNewMessage] = useState('');
   const [sending, setSending] = useState(false);
+  const [waitingForBonita, setWaitingForBonita] = useState(false);
   
   const messagesEndRef = useRef(null);
+  const pollingRef = useRef(null);
 
   useEffect(() => {
     fetchSidebars();
@@ -35,12 +40,48 @@ export default function SidebarPage() {
     if (sidebarId) {
       loadSidebar(sidebarId);
     }
+    
+    // Cleanup polling on unmount
+    return () => {
+      if (pollingRef.current) {
+        clearInterval(pollingRef.current);
+      }
+    };
   }, [sidebarId]);
 
   useEffect(() => {
     // Auto-scroll to bottom when new messages arrive
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
+
+  // Polling for new messages when waiting for Bonita's response
+  const pollForMessages = useCallback(async () => {
+    if (!activeSidebar) return;
+    
+    try {
+      const response = await axios.get(
+        `${API}/sidebar/${activeSidebar.sidebar_id}/messages`,
+        { withCredentials: true }
+      );
+      
+      const newMessages = response.data;
+      
+      // Check if we got a new message from Bonita
+      if (newMessages.length > messages.length) {
+        const lastMessage = newMessages[newMessages.length - 1];
+        if (lastMessage.user_id === 'bonita_ai') {
+          setWaitingForBonita(false);
+          if (pollingRef.current) {
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+          }
+        }
+        setMessages(newMessages);
+      }
+    } catch (error) {
+      console.error('Error polling messages:', error);
+    }
+  }, [activeSidebar, messages.length]);
 
   const fetchSidebars = async () => {
     try {
@@ -85,24 +126,53 @@ export default function SidebarPage() {
     loadSidebar(sidebar.sidebar_id);
   };
 
+  const isBonita = (sidebar) => {
+    if (!sidebar?.other_user) return false;
+    return sidebar.other_user.user_id === 'bonita_ai' || 
+           sidebar.other_user.username === 'bonita' ||
+           sidebar.other_user.name === 'Bonita';
+  };
+
   const sendMessage = async (e) => {
     e.preventDefault();
     if (!newMessage.trim() || !activeSidebar) return;
 
+    const messageContent = newMessage.trim();
     setSending(true);
+    
     try {
       const response = await axios.post(
-        `${API}/sidebar/${activeSidebar.sidebar_id}/message?content=${encodeURIComponent(newMessage)}`,
+        `${API}/sidebar/${activeSidebar.sidebar_id}/message?content=${encodeURIComponent(messageContent)}`,
         {},
         { withCredentials: true }
       );
       
       // Add message to list with user info
-      setMessages([...messages, {
+      setMessages(prev => [...prev, {
         ...response.data,
         user: { name: user.name, username: user.username, picture: user.picture }
       }]);
       setNewMessage('');
+      
+      // If chatting with Bonita, start polling for response
+      if (isBonita(activeSidebar)) {
+        setWaitingForBonita(true);
+        
+        // Start polling every 1.5 seconds
+        if (pollingRef.current) {
+          clearInterval(pollingRef.current);
+        }
+        pollingRef.current = setInterval(pollForMessages, 1500);
+        
+        // Stop polling after 30 seconds as a safety
+        setTimeout(() => {
+          if (pollingRef.current) {
+            clearInterval(pollingRef.current);
+            pollingRef.current = null;
+            setWaitingForBonita(false);
+          }
+        }, 30000);
+      }
     } catch (error) {
       toast.error('Failed to send message');
     } finally {
@@ -112,12 +182,50 @@ export default function SidebarPage() {
 
   const getOtherUser = (sidebar) => {
     // Return the user info of the other person in the sidebar
-    return sidebar.other_user || { name: 'User', username: 'user' };
+    if (!sidebar?.other_user) return { name: 'User', username: 'user' };
+    
+    // Ensure Bonita always has the correct avatar
+    if (sidebar.other_user.user_id === 'bonita_ai' || sidebar.other_user.username === 'bonita') {
+      return {
+        ...sidebar.other_user,
+        name: 'Bonita',
+        picture: sidebar.other_user.picture || BONITA_AVATAR
+      };
+    }
+    
+    return sidebar.other_user;
+  };
+
+  const getMessageUser = (msg) => {
+    // Handle Bonita's messages specially
+    if (msg.user_id === 'bonita_ai') {
+      return {
+        name: 'Bonita',
+        username: 'bonita',
+        picture: msg.user?.picture || BONITA_AVATAR
+      };
+    }
+    return msg.user || { name: 'User', username: 'user' };
+  };
+
+  // Start a chat with Bonita
+  const startBonitaChat = async () => {
+    try {
+      const response = await axios.post(
+        `${API}/sidebar/create?other_user_id=bonita_ai`,
+        {},
+        { withCredentials: true }
+      );
+      navigate(`/sidebar/${response.data.sidebar_id}`);
+    } catch (error) {
+      toast.error('Failed to start chat with Bonita');
+    }
   };
 
   // If viewing a specific sidebar
   if (activeSidebar || sidebarId) {
     const otherUser = activeSidebar ? getOtherUser(activeSidebar) : null;
+    const chattingWithBonita = activeSidebar && isBonita(activeSidebar);
     
     return (
       <div className="flex flex-col h-[calc(100vh-8rem)] md:h-[calc(100vh-4rem)]" data-testid="sidebar-chat">
@@ -129,9 +237,15 @@ export default function SidebarPage() {
               size="sm"
               onClick={() => {
                 setActiveSidebar(null);
+                setWaitingForBonita(false);
+                if (pollingRef.current) {
+                  clearInterval(pollingRef.current);
+                  pollingRef.current = null;
+                }
                 navigate('/sidebar');
               }}
               className="text-white/60 hover:text-white"
+              data-testid="sidebar-back-btn"
             >
               <ArrowLeft className="h-4 w-4" />
             </Button>
@@ -142,7 +256,12 @@ export default function SidebarPage() {
                   <AvatarFallback className="bg-white/10 text-xs">{otherUser.name?.charAt(0)}</AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="font-medium text-sm text-white">{otherUser.name}</p>
+                  <div className="flex items-center gap-1.5">
+                    <p className="font-medium text-sm text-white">{otherUser.name}</p>
+                    {chattingWithBonita && (
+                      <Sparkles className="h-3 w-3 text-amber-400" />
+                    )}
+                  </div>
                   <p className="text-xs text-white/40">@{otherUser.username}</p>
                 </div>
               </>
@@ -163,11 +282,17 @@ export default function SidebarPage() {
             <div className="text-center py-12">
               <MessageSquare className="h-12 w-12 text-white/20 mx-auto mb-4" />
               <p className="text-white/50 text-sm">No messages yet</p>
-              <p className="text-white/30 text-xs">Start the conversation</p>
+              <p className="text-white/30 text-xs">
+                {chattingWithBonita 
+                  ? "Say hey to your AI auntie! She's ready to chat." 
+                  : "Start the conversation"}
+              </p>
             </div>
           ) : (
             messages.map((msg) => {
               const isOwn = msg.user_id === user.user_id;
+              const msgUser = getMessageUser(msg);
+              
               return (
                 <div
                   key={msg.message_id}
@@ -175,11 +300,12 @@ export default function SidebarPage() {
                     "flex gap-2",
                     isOwn ? "justify-end" : "justify-start"
                   )}
+                  data-testid={`message-${msg.message_id}`}
                 >
                   {!isOwn && (
                     <Avatar className="h-8 w-8 border border-white/20 flex-shrink-0">
-                      <AvatarImage src={msg.user?.picture} />
-                      <AvatarFallback className="bg-white/10 text-xs">{msg.user?.name?.charAt(0)}</AvatarFallback>
+                      <AvatarImage src={msgUser.picture} />
+                      <AvatarFallback className="bg-white/10 text-xs">{msgUser.name?.charAt(0)}</AvatarFallback>
                     </Avatar>
                   )}
                   <div
@@ -187,7 +313,9 @@ export default function SidebarPage() {
                       "max-w-[75%] px-4 py-2",
                       isOwn
                         ? "bg-white text-black rounded-tl-xl rounded-tr-none rounded-b-xl"
-                        : "bg-white/10 text-white rounded-tl-none rounded-tr-xl rounded-b-xl"
+                        : msg.user_id === 'bonita_ai'
+                          ? "bg-amber-500/20 text-white rounded-tl-none rounded-tr-xl rounded-b-xl border border-amber-500/30"
+                          : "bg-white/10 text-white rounded-tl-none rounded-tr-xl rounded-b-xl"
                     )}
                   >
                     <p className="text-sm">{msg.content}</p>
@@ -202,6 +330,24 @@ export default function SidebarPage() {
               );
             })
           )}
+          
+          {/* Bonita typing indicator */}
+          {waitingForBonita && (
+            <div className="flex gap-2 justify-start" data-testid="bonita-typing">
+              <Avatar className="h-8 w-8 border border-white/20 flex-shrink-0">
+                <AvatarImage src={BONITA_AVATAR} />
+                <AvatarFallback className="bg-white/10 text-xs">B</AvatarFallback>
+              </Avatar>
+              <div className="bg-amber-500/20 border border-amber-500/30 rounded-tl-none rounded-tr-xl rounded-b-xl px-4 py-3">
+                <div className="flex gap-1">
+                  <span className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+              </div>
+            </div>
+          )}
+          
           <div ref={messagesEndRef} />
         </div>
 
@@ -211,14 +357,14 @@ export default function SidebarPage() {
             <Input
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Whisper something..."
+              placeholder={chattingWithBonita ? "Ask Bonita anything..." : "Whisper something..."}
               className="flex-1 bg-white/10 border-white/20 focus:border-white rounded-full px-4"
-              disabled={sending}
+              disabled={sending || waitingForBonita}
               data-testid="sidebar-message-input"
             />
             <Button
               type="submit"
-              disabled={sending || !newMessage.trim()}
+              disabled={sending || !newMessage.trim() || waitingForBonita}
               className="bg-white text-black hover:bg-white/90 rounded-full w-10 h-10 p-0"
               data-testid="sidebar-send-btn"
             >
@@ -246,6 +392,28 @@ export default function SidebarPage() {
         <p className="text-[10px] text-white/40 mt-2">Private whispers. Just between y'all.</p>
       </div>
 
+      {/* Chat with Bonita CTA */}
+      <div 
+        onClick={startBonitaChat}
+        className="m-4 p-4 rounded-xl bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 cursor-pointer hover:from-amber-500/30 hover:to-orange-500/30 transition-all"
+        data-testid="start-bonita-chat"
+      >
+        <div className="flex items-center gap-3">
+          <Avatar className="h-12 w-12 border-2 border-amber-500/50">
+            <AvatarImage src={BONITA_AVATAR} />
+            <AvatarFallback className="bg-amber-500/20">B</AvatarFallback>
+          </Avatar>
+          <div className="flex-1">
+            <div className="flex items-center gap-2">
+              <p className="font-medium text-white">Chat with Bonita</p>
+              <Sparkles className="h-4 w-4 text-amber-400" />
+            </div>
+            <p className="text-xs text-white/60">Your AI auntie is always here for you</p>
+          </div>
+          <Send className="h-5 w-5 text-amber-400" />
+        </div>
+      </div>
+
       {/* Sidebars List */}
       {loading ? (
         <div className="p-4 space-y-4">
@@ -254,33 +422,44 @@ export default function SidebarPage() {
           ))}
         </div>
       ) : sidebars.length === 0 ? (
-        <div className="text-center py-16 px-6">
-          <MessageSquare className="h-12 w-12 text-white/20 mx-auto mb-4" />
-          <p className="text-white/50 text-sm mb-2">No whispers yet</p>
+        <div className="text-center py-8 px-6">
+          <MessageSquare className="h-10 w-10 text-white/20 mx-auto mb-3" />
+          <p className="text-white/50 text-sm mb-1">No other whispers yet</p>
           <p className="text-white/30 text-xs">Start a sidebar from someone's profile or a group chat</p>
         </div>
       ) : (
         <div className="divide-y divide-white/10">
           {sidebars.map((sidebar) => {
             const otherUser = getOtherUser(sidebar);
+            const isBoniChat = isBonita(sidebar);
+            
             return (
               <div
                 key={sidebar.sidebar_id}
                 onClick={() => selectSidebar(sidebar)}
-                className="p-4 hover:bg-white/5 cursor-pointer transition-colors"
+                className={cn(
+                  "p-4 hover:bg-white/5 cursor-pointer transition-colors",
+                  isBoniChat && "bg-amber-500/5"
+                )}
                 data-testid={`sidebar-${sidebar.sidebar_id}`}
               >
                 <div className="flex items-center gap-3">
-                  <Avatar className="h-12 w-12 border border-white/20">
+                  <Avatar className={cn(
+                    "h-12 w-12 border",
+                    isBoniChat ? "border-amber-500/50" : "border-white/20"
+                  )}>
                     <AvatarImage src={otherUser?.picture} />
                     <AvatarFallback className="bg-white/10">{otherUser?.name?.charAt(0) || '?'}</AvatarFallback>
                   </Avatar>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-white text-sm truncate">{otherUser?.name || 'User'}</p>
+                    <div className="flex items-center gap-1.5">
+                      <p className="font-medium text-white text-sm truncate">{otherUser?.name || 'User'}</p>
+                      {isBoniChat && <Sparkles className="h-3 w-3 text-amber-400 flex-shrink-0" />}
+                    </div>
                     <p className="text-xs text-white/40 truncate">@{otherUser?.username || 'user'}</p>
                   </div>
                   <span className="text-[10px] text-white/30">
-                    {sidebar.source_gc_id ? 'From GC' : 'Direct'}
+                    {sidebar.source_gc_id ? 'From GC' : isBoniChat ? 'AI' : 'Direct'}
                   </span>
                 </div>
               </div>
