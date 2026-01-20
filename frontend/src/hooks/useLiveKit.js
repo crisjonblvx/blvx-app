@@ -166,6 +166,15 @@ export function useLiveKit({
       // Set up event listeners
       room.on(RoomEvent.Connected, () => {
         console.log('[LiveKit] Connected to room');
+        console.log('[LiveKit] Room name:', room.name);
+        console.log('[LiveKit] Local participant:', room.localParticipant?.identity);
+        console.log('[LiveKit] Remote participants count:', room.remoteParticipants.size);
+        
+        // Log all existing participants when we connect
+        room.remoteParticipants.forEach((p) => {
+          console.log('[LiveKit] Existing remote participant:', p.identity, p.name);
+        });
+        
         setIsConnected(true);
         setConnectionState('connected');
         setConnectionError(null);
