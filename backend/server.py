@@ -1539,19 +1539,13 @@ async def send_sidebar_message(sidebar_id: str, content: str, background_tasks: 
 async def generate_bonita_sidebar_response(sidebar_id: str, user_message: str, user_id: str):
     """Generate Bonita's conversational AI response in sidebar"""
     try:
-        from emergentintegrations.llm.chat import LlmChat
+        from emergentintegrations.llm.chat import LlmChat, UserMessage
         
         # Get last 5 messages for context
         recent_messages = await db.sidebar_messages.find(
             {"sidebar_id": sidebar_id}
         ).sort("created_at", -1).limit(5).to_list(5)
         recent_messages.reverse()
-        
-        # Build conversation history
-        chat_history = []
-        for msg in recent_messages:
-            role = "assistant" if msg["user_id"] == "bonita_ai" else "user"
-            chat_history.append({"role": role, "content": msg["content"]})
         
         # Bonita's persona
         bonita_persona = """You are Bonita, the AI "auntie" of BLVX - a high-context social network for Black and Brown communities.
@@ -1571,21 +1565,25 @@ Your knowledge:
 
 Keep responses conversational and not too long (2-3 sentences usually, unless they need more). Be genuine, not corporate."""
 
+        # Initialize chat with correct API
         chat = LlmChat(
             api_key=os.environ.get("EMERGENT_LLM_KEY"),
-            model="claude-sonnet-4-20250514",
+            session_id=f"bonita_sidebar_{sidebar_id}_{uuid.uuid4().hex[:8]}",
             system_message=bonita_persona
-        )
+        ).with_model("anthropic", "claude-sonnet-4-20250514")
         
-        # Add history to chat
-        for msg in chat_history[:-1]:  # Exclude the latest user message since we'll send it
-            if msg["role"] == "user":
-                chat.add_user_message(msg["content"])
+        # Add conversation history (excluding the latest since we'll send it)
+        for msg in recent_messages[:-1]:
+            if msg["user_id"] == "bonita_ai":
+                # Add as assistant message
+                chat._messages.append({"role": "assistant", "content": msg["content"]})
             else:
-                chat.add_assistant_message(msg["content"])
+                # Add as user message
+                chat._messages.append({"role": "user", "content": msg["content"]})
         
         # Generate response
-        response = chat.send_message(user_message)
+        user_msg = UserMessage(text=user_message)
+        response = await chat.send_message(user_msg)
         
         if response:
             # Save Bonita's response
