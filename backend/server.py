@@ -3573,7 +3573,11 @@ async def startup_event():
     else:
         await db.users.update_one(
             {"user_id": "bonita_ai"},
-            {"$set": {"picture": BONITA_AVATAR_URL}}
+            {"$set": {
+                "picture": BONITA_AVATAR_URL,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            },
+            "$setOnInsert": {"created_at": datetime.now(timezone.utc).isoformat()}}
         )
     logger.info("Startup: Bonita's profile initialized")
 
