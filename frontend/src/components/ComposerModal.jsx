@@ -35,7 +35,11 @@ export const ComposerModal = ({
   const isOverLimit = charCount > 500;
 
   const handleSubmit = async () => {
-    if (!content.trim() || isOverLimit || postLoading) return;
+    // Allow posting if there's either content OR media
+    const hasContent = content.trim().length > 0;
+    const hasMedia = selectedMedia !== null;
+    
+    if ((!hasContent && !hasMedia) || isOverLimit || postLoading) return;
 
     try {
       const postData = {
@@ -53,7 +57,9 @@ export const ComposerModal = ({
         } : null,
       };
 
-      await createPost(postData);
+      const result = await createPost(postData);
+      console.log('[Composer] Post created:', result);
+      
       setContent('');
       setBonitaSuggestions(null);
       setShowBonita(false);
@@ -61,6 +67,7 @@ export const ComposerModal = ({
       onOpenChange(false);
       toast.success('Posted!');
     } catch (error) {
+      console.error('[Composer] Post failed:', error);
       toast.error('Failed to post');
     }
   };
