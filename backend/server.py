@@ -160,7 +160,7 @@ class UserBase(BaseModel):
     verified: bool = False
     email_verified: bool = False
     reputation_score: int = 100
-    plates_remaining: int = 3
+    plates_remaining: int = 10
     is_day_one: bool = False
     followers_count: int = 0
     following_count: int = 0
@@ -309,7 +309,7 @@ async def get_current_user(request: Request) -> UserBase:
     # Set defaults for optional fields
     user.setdefault("email_verified", True)  # Default for existing users
     user.setdefault("reputation_score", 100)
-    user.setdefault("plates_remaining", 3)
+    user.setdefault("plates_remaining", 10)
     user.setdefault("is_day_one", False)
     user.setdefault("vouched_by", None)
     
@@ -684,7 +684,7 @@ async def get_user_profile(username: str):
     
     user.setdefault("email_verified", True)
     user.setdefault("reputation_score", 100)
-    user.setdefault("plates_remaining", 3)
+    user.setdefault("plates_remaining", 10)
     user.setdefault("is_day_one", False)
     user.setdefault("vouched_by", None)
     
@@ -709,7 +709,7 @@ async def update_profile(update: UserUpdate, user: UserBase = Depends(get_curren
     
     updated_user.setdefault("email_verified", True)
     updated_user.setdefault("reputation_score", 100)
-    updated_user.setdefault("plates_remaining", 3)
+    updated_user.setdefault("plates_remaining", 10)
     updated_user.setdefault("is_day_one", False)
     updated_user.setdefault("vouched_by", None)
     
@@ -802,7 +802,7 @@ async def search_users(q: str, limit: int = 20):
             user["created_at"] = datetime.fromisoformat(user["created_at"])
         user.setdefault("email_verified", True)
         user.setdefault("reputation_score", 100)
-        user.setdefault("plates_remaining", 3)
+        user.setdefault("plates_remaining", 10)
         user.setdefault("is_day_one", False)
         user.setdefault("vouched_by", None)
         result.append(UserBase(**user))
