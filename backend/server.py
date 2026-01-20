@@ -2263,7 +2263,7 @@ async def drop_spark(
             "user_id": "bonita",
             "email": "bonita@blvx.app",
             "name": "Bonita",
-            "picture": "",
+            "picture": BONITA_AVATAR_URL,
             "username": "bonita",
             "bio": "Your culturally fluent AI companion. The Auntie of The Block.",
             "verified": True,
