@@ -426,11 +426,22 @@ export default function StoopPage() {
           
           {/* LiveKit Status Debug */}
           <div className="mt-3 p-2 bg-black/50 rounded text-[10px] text-white/50 space-y-1">
-            <div>
-              LiveKit: {connectionState} • 
-              Participants: {participants.length} • 
-              Role: {isSpeaker ? 'Speaker' : 'Listener'} •
-              Mic: {isLocalMicActive ? '🎤 ON' : '🔇 OFF'}
+            <div className="flex items-center justify-between">
+              <span>
+                LiveKit: {connectionState} • 
+                Participants: {participants.length} • 
+                Role: {isSpeaker ? 'Speaker' : 'Listener'} •
+                Mic: {isLocalMicActive ? '🎤 ON' : '🔇 OFF'}
+              </span>
+              <button 
+                onClick={() => {
+                  debugRoomState();
+                  toast.info('Check browser console for debug info');
+                }}
+                className="text-blue-400 hover:text-blue-300 underline"
+              >
+                Debug
+              </button>
             </div>
           </div>
         </div>
