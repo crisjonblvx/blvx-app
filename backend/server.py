@@ -46,6 +46,9 @@ stoop_router = APIRouter(prefix="/stoop", tags=["The Stoop"])
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
 
+# Bonita AI Avatar URL
+BONITA_AVATAR_URL = "https://customer-assets.emergentagent.com/job_high-context/artifacts/on1dw2e3_Real%20Bonita%202%20avatar.jpg"
+
 # ========================
 # WEBSOCKET CONNECTION MANAGER
 # ========================
