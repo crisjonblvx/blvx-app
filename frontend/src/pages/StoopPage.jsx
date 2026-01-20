@@ -46,7 +46,8 @@ export default function StoopPage() {
     connectionError,
     connect: connectLiveKit,
     disconnect: disconnectLiveKit,
-    toggleMute
+    toggleMute,
+    debugRoomState
   } = useLiveKit({
     stoopId: activeStoopId,
     userId: user?.user_id,
