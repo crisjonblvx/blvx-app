@@ -1542,18 +1542,21 @@ async def get_stoop(stoop_id: str):
 
 @stoop_router.post("/{stoop_id}/join")
 async def join_stoop(stoop_id: str, user: UserBase = Depends(get_current_user)):
-    """Join a Stoop as a listener"""
+    """Join a Stoop as a listener (unless already a speaker)"""
     stoop = await db.stoops.find_one({"stoop_id": stoop_id})
     if not stoop or not stoop["is_live"]:
         raise HTTPException(status_code=404, detail="Stoop not found or ended")
     
-    if user.user_id not in stoop["listeners"]:
+    # Don't add to listeners if they're already a speaker or the host
+    is_speaker = user.user_id in stoop.get("speakers", []) or user.user_id == stoop["host_id"]
+    
+    if not is_speaker and user.user_id not in stoop["listeners"]:
         await db.stoops.update_one(
             {"stoop_id": stoop_id},
             {"$push": {"listeners": user.user_id}}
         )
     
-    return {"message": "Joined the Stoop"}
+    return {"message": "Joined the Stoop", "is_speaker": is_speaker}
 
 @stoop_router.post("/{stoop_id}/leave")
 async def leave_stoop(stoop_id: str, user: UserBase = Depends(get_current_user)):
