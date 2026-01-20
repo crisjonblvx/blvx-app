@@ -164,11 +164,19 @@ export function useLiveKit({
       roomRef.current = room;
       
       // Set up event listeners
-      room.on(RoomEvent.Connected, () => {
+      room.on(RoomEvent.Connected, async () => {
         console.log('[LiveKit] Connected to room');
         console.log('[LiveKit] Room name:', room.name);
         console.log('[LiveKit] Local participant:', room.localParticipant?.identity);
         console.log('[LiveKit] Remote participants count:', room.remoteParticipants.size);
+        
+        // Wait for SID to be assigned
+        try {
+          const sid = await room.getSid();
+          console.log('[LiveKit] Room SID:', sid);
+        } catch (e) {
+          console.log('[LiveKit] Could not get room SID:', e);
+        }
         
         // Log all existing participants when we connect
         room.remoteParticipants.forEach((p) => {
