@@ -1458,8 +1458,10 @@ async def send_sidebar_message(sidebar_id: str, content: str, user: UserBase = D
 @stoop_router.post("/create")
 async def create_stoop(stoop: StoopCreate, user: UserBase = Depends(get_current_user)):
     """Create a new Stoop"""
+    stoop_id = f"stoop_{uuid.uuid4().hex[:12]}"
+    
     stoop_data = {
-        "stoop_id": f"stoop_{uuid.uuid4().hex[:12]}",
+        "stoop_id": stoop_id,
         "title": stoop.title,
         "host_id": user.user_id,
         "pinned_post_id": stoop.pinned_post_id,
@@ -1468,6 +1470,32 @@ async def create_stoop(stoop: StoopCreate, user: UserBase = Depends(get_current_
         "is_live": True,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
+    
+    # Create LiveKit room on the server side to ensure it exists
+    livekit_api_key = os.environ.get("LIVEKIT_API_KEY")
+    livekit_api_secret = os.environ.get("LIVEKIT_API_SECRET")
+    livekit_url = os.environ.get("LIVEKIT_URL")
+    
+    if livekit_api_key and livekit_api_secret and livekit_url:
+        try:
+            # Create RoomService client
+            room_service = api.RoomService(
+                livekit_url.replace("wss://", "https://"),
+                livekit_api_key,
+                livekit_api_secret
+            )
+            # Create the room with the stoop_id as the room name
+            await room_service.create_room(
+                api.CreateRoomRequest(
+                    name=stoop_id,
+                    empty_timeout=300,  # 5 minutes before empty room closes
+                    max_participants=50
+                )
+            )
+            logger.info(f"[LiveKit] Created room: {stoop_id}")
+        except Exception as e:
+            logger.warning(f"[LiveKit] Failed to create room {stoop_id}: {e}")
+            # Continue anyway - room will be auto-created when first participant joins
     
     await db.stoops.insert_one(stoop_data)
     stoop_data.pop("_id", None)
