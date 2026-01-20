@@ -2392,9 +2392,13 @@ async def upload_file(
         raise HTTPException(status_code=400, detail="No file provided")
     
     # Validate file type
-    allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp", "video/mp4", "video/webm"]
+    allowed_types = ["image/jpeg", "image/png", "image/gif", "image/webp", "video/mp4", "video/webm", "video/quicktime", "video/x-m4v"]
     content_type = file.content_type
     
+    # Also handle HEIC/HEIF from iPhones
+    if content_type in ["image/heic", "image/heif"]:
+        content_type = "image/jpeg"  # Cloudinary converts these automatically
+
     if content_type not in allowed_types:
         raise HTTPException(status_code=400, detail="Unsupported file type")
     
