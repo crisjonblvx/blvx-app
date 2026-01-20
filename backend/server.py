@@ -41,6 +41,7 @@ notifications_router = APIRouter(prefix="/notifications", tags=["Notifications"]
 vouch_router = APIRouter(prefix="/vouch", tags=["Vouch System"])
 gc_router = APIRouter(prefix="/gc", tags=["The GC"])
 stoop_router = APIRouter(prefix="/stoop", tags=["The Stoop"])
+admin_router = APIRouter(prefix="/admin", tags=["Admin"])
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
