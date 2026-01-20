@@ -1,7 +1,8 @@
 import { useState, useRef } from 'react';
-import { Image, Video, X, Loader2 } from 'lucide-react';
+import { Image, Video, X, Loader2, Circle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { GifPicker } from '@/components/GifPicker';
+import { VideoRecorder } from '@/components/VideoRecorder';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import axios from 'axios';
@@ -10,6 +11,7 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export const MediaToolbar = ({ onMediaSelect, selectedMedia, onRemoveMedia }) => {
   const [gifPickerOpen, setGifPickerOpen] = useState(false);
+  const [videoRecorderOpen, setVideoRecorderOpen] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef(null);
