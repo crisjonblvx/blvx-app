@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Radio, Search, MessageCircle, User } from 'lucide-react';
+import { Home, Radio, Search, MessageCircle, User, MessageSquare } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useNotificationCount } from '@/hooks/useNotificationCount';
 import { cn } from '@/lib/utils';
@@ -7,8 +7,8 @@ import { cn } from '@/lib/utils';
 const navItems = [
   { path: '/home', icon: Home, label: 'Home' },
   { path: '/stoop', icon: Radio, label: 'Stoop' },
+  { path: '/sidebar', icon: MessageSquare, label: 'DMs' },
   { path: '/search', icon: Search, label: 'Search' },
-  { path: '/gc', icon: MessageCircle, label: 'GC' },
 ];
 
 export const BottomNav = () => {
