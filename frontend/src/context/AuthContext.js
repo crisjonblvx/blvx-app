@@ -4,6 +4,15 @@ import axios from 'axios';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
+// Configure axios to send auth token from localStorage
+axios.interceptors.request.use((config) => {
+  const token = localStorage.getItem('blvx-session-token');
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
+
 const AuthContext = createContext(null);
 
 export const useAuth = () => {
@@ -37,6 +46,18 @@ export const AuthProvider = ({ children }) => {
       return;
     }
 
+    // Check if we have a token in localStorage
+    const savedToken = localStorage.getItem('blvx-session-token');
+    if (!savedToken) {
+      setUser(null);
+      setIsAuthenticated(false);
+      setLoading(false);
+      if (location.pathname !== '/') {
+        navigate('/', { replace: true });
+      }
+      return;
+    }
+
     try {
       const response = await axios.get(`${API}/auth/me`, {
         withCredentials: true
@@ -45,6 +66,9 @@ export const AuthProvider = ({ children }) => {
       setIsAuthenticated(true);
     } catch (error) {
       console.log('Auth check failed:', error.response?.status);
+      // Clear invalid token
+      localStorage.removeItem('blvx-session-token');
+      setSessionToken(null);
       setUser(null);
       setIsAuthenticated(false);
       // Only redirect if on a protected route
@@ -94,6 +118,8 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error('Logout error:', error);
     } finally {
+      localStorage.removeItem('blvx-session-token');
+      setSessionToken(null);
       setUser(null);
       setIsAuthenticated(false);
       navigate('/', { replace: true });
@@ -107,13 +133,18 @@ export const AuthProvider = ({ children }) => {
 
   // Expose a method to set user after successful login
   const setAuthenticatedUser = (userData, token = null) => {
-    setUser(userData);
+    // Extract and save session token if present
+    const tokenToSave = token || userData.session_token;
+    if (tokenToSave) {
+      localStorage.setItem('blvx-session-token', tokenToSave);
+      setSessionToken(tokenToSave);
+    }
+    
+    // Remove session_token from user object before storing
+    const { session_token, ...userWithoutToken } = userData;
+    setUser(userWithoutToken);
     setIsAuthenticated(true);
     setLoading(false);
-    if (token) {
-      setSessionToken(token);
-      localStorage.setItem('blvx-session-token', token);
-    }
   };
 
   // Load session token from localStorage on mount
