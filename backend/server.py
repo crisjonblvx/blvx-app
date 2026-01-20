@@ -1434,6 +1434,20 @@ async def get_my_sidebars(user: UserBase = Depends(get_current_user)):
     
     return sidebars
 
+@api_router.get("/sidebar/{sidebar_id}")
+async def get_sidebar(sidebar_id: str, user: UserBase = Depends(get_current_user)):
+    """Get a specific sidebar"""
+    sidebar = await db.sidebars.find_one({"sidebar_id": sidebar_id}, {"_id": 0})
+    if not sidebar or (user.user_id not in [sidebar["user_1"], sidebar["user_2"]]):
+        raise HTTPException(status_code=403, detail="Not a member of this sidebar")
+    
+    # Get other user info
+    other_id = sidebar["user_2"] if sidebar["user_1"] == user.user_id else sidebar["user_1"]
+    other_user = await db.users.find_one({"user_id": other_id}, {"_id": 0, "user_id": 1, "name": 1, "username": 1, "picture": 1})
+    sidebar["other_user"] = other_user
+    
+    return sidebar
+
 @api_router.get("/sidebar/{sidebar_id}/messages")
 async def get_sidebar_messages(sidebar_id: str, limit: int = 50, user: UserBase = Depends(get_current_user)):
     """Get messages from a sidebar"""
