@@ -1478,21 +1478,22 @@ async def create_stoop(stoop: StoopCreate, user: UserBase = Depends(get_current_
     
     if livekit_api_key and livekit_api_secret and livekit_url:
         try:
-            # Create RoomService client
-            room_service = api.RoomService(
+            # Create room using LiveKitAPI
+            lkapi = api.LiveKitAPI(
                 livekit_url.replace("wss://", "https://"),
                 livekit_api_key,
                 livekit_api_secret
             )
             # Create the room with the stoop_id as the room name
-            await room_service.create_room(
+            room = await lkapi.room.create_room(
                 api.CreateRoomRequest(
                     name=stoop_id,
                     empty_timeout=300,  # 5 minutes before empty room closes
                     max_participants=50
                 )
             )
-            logger.info(f"[LiveKit] Created room: {stoop_id}")
+            await lkapi.aclose()
+            logger.info(f"[LiveKit] Created room: {stoop_id}, SID: {room.sid}")
         except Exception as e:
             logger.warning(f"[LiveKit] Failed to create room {stoop_id}: {e}")
             # Continue anyway - room will be auto-created when first participant joins
