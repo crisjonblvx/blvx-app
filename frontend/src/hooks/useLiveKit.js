@@ -279,6 +279,26 @@ export function useLiveKit({
     }
   }, [stoopId, userId, updateParticipants, attachAudioTrack, detachAudioTrack, cleanupAudioElements]);
 
+  // Debug function to log room state - can be called periodically or on demand
+  const debugRoomState = useCallback(() => {
+    const room = roomRef.current;
+    if (!room) {
+      console.log('[LiveKit Debug] No room instance');
+      return;
+    }
+    console.log('[LiveKit Debug] Room state:', room.state);
+    console.log('[LiveKit Debug] Room name:', room.name);
+    console.log('[LiveKit Debug] Room SID:', room.sid);
+    console.log('[LiveKit Debug] Local participant:', room.localParticipant?.identity);
+    console.log('[LiveKit Debug] Remote participants count:', room.remoteParticipants.size);
+    room.remoteParticipants.forEach((p, key) => {
+      console.log('[LiveKit Debug] Remote participant:', key, p.identity, p.name, 'speaking:', p.isSpeaking, 'audio:', p.isMicrophoneEnabled);
+      p.audioTrackPublications.forEach((pub) => {
+        console.log('[LiveKit Debug]   Audio track:', pub.trackSid, 'subscribed:', pub.isSubscribed, 'enabled:', pub.isEnabled);
+      });
+    });
+  }, []);
+
   // Toggle microphone
   const toggleMute = useCallback(async () => {
     const room = roomRef.current;
