@@ -144,6 +144,37 @@ class ConnectionManager:
                 await self.user_connections[user_id].send_json(message)
             except Exception:
                 del self.user_connections[user_id]
+    
+    async def connect_sidebar(self, websocket: WebSocket, sidebar_id: str, user_id: str):
+        """Connect a user to a sidebar chat"""
+        await websocket.accept()
+        if sidebar_id not in self.sidebar_connections:
+            self.sidebar_connections[sidebar_id] = []
+        self.sidebar_connections[sidebar_id].append(websocket)
+        logger.info(f"User {user_id} connected to Sidebar {sidebar_id}")
+    
+    async def disconnect_sidebar(self, websocket: WebSocket, sidebar_id: str, user_id: str):
+        """Disconnect a user from a sidebar chat"""
+        if sidebar_id in self.sidebar_connections:
+            if websocket in self.sidebar_connections[sidebar_id]:
+                self.sidebar_connections[sidebar_id].remove(websocket)
+            if not self.sidebar_connections[sidebar_id]:
+                del self.sidebar_connections[sidebar_id]
+        logger.info(f"User {user_id} disconnected from Sidebar {sidebar_id}")
+    
+    async def broadcast_to_sidebar(self, sidebar_id: str, message: dict):
+        """Broadcast a message to all connections in a sidebar"""
+        if sidebar_id in self.sidebar_connections:
+            dead_connections = []
+            for connection in self.sidebar_connections[sidebar_id]:
+                try:
+                    await connection.send_json(message)
+                except Exception as e:
+                    logger.error(f"Error sending to sidebar connection: {e}")
+                    dead_connections.append(connection)
+            for conn in dead_connections:
+                if conn in self.sidebar_connections[sidebar_id]:
+                    self.sidebar_connections[sidebar_id].remove(conn)
 
 # Global connection manager
 ws_manager = ConnectionManager()
