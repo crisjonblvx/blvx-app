@@ -314,22 +314,28 @@ export const VideoRecorder = ({ open, onClose, onVideoRecorded }) => {
 
         <div className="relative aspect-[9/16] max-h-[60vh] bg-black">
           {recordedUrl ? (
-            <video
-              ref={previewVideoRef}
-              src={recordedUrl}
-              controls
-              autoPlay
-              playsInline
-              webkit-playsinline="true"
-              className="w-full h-full object-contain"
-              onError={(e) => {
-                console.error('[VideoRecorder] Video playback error:', e);
-                toast.error('Video preview failed to load');
-              }}
-              onLoadedData={() => {
-                console.log('[VideoRecorder] Video preview loaded');
-              }}
-            />
+            <div className="w-full h-full flex flex-col">
+              <video
+                ref={previewVideoRef}
+                src={recordedUrl}
+                controls
+                autoPlay
+                playsInline
+                webkit-playsinline="true"
+                className="w-full h-full object-contain"
+                onError={(e) => {
+                  console.error('[VideoRecorder] Video playback error:', e);
+                }}
+                onLoadedData={() => {
+                  console.log('[VideoRecorder] Video preview loaded');
+                }}
+              />
+              {recordedBlob && (
+                <div className="absolute bottom-2 left-2 bg-black/60 px-2 py-1 rounded text-[10px] text-white/60">
+                  ✓ {(recordedBlob.size / (1024 * 1024)).toFixed(1)}MB recorded
+                </div>
+              )}
+            </div>
           ) : (
             <video
               ref={videoRef}
