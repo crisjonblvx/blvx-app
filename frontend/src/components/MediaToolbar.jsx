@@ -272,6 +272,13 @@ export const MediaToolbar = ({ onMediaSelect, selectedMedia, onRemoveMedia }) =>
         onClose={() => setGifPickerOpen(false)}
         onSelect={handleGifSelect}
       />
+
+      {/* Video Recorder Modal */}
+      <VideoRecorder
+        open={videoRecorderOpen}
+        onClose={() => setVideoRecorderOpen(false)}
+        onVideoRecorded={handleRecordedVideo}
+      />
     </>
   );
 };
