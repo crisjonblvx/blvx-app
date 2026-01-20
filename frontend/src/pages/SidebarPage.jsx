@@ -197,8 +197,8 @@ export default function SidebarPage() {
   };
 
   const getMessageUser = (msg) => {
-    // Handle Bonita's messages specially
-    if (msg.user_id === 'bonita_ai') {
+    // Handle Bonita's messages specially (both bonita and bonita_ai)
+    if (msg.user_id === 'bonita_ai' || msg.user_id === 'bonita') {
       return {
         name: 'Bonita',
         username: 'bonita',
