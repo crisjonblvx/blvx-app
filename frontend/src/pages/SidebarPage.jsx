@@ -184,8 +184,10 @@ export default function SidebarPage() {
     // Return the user info of the other person in the sidebar
     if (!sidebar?.other_user) return { name: 'User', username: 'user' };
     
-    // Ensure Bonita always has the correct avatar
-    if (sidebar.other_user.user_id === 'bonita_ai' || sidebar.other_user.username === 'bonita') {
+    // Ensure Bonita always has the correct avatar (handle both bonita and bonita_ai)
+    if (sidebar.other_user.user_id === 'bonita_ai' || 
+        sidebar.other_user.user_id === 'bonita' || 
+        sidebar.other_user.username === 'bonita') {
       return {
         ...sidebar.other_user,
         name: 'Bonita',
