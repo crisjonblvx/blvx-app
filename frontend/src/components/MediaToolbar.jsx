@@ -1,5 +1,5 @@
 import { useState, useRef } from 'react';
-import { Image, Video, X, Loader2, Circle } from 'lucide-react';
+import { Image, Video, X, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { GifPicker } from '@/components/GifPicker';
 import { VideoRecorder } from '@/components/VideoRecorder';
@@ -15,13 +15,12 @@ export const MediaToolbar = ({ onMediaSelect, selectedMedia, onRemoveMedia }) =>
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const fileInputRef = useRef(null);
-  const videoInputRef = useRef(null);
 
-  const handleFileSelect = async (e, isVideo = false) => {
+  const handleFileSelect = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Validate file type - expanded for mobile device formats
+    // Validate file type - images only (videos go through recorder)
     const imageTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/heic', 'image/heif'];
     const videoTypes = ['video/mp4', 'video/webm', 'video/quicktime', 'video/x-m4v', 'video/3gpp', 'video/3gpp2'];
     const validTypes = [...imageTypes, ...videoTypes];
