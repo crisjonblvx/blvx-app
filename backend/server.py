@@ -1808,6 +1808,18 @@ SPARK_TOPIC_CATEGORIES = {
         "viral news social media",
         "major news headlines today",
     ],
+    "mainstream": [
+        "national news headlines today",
+        "college football news",
+        "NFL news today",
+        "NBA news today",
+        "politics news today",
+        "world news headlines",
+        "economy news today",
+        "climate news today",
+        "science news discoveries",
+        "celebrity news entertainment",
+    ],
 }
 
 # ========================
