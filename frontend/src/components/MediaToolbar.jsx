@@ -73,7 +73,6 @@ export const MediaToolbar = ({ onMediaSelect, selectedMedia, onRemoveMedia }) =>
       setUploadProgress(0);
       // Reset input
       if (fileInputRef.current) fileInputRef.current.value = '';
-      if (videoInputRef.current) videoInputRef.current.value = '';
     }
   };
 
