@@ -147,7 +147,7 @@ export const MediaToolbar = ({ onMediaSelect, selectedMedia, onRemoveMedia }) =>
           className="text-white/40 hover:text-white text-xs gap-2"
           data-testid="media-upload-btn"
         >
-          {uploading && !videoInputRef.current?.files?.length ? (
+          {uploading ? (
             <Loader2 className="h-4 w-4 animate-spin" />
           ) : (
             <Image className="h-4 w-4" />
