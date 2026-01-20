@@ -3527,6 +3527,7 @@ api_router.include_router(spark_router)
 api_router.include_router(upload_router)
 api_router.include_router(lookout_router)
 api_router.include_router(push_router)
+api_router.include_router(admin_router)
 
 app.include_router(api_router)
 
