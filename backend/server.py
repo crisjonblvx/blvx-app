@@ -1583,15 +1583,17 @@ async def get_livekit_token(stoop_id: str, user: UserBase = Depends(get_current_
     # Determine if user is a speaker (can publish) or just listener
     is_speaker = user.user_id in stoop.get("speakers", []) or user.user_id == stoop["host_id"]
     
-    # Create LiveKit access token
+    # Create LiveKit access token with room creation capability
     token = api.AccessToken(livekit_api_key, livekit_api_secret) \
         .with_identity(user.user_id) \
         .with_name(user.name or user.username) \
         .with_grants(api.VideoGrants(
             room_join=True,
             room=stoop_id,
+            room_create=True,  # Allow room creation if it doesn't exist
             can_publish=is_speaker,
-            can_subscribe=True
+            can_subscribe=True,
+            can_publish_data=True  # Allow data channel for signaling
         ))
     
     jwt_token = token.to_jwt()
