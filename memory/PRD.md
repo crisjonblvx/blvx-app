@@ -170,6 +170,19 @@ Build **BLVX**, a "High-Context Social Network" designed to be a "Group Chat" ra
 - [x] Whisper button on user profiles
 - [x] Real-time-ready architecture
 
+#### Bonita Conversational AI in Sidebar (COMPLETED - Jan 20, 2026)
+- [x] 1-on-1 chat with Bonita in The Sidebar
+- [x] Claude claude-sonnet-4-20250514 integration via Emergent LLM Key
+- [x] Bonita's new avatar (red headwrap lady photo)
+- [x] Real-time polling (1.5s) for Bonita's responses
+- [x] Amber/gold styled messages for Bonita
+- [x] Typing indicator while waiting for Bonita
+- [x] Multi-turn conversation support
+- [x] Detailed BLVX feature knowledge in system prompt
+- [x] "Chat with Bonita" CTA card on Sidebar page
+- [x] WebSocket endpoint for sidebar chats (/ws/sidebar/{id})
+- [x] @Bonita in Group Chats (sparkle button)
+
 #### Dynamic Spark Topics (NEW - Jan 19, 2026)
 - [x] Culturally diverse content categories (Music, Tech, Culture, Politics, Finance)
 - [x] POC/BIPOC focused search queries
