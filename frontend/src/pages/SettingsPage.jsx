@@ -143,6 +143,18 @@ export default function SettingsPage() {
         },
       ],
     },
+    // Admin section - only show for admin users
+    ...(ADMIN_USERS.includes(user?.user_id) ? [{
+      title: 'Admin',
+      items: [
+        {
+          icon: Settings2,
+          label: 'Admin Dashboard',
+          description: 'Manage users, posts, and platform',
+          onClick: () => navigate('/admin'),
+        },
+      ],
+    }] : []),
     {
       title: 'About',
       items: [
