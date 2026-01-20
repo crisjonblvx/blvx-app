@@ -1,5 +1,19 @@
 # BLVX Changelog
 
+## v1.6.0 (January 20, 2026)
+### Admin Dashboard
+- **Platform Statistics**: Overview of total users, posts, GCs, stoops, alerts
+- **Recent Activity**: Track signups and active users (last 7 days)
+- **User Management**: Search users, view details, ban/unban functionality
+- **Content Moderation**: View all posts, delete violations
+- **Alert Management**: Review and remove safety alerts
+- **Admin Access Control**: Hardcoded admin user IDs for security
+- **Settings Integration**: Admin link appears only for admin users
+
+### Bug Fixes
+- **Bonita Chat Fix**: Now handles both `bonita` and `bonita_ai` user IDs
+- **Sidebar Polling**: Fixed message detection for both Bonita identifiers
+
 ## v1.5.0 (January 20, 2026)
 ### Bonita Conversational AI in Sidebar
 - **1-on-1 Chat with Bonita**: Complete conversational AI experience in The Sidebar
