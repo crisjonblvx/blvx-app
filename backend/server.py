@@ -3512,6 +3512,196 @@ async def test_push_notification(user: UserBase = Depends(get_current_user)):
     return {"message": "Test notification sent"}
 
 # ========================
+# ADMIN DASHBOARD API
+# ========================
+
+# List of admin user IDs (hardcoded for now, could be stored in DB)
+ADMIN_USERS = ["user_d940ef29bbb5"]  # CJ Nurse's user ID
+
+async def get_admin_user(user: UserBase = Depends(get_current_user)):
+    """Dependency to check if user is admin"""
+    if user.user_id not in ADMIN_USERS:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    return user
+
+@admin_router.get("/stats")
+async def get_admin_stats(admin: UserBase = Depends(get_admin_user)):
+    """Get platform statistics"""
+    total_users = await db.users.count_documents({})
+    total_posts = await db.posts.count_documents({})
+    total_gcs = await db.gcs.count_documents({})
+    total_stoops = await db.stoops.count_documents({})
+    total_alerts = await db.alerts.count_documents({})
+    
+    # Get recent signups (last 7 days)
+    week_ago = (datetime.now(timezone.utc) - timedelta(days=7)).isoformat()
+    recent_signups = await db.users.count_documents({"created_at": {"$gte": week_ago}})
+    
+    # Get active users (users who posted in last 7 days)
+    active_users = await db.posts.distinct("author_id", {"created_at": {"$gte": week_ago}})
+    
+    return {
+        "total_users": total_users,
+        "total_posts": total_posts,
+        "total_gcs": total_gcs,
+        "total_stoops": total_stoops,
+        "total_alerts": total_alerts,
+        "recent_signups": recent_signups,
+        "active_users_count": len(active_users)
+    }
+
+@admin_router.get("/users")
+async def get_admin_users(
+    page: int = 1,
+    limit: int = 20,
+    search: str = None,
+    admin: UserBase = Depends(get_admin_user)
+):
+    """Get paginated list of users for admin"""
+    query = {}
+    if search:
+        query = {"$or": [
+            {"name": {"$regex": search, "$options": "i"}},
+            {"username": {"$regex": search, "$options": "i"}},
+            {"email": {"$regex": search, "$options": "i"}}
+        ]}
+    
+    skip = (page - 1) * limit
+    
+    users = await db.users.find(
+        query,
+        {"_id": 0, "password_hash": 0}
+    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    total = await db.users.count_documents(query)
+    
+    return {
+        "users": users,
+        "total": total,
+        "page": page,
+        "pages": (total + limit - 1) // limit
+    }
+
+@admin_router.post("/users/{user_id}/ban")
+async def ban_user(user_id: str, reason: str = "Violation of community guidelines", admin: UserBase = Depends(get_admin_user)):
+    """Ban a user"""
+    if user_id in ADMIN_USERS:
+        raise HTTPException(status_code=400, detail="Cannot ban admin users")
+    
+    result = await db.users.update_one(
+        {"user_id": user_id},
+        {"$set": {"is_banned": True, "ban_reason": reason, "banned_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return {"message": f"User {user_id} has been banned", "reason": reason}
+
+@admin_router.post("/users/{user_id}/unban")
+async def unban_user(user_id: str, admin: UserBase = Depends(get_admin_user)):
+    """Unban a user"""
+    result = await db.users.update_one(
+        {"user_id": user_id},
+        {"$unset": {"is_banned": "", "ban_reason": "", "banned_at": ""}}
+    )
+    
+    if result.modified_count == 0:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return {"message": f"User {user_id} has been unbanned"}
+
+@admin_router.get("/posts")
+async def get_admin_posts(
+    page: int = 1,
+    limit: int = 20,
+    reported: bool = False,
+    admin: UserBase = Depends(get_admin_user)
+):
+    """Get paginated list of posts for admin"""
+    query = {}
+    if reported:
+        query = {"reports": {"$exists": True, "$ne": []}}
+    
+    skip = (page - 1) * limit
+    
+    posts = await db.posts.find(
+        query,
+        {"_id": 0}
+    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    # Get user info for each post
+    for post in posts:
+        author = await db.users.find_one(
+            {"user_id": post["author_id"]},
+            {"_id": 0, "name": 1, "username": 1, "picture": 1}
+        )
+        post["author"] = author
+    
+    total = await db.posts.count_documents(query)
+    
+    return {
+        "posts": posts,
+        "total": total,
+        "page": page,
+        "pages": (total + limit - 1) // limit
+    }
+
+@admin_router.delete("/posts/{post_id}")
+async def delete_post_admin(post_id: str, reason: str = "Content violation", admin: UserBase = Depends(get_admin_user)):
+    """Delete a post as admin"""
+    result = await db.posts.delete_one({"post_id": post_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Post not found")
+    
+    # Also delete replies to this post
+    await db.posts.delete_many({"reply_to": post_id})
+    
+    return {"message": f"Post {post_id} has been deleted", "reason": reason}
+
+@admin_router.get("/alerts")
+async def get_admin_alerts(
+    page: int = 1,
+    limit: int = 20,
+    admin: UserBase = Depends(get_admin_user)
+):
+    """Get all alerts for admin review"""
+    skip = (page - 1) * limit
+    
+    alerts = await db.alerts.find(
+        {},
+        {"_id": 0}
+    ).sort("created_at", -1).skip(skip).limit(limit).to_list(limit)
+    
+    # Get reporter info
+    for alert in alerts:
+        reporter = await db.users.find_one(
+            {"user_id": alert["reporter_id"]},
+            {"_id": 0, "name": 1, "username": 1}
+        )
+        alert["reporter"] = reporter
+    
+    total = await db.alerts.count_documents({})
+    
+    return {
+        "alerts": alerts,
+        "total": total,
+        "page": page,
+        "pages": (total + limit - 1) // limit
+    }
+
+@admin_router.delete("/alerts/{alert_id}")
+async def delete_alert_admin(alert_id: str, admin: UserBase = Depends(get_admin_user)):
+    """Delete an alert as admin"""
+    result = await db.alerts.delete_one({"alert_id": alert_id})
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    
+    return {"message": f"Alert {alert_id} has been deleted"}
+
+# ========================
 # INCLUDE ROUTERS
 # ========================
 
