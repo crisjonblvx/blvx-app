@@ -1541,8 +1541,8 @@ async def send_sidebar_message(sidebar_id: str, content: str, background_tasks: 
     
     other_id = sidebar["user_2"] if sidebar["user_1"] == user.user_id else sidebar["user_1"]
     
-    # Check if messaging Bonita - trigger AI response
-    if other_id == "bonita_ai":
+    # Check if messaging Bonita - trigger AI response (handle both bonita and bonita_ai)
+    if other_id in ["bonita_ai", "bonita"]:
         background_tasks.add_task(generate_bonita_sidebar_response, sidebar_id, content, user.user_id)
     else:
         await create_notification(other_id, "sidebar_message", user.user_id, None)
