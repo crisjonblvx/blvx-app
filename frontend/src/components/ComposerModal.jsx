@@ -113,14 +113,6 @@ export const ComposerModal = ({
             <DialogTitle className="font-display text-sm tracking-widest uppercase">
               {replyTo ? 'Reply' : quotedPost ? 'Quote' : 'New Post'}
             </DialogTitle>
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => onOpenChange(false)}
-              className="text-white/50 hover:text-white h-8 w-8"
-            >
-              <X className="h-4 w-4" />
-            </Button>
           </div>
         </DialogHeader>
 
