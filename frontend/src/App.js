@@ -15,6 +15,7 @@ import SettingsPage from "@/pages/SettingsPage";
 import BonitaPage from "@/pages/BonitaPage";
 import VouchPage from "@/pages/VouchPage";
 import SidebarPage from "@/pages/SidebarPage";
+import AdminPage from "@/pages/AdminPage";
 
 // Components
 import { NoiseOverlay } from "@/components/NoiseOverlay";
