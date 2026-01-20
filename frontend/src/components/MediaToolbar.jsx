@@ -94,6 +94,46 @@ export const MediaToolbar = ({ onMediaSelect, selectedMedia, onRemoveMedia }) =>
     });
   };
 
+  // Handle recorded video from VideoRecorder
+  const handleRecordedVideo = async (file, previewUrl) => {
+    setUploading(true);
+    setUploadProgress(0);
+    
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await axios.post(`${API}/upload`, formData, {
+        withCredentials: true,
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+        onUploadProgress: (progressEvent) => {
+          const progress = Math.round((progressEvent.loaded * 100) / progressEvent.total);
+          setUploadProgress(progress);
+        }
+      });
+
+      onMediaSelect({
+        url: response.data.url,
+        type: 'video',
+        preview: previewUrl,
+        width: response.data.width,
+        height: response.data.height,
+        duration: response.data.duration,
+        storage: response.data.storage,
+      });
+      
+      toast.success('Video uploaded!');
+    } catch (error) {
+      console.error('Upload error:', error);
+      toast.error(error.response?.data?.detail || 'Upload failed');
+    } finally {
+      setUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
   return (
     <>
       <div className="flex items-center gap-2">
@@ -123,7 +163,7 @@ export const MediaToolbar = ({ onMediaSelect, selectedMedia, onRemoveMedia }) =>
           <span className="hidden sm:inline">Receipts</span>
         </Button>
 
-        {/* POV (Video Upload) */}
+        {/* POV (Video Upload from file) */}
         <input
           ref={videoInputRef}
           type="file"
