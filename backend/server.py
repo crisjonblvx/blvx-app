@@ -3396,9 +3396,9 @@ async def websocket_sidebar_endpoint(websocket: WebSocket, sidebar_id: str):
                         "message": message
                     })
                     
-                    # Check if messaging Bonita - trigger AI response
+                    # Check if messaging Bonita - trigger AI response (handle both bonita and bonita_ai)
                     other_id = sidebar["user_2"] if sidebar["user_1"] == user["user_id"] else sidebar["user_1"]
-                    if other_id == "bonita_ai":
+                    if other_id in ["bonita_ai", "bonita"]:
                         asyncio.create_task(generate_bonita_sidebar_response(sidebar_id, content, user["user_id"]))
             
             elif data.get("type") == "typing":
