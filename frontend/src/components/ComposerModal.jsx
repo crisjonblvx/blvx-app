@@ -265,7 +265,7 @@ export const ComposerModal = ({
             
             <Button
               onClick={handleSubmit}
-              disabled={!content.trim() || isOverLimit || postLoading}
+              disabled={(!content.trim() && !selectedMedia) || isOverLimit || postLoading}
               className="bg-white text-black hover:bg-white/90 rounded-none px-6 text-xs font-display tracking-wider"
               data-testid="composer-submit"
             >
