@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLiveKit } from '../hooks/useLiveKit';
 import { Button } from '../components/ui/button';
