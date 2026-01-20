@@ -21,7 +21,8 @@ Build **BLVX**, a "High-Context Social Network" designed to be a "Group Chat" ra
 - **Database:** MongoDB
 - **AI Integration:** Claude 3.5 Sonnet via Emergent LLM Key
 - **Authentication:** JWT + Google OAuth + Email/Password
-- **Media:** GIPHY API for GIFs, Cloud Storage for images/videos
+- **Media:** GIPHY API for GIFs, Cloudinary for images/videos
+- **Real-time Audio:** LiveKit (wss://blvx-2j4i3fsu.livekit.cloud)
 
 ---
 
