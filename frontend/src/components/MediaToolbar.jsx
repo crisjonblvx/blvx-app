@@ -125,7 +125,7 @@ export const MediaToolbar = ({ onMediaSelect, selectedMedia, onRemoveMedia }) =>
         <input
           ref={videoInputRef}
           type="file"
-          accept="video/mp4,video/webm,video/quicktime"
+          accept="video/mp4,video/webm,video/quicktime,video/x-m4v,video/3gpp,.mov,.mp4,.webm"
           onChange={(e) => handleFileSelect(e, true)}
           className="hidden"
           id="video-upload"
