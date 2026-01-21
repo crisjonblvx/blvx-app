@@ -16,6 +16,7 @@ import BonitaPage from "@/pages/BonitaPage";
 import VouchPage from "@/pages/VouchPage";
 import SidebarPage from "@/pages/SidebarPage";
 import AdminPage from "@/pages/AdminPage";
+import ResetPasswordPage from "@/pages/ResetPasswordPage";
 
 // Components
 import { NoiseOverlay } from "@/components/NoiseOverlay";
@@ -102,6 +103,7 @@ function AppRouter() {
     <AuthCallbackHandler>
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/home" element={<AppShell><HomePage /></AppShell>} />
         <Route path="/stoop" element={<AppShell><StoopPage /></AppShell>} />
         <Route path="/search" element={<AppShell><SearchPage /></AppShell>} />
