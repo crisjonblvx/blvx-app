@@ -553,6 +553,71 @@ async def resend_verification(email: EmailStr):
         "message": f"Verification code sent to {email}" if email_sent else f"Verification code: {verification_code} (Email not configured)"
     }
 
+@auth_router.post("/forgot-password")
+async def forgot_password(email: EmailStr):
+    """Request password reset"""
+    user = await db.users.find_one({"email": email.lower()})
+    if not user:
+        # Don't reveal if email exists for security
+        return {"message": "If an account exists, a reset link has been sent."}
+    
+    if not user.get("password_hash"):
+        # Google OAuth user - can't reset password
+        return {"message": "This account uses Google sign-in. Please log in with Google."}
+    
+    # Generate secure reset token
+    reset_token = secrets.token_urlsafe(32)
+    expires_at = datetime.now(timezone.utc) + timedelta(hours=1)
+    
+    # Store token
+    await db.password_resets.delete_many({"email": email.lower()})
+    await db.password_resets.insert_one({
+        "email": email.lower(),
+        "token": reset_token,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "expires_at": expires_at.isoformat()
+    })
+    
+    # Send reset email
+    from services.email_service import send_password_reset_email
+    email_sent = await send_password_reset_email(
+        email.lower(), 
+        reset_token, 
+        user.get("name", "there")
+    )
+    
+    logger.info(f"Password reset requested for {email}")
+    return {"message": "If an account exists, a reset link has been sent.", "email_sent": email_sent}
+
+@auth_router.post("/reset-password")
+async def reset_password(token: str, new_password: str):
+    """Reset password with token"""
+    if len(new_password) < 8:
+        raise HTTPException(status_code=400, detail="Password must be at least 8 characters")
+    
+    # Find valid token
+    reset = await db.password_resets.find_one({"token": token})
+    if not reset:
+        raise HTTPException(status_code=400, detail="Invalid or expired reset link")
+    
+    expires_at = datetime.fromisoformat(reset["expires_at"])
+    if expires_at.replace(tzinfo=timezone.utc) < datetime.now(timezone.utc):
+        await db.password_resets.delete_one({"token": token})
+        raise HTTPException(status_code=400, detail="Reset link has expired")
+    
+    # Update password
+    password_hash = hash_password(new_password)
+    await db.users.update_one(
+        {"email": reset["email"]},
+        {"$set": {"password_hash": password_hash}}
+    )
+    
+    # Delete used token
+    await db.password_resets.delete_one({"token": token})
+    
+    logger.info(f"Password reset successful for {reset['email']}")
+    return {"message": "Password reset successful. You can now log in."}
+
 @auth_router.get("/session")
 async def exchange_session(session_id: str, response: Response):
     """Exchange Emergent session_id for user data and set cookie (Google OAuth)"""
