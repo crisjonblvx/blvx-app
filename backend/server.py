@@ -545,8 +545,12 @@ async def resend_verification(email: EmailStr):
     
     logger.info(f"New verification code for {email}: {verification_code}")
     
+    # Send verification email
+    email_sent = await send_verification_email(email.lower(), verification_code, user.get("name", "there"))
+    
     return {
-        "message": f"Verification code: {verification_code} (In production, this would be sent via email)"
+        "email_sent": email_sent,
+        "message": f"Verification code sent to {email}" if email_sent else f"Verification code: {verification_code} (Email not configured)"
     }
 
 @auth_router.get("/session")
