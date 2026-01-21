@@ -222,6 +222,7 @@ class EmailSignup(BaseModel):
 class EmailLogin(BaseModel):
     email: EmailStr
     password: str
+    remember_me: bool = False
 
 class VerifyEmail(BaseModel):
     email: EmailStr
@@ -362,17 +363,20 @@ async def get_optional_user(request: Request) -> Optional[UserBase]:
     except HTTPException:
         return None
 
-async def create_session(user_id: str, response: Response) -> str:
+async def create_session(user_id: str, response: Response, remember_me: bool = False) -> str:
     """Create a new session for a user"""
     session_token = generate_session_token()
-    expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+    # 30 days if remember_me, otherwise 7 days
+    session_days = 30 if remember_me else 7
+    expires_at = datetime.now(timezone.utc) + timedelta(days=session_days)
     
     await db.user_sessions.delete_many({"user_id": user_id})
     await db.user_sessions.insert_one({
         "user_id": user_id,
         "session_token": session_token,
         "expires_at": expires_at.isoformat(),
-        "created_at": datetime.now(timezone.utc).isoformat()
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "remember_me": remember_me
     })
     
     response.set_cookie(
@@ -382,7 +386,7 @@ async def create_session(user_id: str, response: Response) -> str:
         secure=True,
         samesite="none",
         path="/",
-        max_age=7 * 24 * 60 * 60
+        max_age=session_days * 24 * 60 * 60
     )
     
     return session_token
@@ -481,7 +485,7 @@ async def email_login(data: EmailLogin, response: Response):
     if not verify_password(data.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Invalid email or password")
     
-    session_token = await create_session(user["user_id"], response)
+    session_token = await create_session(user["user_id"], response, data.remember_me)
     
     # Return user without password, with session token
     user_data = {k: v for k, v in user.items() if k not in ["_id", "password_hash"]}
