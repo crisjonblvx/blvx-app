@@ -126,6 +126,27 @@ export default function LandingPage() {
     }
   };
 
+  const handleForgotPassword = async (e) => {
+    e.preventDefault();
+    if (!forgotEmail) {
+      toast.error('Please enter your email');
+      return;
+    }
+    
+    setLoading(true);
+    try {
+      await axios.post(`${API}/auth/forgot-password`, null, {
+        params: { email: forgotEmail }
+      });
+      setResetSent(true);
+      toast.success('Check your inbox for the reset link');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Something went wrong');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Landing view
   if (authMode === 'landing') {
     return (
