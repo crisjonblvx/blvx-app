@@ -20,6 +20,9 @@ import json
 import random
 from livekit import api
 
+# Import services
+from services.email_service import send_verification_email, send_welcome_email
+
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
