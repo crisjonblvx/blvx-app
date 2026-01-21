@@ -224,3 +224,103 @@ async def send_welcome_email(to_email: str, name: str) -> bool:
     except Exception as e:
         logger.error(f"Failed to send welcome email: {e}")
         return False
+
+
+async def send_password_reset_email(to_email: str, token: str, name: str = "there") -> bool:
+    """Send password reset email"""
+    if not resend.api_key:
+        logger.warning("RESEND_API_KEY not configured - skipping email send")
+        return False
+    
+    # Build reset URL
+    reset_url = f"https://high-context.preview.emergentagent.com/reset-password?token={token}"
+    
+    html_content = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    </head>
+    <body style="margin: 0; padding: 0; background-color: #000000; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+        <table role="presentation" style="width: 100%; border-collapse: collapse;">
+            <tr>
+                <td align="center" style="padding: 40px 20px;">
+                    <table role="presentation" style="max-width: 480px; width: 100%; border-collapse: collapse;">
+                        <!-- Header with Logo -->
+                        <tr>
+                            <td align="center" style="padding: 30px; background-color: #000000; border: 1px solid #333; border-bottom: none;">
+                                <img 
+                                    src="{LOGO_URL}" 
+                                    alt="BLVX - High Context Social" 
+                                    width="120" 
+                                    style="display: block; max-width: 120px; height: auto;"
+                                />
+                            </td>
+                        </tr>
+                        
+                        <!-- Content -->
+                        <tr>
+                            <td style="padding: 40px 30px; background-color: #111; border: 1px solid #333;">
+                                <h2 style="margin: 0 0 24px 0; color: #f59e0b; font-size: 22px; font-weight: 600;">
+                                    Locked out?
+                                </h2>
+                                
+                                <p style="margin: 0 0 20px 0; color: #ffffff; font-size: 16px; line-height: 1.6;">
+                                    No stress, {name}. It happens to the best of us.
+                                </p>
+                                
+                                <p style="margin: 0 0 30px 0; color: #aaa; font-size: 14px; line-height: 1.7;">
+                                    Click the button below to secure your account and get back on The Block.
+                                </p>
+                                
+                                <!-- Reset Button -->
+                                <div style="text-align: center; margin: 0 0 30px 0;">
+                                    <a href="{reset_url}" style="display: inline-block; background-color: #f59e0b; color: #000; font-weight: 600; font-size: 14px; text-decoration: none; padding: 14px 32px; border-radius: 0;">
+                                        Reset Password
+                                    </a>
+                                </div>
+                                
+                                <p style="margin: 0 0 16px 0; color: #666; font-size: 12px;">
+                                    This link expires in 1 hour. If you didn't request this, you can safely ignore this email.
+                                </p>
+                                
+                                <p style="margin: 0; color: #444; font-size: 11px; word-break: break-all;">
+                                    Or copy this link: {reset_url}
+                                </p>
+                            </td>
+                        </tr>
+                        
+                        <!-- Footer -->
+                        <tr>
+                            <td style="padding: 20px 30px; background-color: #000; border: 1px solid #333; border-top: none; text-align: center;">
+                                <p style="margin: 0 0 10px 0; color: #666; font-size: 12px;">
+                                    <a href="https://blvx.social" style="color: #888; text-decoration: none;">BLVX</a>. Built for the culture. Owned by the people.
+                                </p>
+                                <p style="margin: 0; color: #444; font-size: 10px;">
+                                    <a href="https://blvx.social" style="color: #555; text-decoration: none;">blvx.social</a>
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </body>
+    </html>
+    """
+    
+    params = {
+        "from": f"BLVX <{SENDER_EMAIL}>",
+        "to": [to_email],
+        "subject": "Let's get you back in. 🔑",
+        "html": html_content
+    }
+    
+    try:
+        email = await asyncio.to_thread(resend.Emails.send, params)
+        logger.info(f"Password reset email sent to {to_email}, ID: {email.get('id')}")
+        return True
+    except Exception as e:
+        logger.error(f"Failed to send password reset email to {to_email}: {e}")
+        return False
