@@ -40,8 +40,12 @@ export const AuthProvider = ({ children }) => {
       return;
     }
     
-    // Skip auth check on landing page
-    if (location.pathname === '/') {
+    // Public routes that don't require authentication
+    const publicRoutes = ['/', '/reset-password'];
+    const isPublicRoute = publicRoutes.includes(location.pathname);
+    
+    // Skip auth check on public pages
+    if (isPublicRoute) {
       setLoading(false);
       return;
     }
