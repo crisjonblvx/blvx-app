@@ -518,6 +518,9 @@ async def verify_email(data: VerifyEmail, response: Response):
     if isinstance(user.get("created_at"), str):
         user["created_at"] = datetime.fromisoformat(user["created_at"])
     
+    # Send welcome email
+    await send_welcome_email(data.email.lower(), user.get("name", "there"))
+    
     return {"message": "Email verified successfully", "user": user}
 
 @auth_router.post("/resend-verification")
