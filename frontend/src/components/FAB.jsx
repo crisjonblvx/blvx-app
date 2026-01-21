@@ -8,8 +8,8 @@ export const FAB = () => {
 
   return (
     <>
-      {/* FAB positioned on bottom-left to align with sidebar control center feel */}
-      <div className="fixed bottom-20 left-4 md:bottom-6 md:left-6 z-50">
+      {/* FAB - Mobile Only (hidden on md+ screens where sidebar has the button) */}
+      <div className="md:hidden fixed bottom-20 left-4 z-50">
         <Button
           onClick={() => setOpen(true)}
           className="h-14 w-14 bg-white text-black hover:bg-white/90 shadow-lg btn-hover-effect rounded-none"
