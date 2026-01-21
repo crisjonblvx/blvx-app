@@ -47,6 +47,7 @@ Build **BLVX**, a "High-Context Social Network" designed to be a "Group Chat" ra
 - [x] JWT session management
 - [x] Session persistence across page refreshes
 - [x] Email verification with code (Resend integration ready)
+- [x] **Password Reset Flow (NEW)** - Forgot password with branded email, reset page
 
 #### The Block (Public Feed)
 - [x] Chronological feed of posts
