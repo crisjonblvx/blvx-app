@@ -15,7 +15,7 @@ resend.api_key = os.environ.get("RESEND_API_KEY")
 SENDER_EMAIL = os.environ.get("SENDER_EMAIL", "cj@blvx.social")
 
 # Logo URL (hosted on the frontend)
-LOGO_URL = "https://high-context.preview.emergentagent.com/assets/logo-white.png"
+LOGO_URL = "https://high-context-1.preview.emergentagent.com/assets/logo-white.png"
 
 
 async def send_verification_email(to_email: str, code: str, name: str = "there") -> bool:
@@ -233,7 +233,7 @@ async def send_password_reset_email(to_email: str, token: str, name: str = "ther
         return False
     
     # Build reset URL
-    reset_url = f"https://high-context.preview.emergentagent.com/reset-password?token={token}"
+    reset_url = f"https://high-context-1.preview.emergentagent.com/reset-password?token={token}"
     
     html_content = f"""
     <!DOCTYPE html>
