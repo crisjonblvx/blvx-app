@@ -3488,17 +3488,17 @@ async def websocket_sidebar_endpoint(websocket: WebSocket, sidebar_id: str):
 
 push_router = APIRouter(prefix="/push", tags=["Push Notifications"])
 
-# Generate VAPID keys for push notifications (in production, these should be in .env)
-import secrets as py_secrets
-
-# Check if VAPID keys exist in env, otherwise use defaults for development
-VAPID_PUBLIC_KEY = os.environ.get('VAPID_PUBLIC_KEY', 'BEl62iUYgUivxIkv69yViEuiBIa-Ib9-SkvMeAtA3LFgDzkrxZJjSgSnfckjBJuBkr3qBUYIHBQFLXYp5Nksh8U')
-VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY', 'Dl9HKb8sXKUCzERSm5DNBkKPCpSjNlpMwP9p1r9Nmyw')
-VAPID_CLAIMS = {"sub": "mailto:notifications@blvx.app"}
+# VAPID keys for push notifications
+VAPID_PUBLIC_KEY = os.environ.get('VAPID_PUBLIC_KEY')
+VAPID_PRIVATE_KEY = os.environ.get('VAPID_PRIVATE_KEY')
+VAPID_CLAIM_EMAIL = os.environ.get('VAPID_CLAIM_EMAIL', 'admin@blvx.app')
+VAPID_CLAIMS = {"sub": f"mailto:{VAPID_CLAIM_EMAIL}"}
 
 @push_router.get("/vapid-key")
 async def get_vapid_public_key():
     """Get the VAPID public key for push subscription"""
+    if not VAPID_PUBLIC_KEY:
+        raise HTTPException(status_code=503, detail="Push notifications not configured")
     return {"publicKey": VAPID_PUBLIC_KEY}
 
 class PushSubscription(BaseModel):
