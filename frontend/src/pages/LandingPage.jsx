@@ -411,6 +411,20 @@ export default function LandingPage() {
               </div>
             </div>
             
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="remember-me"
+                checked={formData.rememberMe}
+                onChange={(e) => setFormData({...formData, rememberMe: e.target.checked})}
+                className="w-4 h-4 bg-transparent border-white/30 rounded accent-amber-500"
+                data-testid="remember-me-checkbox"
+              />
+              <label htmlFor="remember-me" className="text-white/50 text-xs cursor-pointer">
+                Remember me for 30 days
+              </label>
+            </div>
+            
             <Button
               type="submit"
               disabled={loading}
