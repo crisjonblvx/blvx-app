@@ -450,17 +450,21 @@ async def email_signup(data: EmailSignup, response: Response):
     
     logger.info(f"Verification code for {data.email}: {verification_code}")
     
+    # Send verification email (non-blocking)
+    email_sent = await send_verification_email(data.email.lower(), verification_code, data.name)
+    
     # Create session even before verification (but user will have limited access)
-    await create_session(user_id, response)
+    session_token = await create_session(user_id, response)
     
     user = await db.users.find_one({"user_id": user_id}, {"_id": 0, "password_hash": 0})
     if isinstance(user.get("created_at"), str):
         user["created_at"] = datetime.fromisoformat(user["created_at"])
     
     return {
-        "user": user,
+        "user": {**user, "session_token": session_token},
         "verification_required": True,
-        "message": f"Verification code: {verification_code} (In production, this would be sent via email)"
+        "email_sent": email_sent,
+        "message": f"Verification code sent to {data.email}" if email_sent else f"Verification code: {verification_code} (Email not configured)"
     }
 
 @auth_router.post("/login")
