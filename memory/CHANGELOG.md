@@ -1,5 +1,24 @@
 # BLVX Changelog
 
+## v1.7.0 (January 21, 2026)
+### Backend Modularization
+- **New Directory Structure**:
+  - `/backend/models/` - Pydantic schemas (UserBase, PostBase, etc.)
+  - `/backend/services/` - Business logic (email_service.py)
+  - `/backend/utils/` - Helper functions (password hashing, token generation)
+
+### Email Verification Flow
+- **Resend Integration**: Full email service with Resend API
+- **HTML Email Templates**: Beautiful BLVX-branded verification emails
+- **Welcome Emails**: Sent automatically after email verification
+- **Fallback Mode**: Console logging when RESEND_API_KEY not configured
+
+### Push Notifications Production Ready
+- **VAPID Keys**: Generated and configured in backend/.env
+- **API Endpoint**: /api/push/vapid-key serves public key
+- **Service Worker**: sw-push.js handles push events
+- **Frontend Hook**: usePushNotifications for subscription management
+
 ## v1.6.0 (January 20, 2026)
 ### Admin Dashboard
 - **Platform Statistics**: Overview of total users, posts, GCs, stoops, alerts
