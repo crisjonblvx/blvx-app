@@ -517,5 +517,87 @@ export default function LandingPage() {
     );
   }
 
+  // Forgot password view
+  if (authMode === 'forgot') {
+    return (
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center px-6 py-12">
+        <div className="w-full max-w-sm">
+          <img 
+            src="/assets/logo-white.png"
+            alt="BLVX"
+            className="h-10 mx-auto mb-8"
+          />
+          
+          {resetSent ? (
+            <div className="text-center">
+              <div className="w-16 h-16 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                <Mail className="h-8 w-8 text-amber-500" />
+              </div>
+              <h1 className="font-display text-xl text-white mb-3">Check your inbox</h1>
+              <p className="text-white/50 text-sm mb-6">
+                We sent a reset link to<br />
+                <span className="text-white">{forgotEmail}</span>
+              </p>
+              <p className="text-white/30 text-xs mb-8">
+                The link expires in 1 hour. Check your spam folder if you don't see it.
+              </p>
+              <button 
+                onClick={() => {
+                  setAuthMode('login');
+                  setResetSent(false);
+                  setForgotEmail('');
+                }}
+                className="text-amber-500 text-sm hover:text-amber-400 transition-colors"
+              >
+                ← Back to login
+              </button>
+            </div>
+          ) : (
+            <>
+              <h1 className="font-display text-lg tracking-widest uppercase text-center mb-4">Reset Password</h1>
+              <p className="text-white/50 text-sm text-center mb-8">
+                No stress. Enter your email and we'll send you a reset link.
+              </p>
+              
+              <form onSubmit={handleForgotPassword} className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="forgot-email" className="text-white/60 text-xs uppercase tracking-wider">Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+                    <Input
+                      id="forgot-email"
+                      type="email"
+                      value={forgotEmail}
+                      onChange={(e) => setForgotEmail(e.target.value)}
+                      placeholder="you@example.com"
+                      className="pl-10 bg-transparent border-white/20 focus:border-white rounded-none"
+                      data-testid="forgot-email"
+                    />
+                  </div>
+                </div>
+                
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full bg-white text-black hover:bg-white/90 rounded-none py-6 font-display tracking-widest uppercase"
+                  data-testid="forgot-submit"
+                >
+                  {loading ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : 'Send Reset Link'}
+                </Button>
+              </form>
+              
+              <button 
+                onClick={() => setAuthMode('login')}
+                className="block w-full text-center text-white/30 text-xs mt-6 hover:text-white"
+              >
+                ← Back to login
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return null;
 }
