@@ -4,7 +4,7 @@ import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { ArrowRight, Mail, Lock, User, Eye, EyeOff } from 'lucide-react';
+import { ArrowRight, Mail, Lock, User, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import axios from 'axios';
 
@@ -13,11 +13,13 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 export default function LandingPage() {
   const navigate = useNavigate();
   const { login, isAuthenticated, loading: authLoading, setAuthenticatedUser } = useAuth();
-  const [authMode, setAuthMode] = useState('landing'); // landing, login, signup, verify
+  const [authMode, setAuthMode] = useState('landing'); // landing, login, signup, verify, forgot
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [verificationEmail, setVerificationEmail] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [resetSent, setResetSent] = useState(false);
   
   const [formData, setFormData] = useState({
     email: '',
