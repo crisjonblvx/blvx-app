@@ -377,7 +377,17 @@ export default function LandingPage() {
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="login-password" className="text-white/60 text-xs uppercase tracking-wider">Password</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="login-password" className="text-white/60 text-xs uppercase tracking-wider">Password</Label>
+                <button
+                  type="button"
+                  onClick={() => setAuthMode('forgot')}
+                  className="text-amber-500 text-xs hover:text-amber-400 transition-colors"
+                  data-testid="forgot-password-link"
+                >
+                  Forgot password?
+                </button>
+              </div>
               <div className="relative">
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
                 <Input
