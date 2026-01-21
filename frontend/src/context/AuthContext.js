@@ -56,7 +56,7 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       setIsAuthenticated(false);
       setLoading(false);
-      if (location.pathname !== '/') {
+      if (!isPublicRoute) {
         navigate('/', { replace: true });
       }
       return;
@@ -76,7 +76,7 @@ export const AuthProvider = ({ children }) => {
       setUser(null);
       setIsAuthenticated(false);
       // Only redirect if on a protected route
-      if (location.pathname !== '/') {
+      if (!isPublicRoute) {
         navigate('/', { replace: true });
       }
     } finally {
