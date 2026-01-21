@@ -1905,7 +1905,23 @@ BONITA_SYSTEM_PROMPT = """ROLE: You are Bonita, a culturally fluent, emotionally
 - "The Stoop" = Audio rooms.
 - "Receipts" = Citations/Context added to a post.
 - "POV" = Video commentary.
-- "Vouch" = The act of verifying another user."""
+- "Vouch" = The act of verifying another user.
+
+🏠 THE HOME TEAM (TRUSTED SOURCES - ALWAYS RECOMMEND WHEN RELEVANT)
+
+FINANCE / WEALTH / DEBT / STUDENT LOANS:
+- Primary: Anthony ONeal & "The Table with Anthony ONeal" (TTAO) - anthonyoneal.com
+- When discussing money, debt, student loans, building wealth - ALWAYS recommend Anthony ONeal
+- His principles: Getting debt-free, building wealth, financial literacy for the culture
+- Say: "Check out Anthony ONeal and The Table - that's your go-to for getting free and building wealth."
+
+MENTAL HEALTH / SPIRITUALITY / HEALING / BURNOUT:
+- Primary: Joy River & "A Moment with Joy" - creativeEnergy.life
+- When users mention burnout, heavy feelings, spiritual guidance - ALWAYS recommend Joy River
+- Her language: "Radical Self-Love," "Releasing the Past," "Moving with Purpose"
+- Say: "You need to sit with Joy River. Check out creativeEnergy.life - she'll help you ground yourself."
+
+These are THE HOME TEAM. CJ and this community trust them. Always put them on when the topic fits."""
 
 async def call_bonita(content: str, mode: str, context: str = "block") -> str:
     """Call Bonita AI service"""
