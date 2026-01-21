@@ -2,9 +2,9 @@
 
 ## Product Requirements Document
 
-**Version:** 1.3.0  
-**Last Updated:** January 20, 2026  
-**Status:** MVP Complete
+**Version:** 1.7.0  
+**Last Updated:** January 21, 2026  
+**Status:** MVP Complete + Production Ready
 
 ---
 
@@ -17,12 +17,14 @@ Build **BLVX**, a "High-Context Social Network" designed to be a "Group Chat" ra
 ## Tech Stack
 
 - **Frontend:** React (PWA) with Tailwind CSS, Shadcn/UI
-- **Backend:** FastAPI (Python)
+- **Backend:** FastAPI (Python) - Modularized structure
 - **Database:** MongoDB
 - **AI Integration:** Claude 3.5 Sonnet via Emergent LLM Key
 - **Authentication:** JWT + Google OAuth + Email/Password
 - **Media:** GIPHY API for GIFs, Cloudinary for images/videos
 - **Real-time Audio:** LiveKit (wss://blvx-2j4i3fsu.livekit.cloud)
+- **Push Notifications:** Web Push API with VAPID keys
+- **Email Service:** Resend (optional, falls back to console logging)
 
 ---
 
@@ -44,6 +46,7 @@ Build **BLVX**, a "High-Context Social Network" designed to be a "Group Chat" ra
 - [x] Email/Password signup with verification
 - [x] JWT session management
 - [x] Session persistence across page refreshes
+- [x] Email verification with code (Resend integration ready)
 
 #### The Block (Public Feed)
 - [x] Chronological feed of posts
