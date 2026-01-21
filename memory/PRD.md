@@ -2,7 +2,7 @@
 
 ## Product Requirements Document
 
-**Version:** 1.8.0  
+**Version:** 1.9.0  
 **Last Updated:** January 21, 2026  
 **Status:** MVP Complete + Production Ready
 
@@ -47,7 +47,8 @@ Build **BLVX**, a "High-Context Social Network" designed to be a "Group Chat" ra
 - [x] JWT session management
 - [x] Session persistence across page refreshes
 - [x] Email verification with code (Resend integration ready)
-- [x] **Password Reset Flow (NEW)** - Forgot password with branded email, reset page
+- [x] **Password Reset Flow** - Forgot password with branded email, reset page
+- [x] **Remember Me (30 days)** - Extended session option on login
 
 #### The Block (Public Feed)
 - [x] Chronological feed of posts
