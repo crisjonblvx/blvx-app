@@ -227,17 +227,17 @@ Build **BLVX**, a "High-Context Social Network" designed to be a "Group Chat" ra
 - [x] usePushNotifications hook
 - [x] Settings page toggle for notifications
 - [x] Test notification endpoint
+- [x] VAPID keys configured
 
 ### 🔲 Upcoming Features
 
 #### P1 - High Priority
-- [ ] Email verification flow completion
-- [ ] Push Notifications production testing (infrastructure complete)
+- [ ] Add RESEND_API_KEY for production email sending
+- [ ] Browser push notification permission testing in production
 
 #### P2 - Medium Priority
 - [ ] News API integration for more dynamic Spark topics
 - [ ] Full WebRTC testing in deployed environment
-- [ ] Refactor server.py into modular structure (/routes, /models, /services)
 
 #### P3 - Future
 - [ ] Explore page with trending posts
@@ -246,8 +246,25 @@ Build **BLVX**, a "High-Context Social Network" designed to be a "Group Chat" ra
 - [ ] Analytics
 - [ ] Voice messages for Bonita chats
 
-#### ✅ Recently Completed
-- [x] Admin Dashboard (Jan 20, 2026)
+#### ✅ Recently Completed (Jan 21, 2026)
+- [x] **Backend Modularization Started**
+  - Created /backend/models/ for Pydantic schemas
+  - Created /backend/services/ for email service
+  - Created /backend/utils/ for helper functions
+- [x] **Email Verification Flow**
+  - Resend email service integration
+  - Beautiful HTML email templates (BLVX branded)
+  - Verification code emails
+  - Welcome emails on successful verification
+  - Fallback to console logging if RESEND_API_KEY not set
+- [x] **Push Notifications Production Ready**
+  - VAPID keys generated and configured
+  - /api/push/vapid-key endpoint working
+  - Service worker (sw-push.js) configured
+  - Frontend hook (usePushNotifications) ready
+
+#### ✅ Previously Completed (Jan 20, 2026)
+- [x] Admin Dashboard
   - Platform stats overview (users, posts, GCs, stoops, alerts)
   - User management (search, ban/unban)
   - Post moderation (view, delete)
