@@ -17,13 +17,28 @@ export default function ResetPasswordPage() {
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [initialized, setInitialized] = useState(false);
 
   useEffect(() => {
-    if (!token) {
-      toast.error('Invalid reset link');
-      navigate('/');
-    }
+    // Give URL params time to initialize
+    const timer = setTimeout(() => {
+      setInitialized(true);
+      if (!token) {
+        toast.error('Invalid reset link');
+        navigate('/');
+      }
+    }, 100);
+    return () => clearTimeout(timer);
   }, [token, navigate]);
+
+  // Show loading while initializing
+  if (!initialized) {
+    return (
+      <div className="min-h-screen bg-black flex items-center justify-center">
+        <Loader2 className="h-8 w-8 text-white animate-spin" />
+      </div>
+    );
+  }
 
   const handleSubmit = async (e) => {
     e.preventDefault();
