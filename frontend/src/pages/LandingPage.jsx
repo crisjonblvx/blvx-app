@@ -24,7 +24,8 @@ export default function LandingPage() {
   const [formData, setFormData] = useState({
     email: '',
     password: '',
-    name: ''
+    name: '',
+    rememberMe: false
   });
 
   // Redirect if already authenticated
@@ -74,7 +75,8 @@ export default function LandingPage() {
     try {
       const response = await axios.post(`${API}/auth/login`, {
         email: formData.email,
-        password: formData.password
+        password: formData.password,
+        remember_me: formData.rememberMe
       }, { withCredentials: true });
       
       // Set authenticated user and navigate
