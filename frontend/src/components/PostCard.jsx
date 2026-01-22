@@ -162,27 +162,27 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
           <div className="flex-1 min-w-0">
             {/* Header */}
             <div className="flex items-center justify-between mb-1">
-              <div className="flex items-center gap-2 min-w-0">
+              <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
                 <Link 
                   to={`/profile/${post.user?.username}`}
                   onClick={(e) => e.stopPropagation()}
-                  className="font-semibold text-white hover:underline truncate text-sm"
+                  className="font-bold text-[15px] hover:underline truncate"
                 >
                   {post.user?.name}
                 </Link>
                 <Link 
                   to={`/profile/${post.user?.username}`}
                   onClick={(e) => e.stopPropagation()}
-                  className="text-white/40 text-xs truncate"
+                  className="text-white/50 text-[15px] truncate"
                 >
                   @{post.user?.username}
                 </Link>
-                <span className="text-white/20">·</span>
-                <span className="text-white/40 text-xs font-mono whitespace-nowrap">
+                <span className="text-white/30">·</span>
+                <span className="text-white/50 text-[14px] whitespace-nowrap">
                   {formatTime(post.created_at)}
                 </span>
                 {isCookout && (
-                  <Lock className="h-3 w-3 text-white/40" />
+                  <Lock className="h-3.5 w-3.5 text-white/50" />
                 )}
               </div>
 
