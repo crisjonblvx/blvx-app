@@ -442,6 +442,8 @@ async def email_signup(data: EmailSignup, response: Response):
         "reputation_score": 100,
         "plates_remaining": 10,
         "is_day_one": False,
+        "is_vouched": False,
+        "has_seen_welcome": False,
         "followers_count": 0,
         "following_count": 0,
         "posts_count": 0,
