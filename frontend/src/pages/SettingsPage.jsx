@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, LogOut, User, Bell, Shield, HelpCircle, Sparkles, Zap, Moon, Sun, Loader2, Calendar, Settings2 } from 'lucide-react';
+import { ArrowLeft, LogOut, User, Bell, Shield, HelpCircle, Sparkles, Zap, Moon, Sun, Loader2, Calendar, Settings2, Camera } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
@@ -24,7 +24,7 @@ const ADMIN_USERS = ["user_d940ef29bbb5"];
 
 export default function SettingsPage() {
   const navigate = useNavigate();
-  const { user, logout } = useAuth();
+  const { user, logout, refreshUser } = useAuth();
   const { theme, toggleTheme, isDark } = useTheme();
   const { 
     isSupported: pushSupported, 
@@ -38,6 +38,65 @@ export default function SettingsPage() {
   const [droppingSpark, setDroppingSpark] = useState(false);
   const [sparkCategory, setSparkCategory] = useState('random');
   const [droppingCalendar, setDroppingCalendar] = useState(false);
+  const [avatarPreview, setAvatarPreview] = useState(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      toast.error('Please select a JPG, PNG, or WebP image');
+      return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be less than 5MB');
+      return;
+    }
+
+    // Show preview immediately
+    const previewUrl = URL.createObjectURL(file);
+    setAvatarPreview(previewUrl);
+
+    // Upload to server
+    setUploadingAvatar(true);
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+
+      const response = await axios.post(`${API}/users/avatar`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        withCredentials: true
+      });
+
+      toast.success('Profile photo updated!');
+      
+      // Refresh user data to get new avatar URL
+      if (refreshUser) {
+        await refreshUser();
+      }
+    } catch (error) {
+      console.error('Avatar upload error:', error);
+      toast.error(error.response?.data?.detail || 'Failed to upload photo');
+      // Revert preview on error
+      setAvatarPreview(null);
+    } finally {
+      setUploadingAvatar(false);
+      // Cleanup preview URL
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    }
+  };
 
   const handleLogout = async () => {
     await logout();
