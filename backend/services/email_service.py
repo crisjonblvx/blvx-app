@@ -226,14 +226,14 @@ async def send_welcome_email(to_email: str, name: str) -> bool:
         return False
 
 
-async def send_password_reset_email(to_email: str, token: str, name: str = "there") -> bool:
+async def send_password_reset_email(to_email: str, token: str, name: str = "there", origin: str = "https://blvx.social") -> bool:
     """Send password reset email"""
     if not resend.api_key:
         logger.warning("RESEND_API_KEY not configured - skipping email send")
         return False
     
-    # Build reset URL
-    reset_url = f"https://high-context-1.preview.emergentagent.com/reset-password?token={token}"
+    # Build reset URL from origin
+    reset_url = f"{origin}/reset-password?token={token}"
     
     html_content = f"""
     <!DOCTYPE html>
