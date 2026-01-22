@@ -34,19 +34,20 @@ export const Sidebar = () => {
   return (
     <>
       <aside className="hidden md:flex fixed left-0 top-0 bottom-0 w-64 flex-col border-r border-white/10 bg-black z-40">
-        {/* Logo */}
-        <div className="p-6">
-          <Link to="/home" data-testid="sidebar-logo">
+        {/* Logo with amber accent */}
+        <div className="p-6 border-b border-white/5">
+          <Link to="/home" data-testid="sidebar-logo" className="block">
             <img 
               src={assets.logo}
               alt="BLVX"
-              className="h-8"
+              className="h-9"
             />
+            <div className="mt-2 h-0.5 w-12 bg-gradient-to-r from-amber-500 to-transparent rounded-full" />
           </Link>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 flex flex-col">
+        <nav className="flex-1 px-3 pt-2 flex flex-col">
           {navItems.map(({ path, icon: Icon, label }) => {
             const isActive = location.pathname === path;
             const showBadge = path === '/gc' && unreadCount > 0;
