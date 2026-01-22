@@ -3952,6 +3952,12 @@ api_router.include_router(admin_router)
 
 app.include_router(api_router)
 
+# Root-level health check for Kubernetes
+@app.get("/health")
+async def root_health_check():
+    """Root health check endpoint for K8s probes"""
+    return {"status": "healthy"}
+
 # ========================
 # CORS MIDDLEWARE
 # ========================
