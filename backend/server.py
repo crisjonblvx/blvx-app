@@ -392,7 +392,7 @@ async def create_session(user_id: str, response: Response, remember_me: bool = F
         value=session_token,
         httponly=True,
         secure=True,
-        samesite="lax",
+        samesite="none",  # Required for OAuth redirects on mobile Safari
         path="/",
         max_age=session_days * 24 * 60 * 60
     )
