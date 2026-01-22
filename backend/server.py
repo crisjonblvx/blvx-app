@@ -354,7 +354,13 @@ async def get_current_user(request: Request) -> UserBase:
     user.setdefault("reputation_score", 100)
     user.setdefault("plates_remaining", 10)
     user.setdefault("is_day_one", False)
+    user.setdefault("is_vouched", False)
+    user.setdefault("has_seen_welcome", False)
     user.setdefault("vouched_by", None)
+    
+    # The Prime Mover - CJ is always vouched
+    if user.get("email") == "cj@blvx.social":
+        user["is_vouched"] = True
     
     return UserBase(**user)
 
