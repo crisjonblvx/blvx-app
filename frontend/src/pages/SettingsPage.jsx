@@ -85,27 +85,6 @@ export default function SettingsPage() {
     }
   };
 
-  const handleDropCalendarPost = async () => {
-    setDroppingCalendar(true);
-    try {
-      const response = await axios.post(
-        `${API}/spark/calendar/post`,
-        {},
-        { withCredentials: true }
-      );
-      toast.success(`Culture Calendar: ${response.data.event_name}!`);
-    } catch (error) {
-      console.error('Calendar error:', error);
-      if (error.response?.status === 404) {
-        toast.error('No cultural event today');
-      } else {
-        toast.error(error.response?.data?.detail || 'Failed to post');
-      }
-    } finally {
-      setDroppingCalendar(false);
-    }
-  };
-
   const settingSections = [
     {
       title: 'Account',
