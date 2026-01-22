@@ -252,26 +252,47 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
 
             {/* Media */}
             {post.media_url && (
-              <div className="mb-3 rounded-sm overflow-hidden border border-white/10 relative">
+              <div ref={containerRef} className="mb-3 rounded-lg overflow-hidden border border-white/10 relative">
                 {post.media_type === 'video' ? (
                   <div className="relative">
                     <video 
+                      ref={videoRef}
                       src={post.media_url} 
-                      controls 
+                      loop
+                      muted
                       playsInline
                       preload="metadata"
-                      className="w-full max-h-96 object-contain bg-black"
-                      poster={`${post.media_url}?poster=true`}
+                      className="w-full max-h-[500px] object-contain bg-black cursor-pointer"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (videoRef.current?.paused) {
+                          videoRef.current.play();
+                        } else {
+                          videoRef.current?.pause();
+                        }
+                      }}
                     />
-                    <div className="absolute top-2 left-2 bg-black/80 px-2 py-1 text-[10px] text-white/60 font-display tracking-wider">
+                    {/* POV Badge */}
+                    <div className="absolute top-2 left-2 bg-amber-500 px-2 py-1 text-[10px] text-black font-bold font-display tracking-wider rounded">
                       POV
                     </div>
+                    {/* Mute/Unmute Button */}
+                    <button
+                      onClick={toggleMute}
+                      className="absolute bottom-3 right-3 bg-black/70 hover:bg-black/90 p-2 rounded-full transition-colors"
+                    >
+                      {isMuted ? (
+                        <VolumeX className="h-4 w-4 text-white" />
+                      ) : (
+                        <Volume2 className="h-4 w-4 text-white" />
+                      )}
+                    </button>
                   </div>
                 ) : (
                   <img 
                     src={post.media_url} 
                     alt="" 
-                    className="w-full max-h-96 object-contain bg-black"
+                    className="w-full max-h-[500px] object-contain bg-black"
                     loading="lazy"
                   />
                 )}
