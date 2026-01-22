@@ -65,12 +65,12 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
     }
   };
 
-  // Check if post is liked on mount
+  // Check if post is plated on mount
   useState(() => {
     const check = async () => {
       try {
-        const liked = await checkLiked(post.post_id);
-        setIsLiked(liked);
+        const plated = await checkLiked(post.post_id);
+        setIsPlated(plated);
       } catch (e) {
         // Ignore
       } finally {
@@ -80,19 +80,20 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
     check();
   }, [post.post_id]);
 
-  const handleLike = async (e) => {
+  const handlePlate = async (e) => {
     e.stopPropagation();
     if (checkingLike) return;
     
     try {
-      if (isLiked) {
+      if (isPlated) {
         await unlikePost(post.post_id);
-        setLikeCount(prev => prev - 1);
-        setIsLiked(false);
+        setPlateCount(prev => prev - 1);
+        setIsPlated(false);
       } else {
         await likePost(post.post_id);
-        setLikeCount(prev => prev + 1);
-        setIsLiked(true);
+        setPlateCount(prev => prev + 1);
+        setIsPlated(true);
+        toast.success('Plate served! 🍽️');
       }
     } catch (error) {
       toast.error('Action failed');
