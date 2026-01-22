@@ -149,6 +149,12 @@ export const AuthProvider = ({ children }) => {
     setUser(userWithoutToken);
     setIsAuthenticated(true);
     setLoading(false);
+    
+    // Mark that we just authenticated to prevent checkAuth from running
+    authCheckRef.current = true;
+    setTimeout(() => {
+      authCheckRef.current = false;
+    }, 2000);
   };
 
   // Refresh user data from server
