@@ -83,7 +83,7 @@ export default function HomePage() {
         toast.error('Failed to refresh feed');
       }
     }
-  }, [feedType, fetchFeed, fetchExploreFeed]);
+  }, [feedType, fetchFeed, fetchExploreFeed, fetchCookout]);
 
   // Initial load - generate fresh content then load feed
   useEffect(() => {
@@ -92,6 +92,7 @@ export default function HomePage() {
       await loadFeed();
     };
     initFeed();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Run once on mount
 
   // Reload feed when feed type changes
@@ -99,6 +100,7 @@ export default function HomePage() {
     if (lastFetch) { // Only if we've already done initial load
       loadFeed();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [feedType]);
 
   // Auto-refresh when page becomes visible
