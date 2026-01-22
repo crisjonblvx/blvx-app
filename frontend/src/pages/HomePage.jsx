@@ -216,7 +216,7 @@ export default function HomePage() {
       </div>
 
       {/* Posts */}
-      {loading && posts.length === 0 ? (
+      {(loading || cookoutLoading) && posts.length === 0 && cookoutPosts.length === 0 ? (
         <div className="p-4 space-y-4">
           {[...Array(5)].map((_, i) => (
             <div key={i} className="flex gap-3">
@@ -229,22 +229,38 @@ export default function HomePage() {
             </div>
           ))}
         </div>
-      ) : posts.length === 0 ? (
+      ) : feedType === 'cookout' && !user?.is_vouched ? (
+        <div className="text-center py-16 px-6">
+          <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-500/20 flex items-center justify-center">
+            <Lock className="h-8 w-8 text-amber-500" />
+          </div>
+          <p className="text-white text-lg mb-2 font-display tracking-wide">
+            Invite Only
+          </p>
+          <p className="text-white/50 text-sm">
+            Earn Plates on The Block to get a Vouch.
+          </p>
+        </div>
+      ) : (feedType === 'cookout' ? cookoutPosts : posts).length === 0 ? (
         <div className="text-center py-16 px-6">
           <p className="text-white/50 text-base mb-2 font-display tracking-wide">
             {feedType === 'block' 
               ? "The Block is quiet" 
+              : feedType === 'cookout'
+              ? "The Cookout is empty"
               : "Nothing to explore yet"}
           </p>
           <p className="text-white/30 text-sm">
             {feedType === 'block'
               ? "Follow some people or post something"
+              : feedType === 'cookout'
+              ? "Post something for your inner circle"
               : "Be the first to start the conversation"}
           </p>
         </div>
       ) : (
         <div>
-          {posts.map((post, index) => (
+          {(feedType === 'cookout' ? cookoutPosts : posts).map((post, index) => (
             <div 
               key={post.post_id} 
               className="animate-fade-in"
