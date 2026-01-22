@@ -127,6 +127,7 @@ export function useWebRTC({
     }
 
     return pc;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sendSignal]);
 
   // Handle incoming WebRTC signaling messages
