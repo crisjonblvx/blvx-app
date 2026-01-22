@@ -691,6 +691,8 @@ async def exchange_session(session_id: str, response: Response):
             "reputation_score": 100,
             "plates_remaining": 10,
             "is_day_one": False,
+            "is_vouched": data["email"] == "cj@blvx.social",  # Prime Mover
+            "has_seen_welcome": False,
             "followers_count": 0,
             "following_count": 0,
             "posts_count": 0,
