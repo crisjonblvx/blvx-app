@@ -34,8 +34,20 @@ export const AuthProvider = ({ children }) => {
 
   // Check authentication on mount and when user state changes
   const checkAuth = useCallback(async (skipIfUser = false) => {
+    // Skip if we just authenticated
+    if (authCheckRef.current) {
+      setLoading(false);
+      return;
+    }
+    
     // If we already have user data passed from login, use it
     if (skipIfUser && user) {
+      setLoading(false);
+      return;
+    }
+    
+    // If we're already authenticated with a user, skip
+    if (isAuthenticated && user) {
       setLoading(false);
       return;
     }
