@@ -2,8 +2,9 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { usePosts } from '@/hooks/usePosts';
 import { PostCard } from '@/components/PostCard';
+import { WelcomeModal } from '@/components/WelcomeModal';
 import { Skeleton } from '@/components/ui/skeleton';
-import { RefreshCw, Lock, Globe } from 'lucide-react';
+import { RefreshCw, Lock, Globe, UtensilsCrossed } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
@@ -13,11 +14,36 @@ const API = process.env.REACT_APP_BACKEND_URL;
 
 export default function HomePage() {
   const { user } = useAuth();
-  const { posts, loading, fetchFeed, fetchExploreFeed } = usePosts();
+  const { posts, loading, fetchFeed, fetchExploreFeed, setPosts } = usePosts();
   const [feedType, setFeedType] = useState('block');
   const [refreshing, setRefreshing] = useState(false);
   const [lastFetch, setLastFetch] = useState(null);
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [cookoutPosts, setCookoutPosts] = useState([]);
+  const [cookoutLoading, setCookoutLoading] = useState(false);
   const hasGeneratedFreshContent = useRef(false);
+
+  // Show welcome modal for first-time users
+  useEffect(() => {
+    if (user && !user.has_seen_welcome) {
+      setShowWelcome(true);
+    }
+  }, [user]);
+
+  // Fetch cookout posts
+  const fetchCookout = useCallback(async () => {
+    if (!user?.is_vouched) return;
+    setCookoutLoading(true);
+    try {
+      const response = await axios.get(`${API}/api/posts/cookout`, { withCredentials: true });
+      setCookoutPosts(response.data);
+    } catch (error) {
+      console.error('Failed to fetch cookout:', error);
+      setCookoutPosts([]);
+    } finally {
+      setCookoutLoading(false);
+    }
+  }, [user?.is_vouched]);
 
   // Generate fresh Bonita content on first load
   const generateFreshContent = useCallback(async () => {
