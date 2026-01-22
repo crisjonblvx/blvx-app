@@ -384,7 +384,7 @@ async def create_session(user_id: str, response: Response, remember_me: bool = F
         value=session_token,
         httponly=True,
         secure=True,
-        samesite="none",
+        samesite="lax",
         path="/",
         max_age=session_days * 24 * 60 * 60
     )
