@@ -346,6 +346,7 @@ export const LookoutPanel = ({ open, onOpenChange }) => {
     if (open) {
       fetchAlerts();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, filter]);
 
   const fetchAlerts = async () => {
