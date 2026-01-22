@@ -254,6 +254,21 @@ Build **BLVX**, a "High-Context Social Network" designed to be a "Group Chat" ra
 - [ ] Analytics
 - [ ] Voice messages for Bonita chats
 
+#### ✅ Recently Completed (Jan 22, 2026)
+- [x] **Branding & Launch Polish**
+  - [x] Larger logos (h-12 in Sidebar, h-9 in Header)
+  - [x] Open Graph meta tags for social sharing
+  - [x] Twitter Card meta tags
+  - [x] PWA manifest.json with display:standalone
+  - [x] Custom OG image with BLVX branding
+  - [x] Landing page force-dark CSS (brand identity)
+  - [x] Seed posts endpoint for empty databases
+- [x] **Token-Based Authentication Complete**
+  - [x] All auth endpoints return session_token
+  - [x] Verify-email auto-login with token
+  - [x] Bearer token accepted on all protected endpoints
+  - [x] Mobile Safari/ITP login issues resolved
+
 #### ✅ Recently Completed (Jan 21, 2026)
 - [x] **Backend Modularization Started**
   - Created /backend/models/ for Pydantic schemas
