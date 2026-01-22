@@ -240,13 +240,13 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
 
             {/* Reply indicator */}
             {post.post_type === 'reply' && post.parent_post && (
-              <p className="text-white/40 text-xs mb-2">
-                Replying to <span className="text-white/60">@{post.parent_post.user?.username}</span>
+              <p className="text-white/50 text-sm mb-2">
+                Replying to <span className="text-amber-500">@{post.parent_post.user?.username}</span>
               </p>
             )}
 
             {/* Post content */}
-            <p className="text-white whitespace-pre-wrap break-words mb-3 text-[15px] leading-relaxed">
+            <p className="whitespace-pre-wrap break-words mb-3 text-[15px] leading-[1.5]">
               {post.content}
             </p>
 
