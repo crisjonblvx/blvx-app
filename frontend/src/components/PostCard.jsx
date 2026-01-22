@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
-import { Heart, MessageCircle, Repeat2, Share, MoreHorizontal, Trash2, Sparkles, Lock, Send } from 'lucide-react';
+import { Heart, MessageCircle, Repeat2, Share, MoreHorizontal, Trash2, Sparkles, Lock, Send, Volume2, VolumeX } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { usePosts } from '@/hooks/usePosts';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
