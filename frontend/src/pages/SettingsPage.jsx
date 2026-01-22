@@ -253,6 +253,58 @@ export default function SettingsPage() {
         </div>
       </div>
 
+      {/* Profile Photo Section */}
+      <div className="p-6 border-b border-white/10 flex flex-col items-center">
+        <div 
+          className="relative cursor-pointer group"
+          onClick={handleAvatarClick}
+          data-testid="avatar-upload-btn"
+        >
+          {/* Avatar Image */}
+          <div className="w-24 h-24 rounded-full overflow-hidden bg-white/10 border-2 border-white/20 group-hover:border-amber-500 transition-colors">
+            {(avatarPreview || user?.picture) ? (
+              <img 
+                src={avatarPreview || user?.picture} 
+                alt={user?.name || 'Profile'} 
+                className="w-full h-full object-cover"
+              />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-white/40">
+                <User className="w-10 h-10" />
+              </div>
+            )}
+          </div>
+          
+          {/* Camera Overlay */}
+          <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            {uploadingAvatar ? (
+              <Loader2 className="w-6 h-6 text-white animate-spin" />
+            ) : (
+              <Camera className="w-6 h-6 text-white" />
+            )}
+          </div>
+          
+          {/* Camera Badge */}
+          <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-amber-500 rounded-full flex items-center justify-center border-2 border-black">
+            <Camera className="w-4 h-4 text-black" />
+          </div>
+        </div>
+        
+        <p className="mt-3 font-medium">{user?.name || user?.username}</p>
+        <p className="text-sm text-white/50">@{user?.username}</p>
+        <p className="text-xs text-white/30 mt-2">Tap to change photo</p>
+        
+        {/* Hidden file input */}
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp"
+          onChange={handleAvatarChange}
+          className="hidden"
+          data-testid="avatar-file-input"
+        />
+      </div>
+
       {/* The Spark - Admin Tool */}
       <div className="p-4 border-b border-white/10">
         <div className="flex items-center gap-2 mb-4">
