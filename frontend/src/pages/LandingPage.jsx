@@ -152,7 +152,7 @@ export default function LandingPage() {
   // Landing view
   if (authMode === 'landing') {
     return (
-      <div className="min-h-screen bg-black flex flex-col">
+      <div className="min-h-screen bg-black flex flex-col force-dark">
         <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 relative overflow-hidden">
           <div className="absolute inset-0 bg-black" />
           
@@ -254,7 +254,7 @@ export default function LandingPage() {
   // Signup view
   if (authMode === 'signup') {
     return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center px-6 py-12">
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center px-6 py-12 force-dark">
         <div className="w-full max-w-sm">
           <img 
             src="/assets/logo-white.png"
@@ -351,7 +351,7 @@ export default function LandingPage() {
   // Login view
   if (authMode === 'login') {
     return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center px-6 py-12">
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center px-6 py-12 force-dark">
         <div className="w-full max-w-sm">
           <img 
             src="/assets/logo-white.png"
@@ -479,7 +479,7 @@ export default function LandingPage() {
   // Verify email view
   if (authMode === 'verify') {
     return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center px-6 py-12">
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center px-6 py-12 force-dark">
         <div className="w-full max-w-sm">
           <img 
             src="/assets/logo-white.png"
@@ -536,7 +536,7 @@ export default function LandingPage() {
   // Forgot password view
   if (authMode === 'forgot') {
     return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center px-6 py-12">
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center px-6 py-12 force-dark">
         <div className="w-full max-w-sm">
           <img 
             src="/assets/logo-white.png"
