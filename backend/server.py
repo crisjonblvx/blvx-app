@@ -202,6 +202,8 @@ class UserBase(BaseModel):
     reputation_score: int = 100
     plates_remaining: int = 10
     is_day_one: bool = False
+    is_vouched: bool = False
+    has_seen_welcome: bool = False
     followers_count: int = 0
     following_count: int = 0
     posts_count: int = 0
