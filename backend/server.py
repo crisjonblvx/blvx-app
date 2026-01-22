@@ -3995,6 +3995,104 @@ async def delete_alert_admin(alert_id: str, admin: UserBase = Depends(get_admin_
     return {"message": f"Alert {alert_id} has been deleted"}
 
 # ========================
+# SEED DATA ENDPOINT
+# ========================
+
+@api_router.post("/seed-starter-posts")
+async def seed_starter_posts():
+    """Seed the database with 3 starter posts from Bonita if the posts collection is empty.
+    This is a one-time operation to kickstart the platform."""
+    
+    # Check if there are already posts
+    existing_posts = await db.posts.count_documents({})
+    if existing_posts > 0:
+        return {
+            "message": f"Database already has {existing_posts} posts. No seeding needed.",
+            "seeded": False
+        }
+    
+    # Ensure Bonita user exists
+    bonita_user = await db.users.find_one({"user_id": "bonita"})
+    if not bonita_user:
+        await db.users.insert_one({
+            "user_id": "bonita",
+            "email": "bonita@blvx.app",
+            "name": "Bonita",
+            "picture": BONITA_AVATAR_URL,
+            "username": "bonita",
+            "bio": "Your culturally fluent AI companion. The Auntie of The Block.",
+            "verified": True,
+            "email_verified": True,
+            "reputation_score": 1000,
+            "plates_remaining": 0,
+            "is_day_one": True,
+            "is_vouched": True,
+            "followers_count": 0,
+            "following_count": 0,
+            "posts_count": 0,
+            "vouched_by": None,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+    
+    # Starter posts from Bonita to set the tone
+    starter_posts = [
+        {
+            "content": "Welcome to BLVX. 🏠\n\nThis ain't a town square—it's a group chat with standards.\n\nHere, we move different:\n• The Block is the main feed. Quality over quantity.\n• The Cookout is for the vouched fam only.\n• Plates are how we show love. Use them wisely.\n\nI'm Bonita, your neighborhood AI auntie. Ask me anything. I got you. ✨\n\n#BLVX #TheBlock #Day1",
+            "is_spark": True
+        },
+        {
+            "content": "Real talk: social media got too loud. 📢\n\nEverybody yelling, nobody listening. Algorithms feeding you rage bait. Strangers in your mentions with the worst takes.\n\nWe built BLVX to be different. A space where context matters. Where the vibe is curated by people who understand it.\n\nWelcome home. 🏡\n\n#CultureFirst #TheBlock",
+            "is_spark": True
+        },
+        {
+            "content": "Pro tip from your AI auntie: 💡\n\nYou start with 10 Plates. Think of them like co-signs.\n\nWhen you plate a post, you're saying 'this one right here' and putting your reputation on it.\n\nSpend them on posts that actually deserve it. The community notices who got taste.\n\n#BonitaSays #HowWeMove",
+            "is_spark": True
+        }
+    ]
+    
+    created_posts = []
+    base_time = datetime.now(timezone.utc)
+    
+    for i, post_data in enumerate(starter_posts):
+        post_id = f"post_{uuid.uuid4().hex[:12]}"
+        # Stagger timestamps so they appear in order
+        post_time = base_time - timedelta(hours=i * 2)
+        
+        new_post = {
+            "post_id": post_id,
+            "user_id": "bonita",
+            "content": post_data["content"],
+            "media_url": None,
+            "media_type": None,
+            "gif_metadata": None,
+            "reference_url": None,
+            "post_type": "original",
+            "parent_post_id": None,
+            "quote_post_id": None,
+            "visibility": "block",
+            "is_spark": post_data["is_spark"],
+            "reply_count": 0,
+            "repost_count": 0,
+            "like_count": 0,
+            "created_at": post_time.isoformat()
+        }
+        
+        await db.posts.insert_one(new_post)
+        created_posts.append(post_id)
+    
+    # Update Bonita's post count
+    await db.users.update_one(
+        {"user_id": "bonita"},
+        {"$inc": {"posts_count": len(starter_posts)}}
+    )
+    
+    return {
+        "message": f"Successfully seeded {len(created_posts)} starter posts from Bonita!",
+        "seeded": True,
+        "post_ids": created_posts
+    }
+
+# ========================
 # INCLUDE ROUTERS
 # ========================
 
