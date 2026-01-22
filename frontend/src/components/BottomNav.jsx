@@ -68,9 +68,10 @@ export const BottomNav = () => {
             Profile
           </span>
           {location.pathname.startsWith('/profile') && (
-            <span className="absolute bottom-1 w-1 h-1 bg-white rounded-full" />
+            <span className="absolute bottom-1 w-1 h-1 bg-amber-500 rounded-full" />
           )}
         </Link>
+        </div>
       </div>
     </nav>
   );
