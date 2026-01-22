@@ -26,6 +26,44 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
   const [replyOpen, setReplyOpen] = useState(false);
   const [quoteOpen, setQuoteOpen] = useState(false);
   const [checkingLike, setCheckingLike] = useState(true);
+  const [isMuted, setIsMuted] = useState(true);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const videoRef = useRef(null);
+  const containerRef = useRef(null);
+
+  // Auto-play video when visible in viewport
+  useEffect(() => {
+    if (post.media_type !== 'video' || !videoRef.current) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          if (entry.isIntersecting) {
+            videoRef.current?.play().catch(() => {});
+            setIsPlaying(true);
+          } else {
+            videoRef.current?.pause();
+            setIsPlaying(false);
+          }
+        });
+      },
+      { threshold: 0.5 }
+    );
+
+    if (containerRef.current) {
+      observer.observe(containerRef.current);
+    }
+
+    return () => observer.disconnect();
+  }, [post.media_type]);
+
+  const toggleMute = (e) => {
+    e.stopPropagation();
+    if (videoRef.current) {
+      videoRef.current.muted = !videoRef.current.muted;
+      setIsMuted(!isMuted);
+    }
+  };
 
   // Check if post is liked on mount
   useState(() => {
