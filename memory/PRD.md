@@ -242,10 +242,12 @@ Build **BLVX**, a "High-Context Social Network" designed to be a "Group Chat" ra
 #### P1 - High Priority
 - [ ] Add RESEND_API_KEY for production email sending
 - [ ] Browser push notification permission testing in production
+- [ ] Modularize `server.py` into separate route files (routes/auth.py, routes/posts.py, etc.)
 
 #### P2 - Medium Priority
 - [ ] News API integration for more dynamic Spark topics
 - [ ] Full WebRTC testing in deployed environment
+- [ ] Fix ESLint react-hooks/exhaustive-deps warnings
 
 #### P3 - Future
 - [ ] Explore page with trending posts
