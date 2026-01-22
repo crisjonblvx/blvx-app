@@ -49,6 +49,12 @@ Build **BLVX**, a "High-Context Social Network" designed to be a "Group Chat" ra
 - [x] Email verification with code (Resend integration ready)
 - [x] **Password Reset Flow** - Forgot password with branded email, reset page
 - [x] **Remember Me (30 days)** - Extended session option on login
+- [x] **Token-Based Authentication** (COMPLETED Jan 22, 2026)
+  - [x] Bearer token in Authorization header
+  - [x] Token stored in localStorage (mobile Safari/ITP compatible)
+  - [x] Axios interceptor for automatic token injection
+  - [x] Cookie fallback for backwards compatibility
+  - [x] Auto-login after email verification
 
 #### The Block (Public Feed)
 - [x] Chronological feed of posts
