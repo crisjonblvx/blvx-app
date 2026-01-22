@@ -116,6 +116,7 @@ function AppRouter() {
         <Route path="/profile/:username" element={<AppShell><ProfilePage /></AppShell>} />
         <Route path="/post/:postId" element={<AppShell><ThreadPage /></AppShell>} />
         <Route path="/settings" element={<AppShell><SettingsPage /></AppShell>} />
+        <Route path="/calendar" element={<AppShell><CalendarPage /></AppShell>} />
         <Route path="/admin" element={<AppShell><AdminPage /></AppShell>} />
       </Routes>
     </AuthCallbackHandler>
