@@ -382,20 +382,21 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
                 )}
               </Button>
 
-              {/* Like */}
+              {/* Plate (was Like) */}
               <Button
                 variant="ghost"
                 size="sm"
                 className={cn(
                   "gap-2 hover:bg-white/5 h-8 px-2",
-                  isLiked ? "text-red-500 hover:text-red-400" : "text-white/40 hover:text-white"
+                  isPlated ? "text-amber-500 hover:text-amber-400" : "text-white/40 hover:text-white"
                 )}
-                onClick={handleLike}
-                data-testid={`post-${post.post_id}-like`}
+                onClick={handlePlate}
+                title="Serve a Plate"
+                data-testid={`post-${post.post_id}-plate`}
               >
-                <Heart className={cn("h-4 w-4", isLiked && "fill-current")} />
-                {likeCount > 0 && (
-                  <span className="text-xs font-mono">{likeCount}</span>
+                <UtensilsCrossed className={cn("h-4 w-4", isPlated && "fill-amber-500")} />
+                {plateCount > 0 && (
+                  <span className="text-xs">{plateCount}</span>
                 )}
               </Button>
 
