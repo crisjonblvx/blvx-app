@@ -150,9 +150,9 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
             onClick={(e) => e.stopPropagation()}
             className="flex-shrink-0"
           >
-            <Avatar className="h-10 w-10 border border-white/20 hover:border-white/40 transition-colors">
+            <Avatar className="h-11 w-11 border border-white/20 hover:border-white/40 transition-colors">
               <AvatarImage src={post.user?.picture} alt={post.user?.name} />
-              <AvatarFallback className="bg-white/10 text-white text-sm">
+              <AvatarFallback className="bg-white/10 text-base font-medium">
                 {post.user?.name?.charAt(0)?.toUpperCase()}
               </AvatarFallback>
             </Avatar>
