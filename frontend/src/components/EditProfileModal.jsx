@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { X } from 'lucide-react';
+import { useState, useRef } from 'react';
+import { Camera, Loader2, User } from 'lucide-react';
 import { useUsers } from '@/hooks/useUsers';
 import {
   Dialog,
@@ -13,6 +13,9 @@ import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { toast } from 'sonner';
+import axios from 'axios';
+
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export const EditProfileModal = ({ open, onOpenChange, profile, onUpdate }) => {
   const { updateProfile, loading } = useUsers();
@@ -22,6 +25,57 @@ export const EditProfileModal = ({ open, onOpenChange, profile, onUpdate }) => {
     bio: profile?.bio || '',
     picture: profile?.picture || '',
   });
+  const [avatarPreview, setAvatarPreview] = useState(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const fileInputRef = useRef(null);
+
+  const handleAvatarClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleAvatarChange = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file type
+    const validTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!validTypes.includes(file.type)) {
+      toast.error('Please select a JPG, PNG, or WebP image');
+      return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image must be less than 5MB');
+      return;
+    }
+
+    // Show preview immediately
+    const previewUrl = URL.createObjectURL(file);
+    setAvatarPreview(previewUrl);
+
+    // Upload to server
+    setUploadingAvatar(true);
+    try {
+      const formDataUpload = new FormData();
+      formDataUpload.append('file', file);
+
+      const response = await axios.post(`${API}/users/avatar`, formDataUpload, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+        withCredentials: true
+      });
+
+      // Update form data with new picture URL
+      setFormData(prev => ({ ...prev, picture: response.data.picture }));
+      toast.success('Photo uploaded!');
+    } catch (error) {
+      console.error('Avatar upload error:', error);
+      toast.error(error.response?.data?.detail || 'Failed to upload photo');
+      setAvatarPreview(null);
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -46,6 +100,8 @@ export const EditProfileModal = ({ open, onOpenChange, profile, onUpdate }) => {
     }
   };
 
+  const displayPicture = avatarPreview || formData.picture;
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="bg-black border border-white/20 sm:max-w-[425px] p-0">
@@ -58,25 +114,45 @@ export const EditProfileModal = ({ open, onOpenChange, profile, onUpdate }) => {
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="p-4 space-y-4">
-          {/* Avatar preview */}
-          <div className="flex justify-center">
-            <Avatar className="h-20 w-20 border border-white/20">
-              <AvatarImage src={formData.picture} alt={formData.name} />
-              <AvatarFallback className="bg-white/10 text-white text-xl">
-                {formData.name?.charAt(0)?.toUpperCase()}
-              </AvatarFallback>
-            </Avatar>
-          </div>
-
-          {/* Picture URL */}
-          <div className="space-y-2">
-            <Label htmlFor="picture" className="text-white/60">Picture URL</Label>
-            <Input
-              id="picture"
-              value={formData.picture}
-              onChange={(e) => setFormData(prev => ({ ...prev, picture: e.target.value }))}
-              placeholder="https://..."
-              className="bg-transparent border-white/20 focus:border-white"
+          {/* Avatar with upload */}
+          <div className="flex flex-col items-center gap-2">
+            <div 
+              className="relative cursor-pointer group"
+              onClick={handleAvatarClick}
+              data-testid="avatar-upload-trigger"
+            >
+              <Avatar className="h-24 w-24 border-2 border-white/20 group-hover:border-amber-500 transition-colors">
+                <AvatarImage src={displayPicture} alt={formData.name} />
+                <AvatarFallback className="bg-white/10 text-white text-2xl">
+                  {formData.name?.charAt(0)?.toUpperCase() || <User className="w-8 h-8" />}
+                </AvatarFallback>
+              </Avatar>
+              
+              {/* Camera Overlay */}
+              <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                {uploadingAvatar ? (
+                  <Loader2 className="w-6 h-6 text-white animate-spin" />
+                ) : (
+                  <Camera className="w-6 h-6 text-white" />
+                )}
+              </div>
+              
+              {/* Camera Badge */}
+              <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-amber-500 rounded-full flex items-center justify-center border-2 border-black">
+                <Camera className="w-3.5 h-3.5 text-black" />
+              </div>
+            </div>
+            
+            <p className="text-xs text-white/40">Tap to change photo</p>
+            
+            {/* Hidden file input */}
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              onChange={handleAvatarChange}
+              className="hidden"
+              data-testid="avatar-file-input"
             />
           </div>
 
@@ -122,7 +198,7 @@ export const EditProfileModal = ({ open, onOpenChange, profile, onUpdate }) => {
           {/* Submit */}
           <Button
             type="submit"
-            disabled={loading}
+            disabled={loading || uploadingAvatar}
             className="w-full bg-white text-black hover:bg-white/90 rounded-sm"
             data-testid="save-profile-btn"
           >
