@@ -499,6 +499,14 @@ Build **BLVX**, a "High-Context Social Network" designed to be a "Group Chat" ra
   - Frontend saves token to localStorage with Axios interceptor
   - Cookie authentication preserved as fallback
   - Verify-email now auto-logs in users with session token
+- **RESEND Email Service Configured**
+  - RESEND_API_KEY added for production email delivery
+  - Verification emails now sending via Resend
+  - Welcome emails and password reset emails working
+- **ESLint Fixes**
+  - Fixed react-hooks/exhaustive-deps warnings in AuthContext
+  - Fixed hook dependency warnings across multiple pages
+  - Reduced total lint issues from 49 to 38
 
 ### v1.5.0 (January 20, 2026)
 - **Bonita Conversational AI in Sidebar**: Complete 1-on-1 chat with AI auntie
