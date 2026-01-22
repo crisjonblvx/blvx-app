@@ -34,6 +34,7 @@ export function usePushNotifications() {
       setPermission(Notification.permission);
       checkSubscription();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Check current subscription status
