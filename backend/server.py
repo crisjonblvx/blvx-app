@@ -1194,6 +1194,45 @@ async def get_explore_feed(limit: int = 20, before: Optional[str] = None, user: 
     
     return result
 
+@posts_router.get("/cookout")
+async def get_cookout_feed(limit: int = 20, before: Optional[str] = None, user: UserBase = Depends(get_current_user)):
+    """Get The Cookout feed - private posts from mutual follows"""
+    # Check if user is vouched
+    if not user.is_vouched:
+        raise HTTPException(
+            status_code=403, 
+            detail="The Cookout is invite only. Earn plates on The Block to get a Vouch."
+        )
+    
+    # Get mutuals (users who follow each other)
+    following = await db.follows.find({"follower_id": user.user_id}, {"_id": 0, "following_id": 1}).to_list(1000)
+    following_ids = set([f["following_id"] for f in following])
+    
+    followers = await db.follows.find({"following_id": user.user_id}, {"_id": 0, "follower_id": 1}).to_list(1000)
+    follower_ids = set([f["follower_id"] for f in followers])
+    
+    mutuals = following_ids.intersection(follower_ids)
+    mutuals.add(user.user_id)  # Include own cookout posts
+    
+    query = {
+        "visibility": "cookout",
+        "user_id": {"$in": list(mutuals)}
+    }
+    
+    if before:
+        query["created_at"] = {"$lt": before}
+    
+    posts = await db.posts.find(query, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+    
+    result = []
+    for post in posts:
+        if isinstance(post.get("created_at"), str):
+            post["created_at"] = datetime.fromisoformat(post["created_at"])
+        enriched = await get_post_with_user(post)
+        result.append(enriched)
+    
+    return result
+
 @posts_router.get("/user/{username}")
 async def get_user_posts(username: str, limit: int = 20, before: Optional[str] = None, request: Request = None):
     """Get posts by a specific user"""
