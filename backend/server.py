@@ -841,6 +841,60 @@ async def update_profile(update: UserUpdate, user: UserBase = Depends(get_curren
     
     return UserBase(**updated_user)
 
+@users_router.post("/avatar")
+async def upload_avatar(file: UploadFile = File(...), user: UserBase = Depends(get_current_user)):
+    """Upload and update user avatar"""
+    # Validate file type
+    allowed_types = ["image/jpeg", "image/png", "image/webp"]
+    if file.content_type not in allowed_types:
+        raise HTTPException(status_code=400, detail="Only JPG, PNG, and WebP images are allowed")
+    
+    # Validate file size (5MB max)
+    contents = await file.read()
+    if len(contents) > 5 * 1024 * 1024:
+        raise HTTPException(status_code=400, detail="File size must be less than 5MB")
+    
+    # Check Cloudinary configuration
+    if not is_cloudinary_configured():
+        raise HTTPException(status_code=500, detail="Image storage not configured")
+    
+    try:
+        # Generate unique filename
+        ext = file.filename.split('.')[-1] if '.' in file.filename else 'jpg'
+        unique_filename = f"avatar_{user.user_id}_{uuid.uuid4().hex[:8]}.{ext}"
+        
+        # Upload to Cloudinary
+        import cloudinary.uploader
+        import io
+        configure_cloudinary()
+        
+        result = cloudinary.uploader.upload(
+            io.BytesIO(contents),
+            folder="blvx_avatars",
+            public_id=f"avatar_{user.user_id}",
+            overwrite=True,
+            transformation=[
+                {"width": 400, "height": 400, "crop": "fill", "gravity": "face"},
+                {"quality": "auto", "fetch_format": "auto"}
+            ]
+        )
+        
+        avatar_url = result.get("secure_url")
+        
+        # Update user's picture in database
+        await db.users.update_one(
+            {"user_id": user.user_id},
+            {"$set": {"picture": avatar_url}}
+        )
+        
+        logger.info(f"Avatar uploaded for user {user.user_id}: {avatar_url}")
+        
+        return {"picture": avatar_url, "message": "Avatar updated successfully"}
+        
+    except Exception as e:
+        logger.error(f"Avatar upload failed: {e}")
+        raise HTTPException(status_code=500, detail="Failed to upload avatar")
+
 @users_router.post("/follow/{user_id}")
 async def follow_user(user_id: str, current_user: UserBase = Depends(get_current_user)):
     """Follow a user"""
