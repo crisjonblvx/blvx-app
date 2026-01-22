@@ -24,7 +24,7 @@ const ADMIN_USERS = ["user_d940ef29bbb5"];
 export default function SettingsPage() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { theme, toggleTheme, isDark } = useTheme();
+  const { toggleTheme, isDark } = useTheme();
   const { 
     isSupported: pushSupported, 
     isSubscribed: pushSubscribed, 
@@ -53,7 +53,6 @@ export default function SettingsPage() {
       const success = await subscribePush();
       if (success) {
         toast.success('Push notifications enabled!');
-        // Send a test notification
         await testNotification();
       } else {
         if (pushPermission === 'denied') {
@@ -68,7 +67,7 @@ export default function SettingsPage() {
   const handleDropSpark = async () => {
     setDroppingSpark(true);
     try {
-      const response = await axios.post(
+      await axios.post(
         `${API}/spark/drop`,
         null,
         { 
@@ -92,6 +91,7 @@ export default function SettingsPage() {
         {
           icon: User,
           label: 'Edit Profile',
+          description: 'Update your name, bio, and photo',
           onClick: () => navigate(`/profile/${user?.username}`),
         },
       ],
@@ -115,7 +115,7 @@ export default function SettingsPage() {
           label: isDark ? 'Cinema Mode' : 'Editorial Mode',
           description: isDark ? 'Immersive dark theme (current)' : 'Light magazine aesthetic (current)',
           toggle: true,
-          value: !isDark, // Toggle is OFF for dark mode, ON for light
+          value: !isDark,
           onChange: toggleTheme,
         },
       ],
@@ -171,58 +171,6 @@ export default function SettingsPage() {
         </div>
       </div>
 
-      {/* Profile Photo Section */}
-      <div className="p-6 border-b border-white/10 flex flex-col items-center">
-        <div 
-          className="relative cursor-pointer group"
-          onClick={handleAvatarClick}
-          data-testid="avatar-upload-btn"
-        >
-          {/* Avatar Image */}
-          <div className="w-24 h-24 rounded-full overflow-hidden bg-white/10 border-2 border-white/20 group-hover:border-amber-500 transition-colors">
-            {(avatarPreview || user?.picture) ? (
-              <img 
-                src={avatarPreview || user?.picture} 
-                alt={user?.name || 'Profile'} 
-                className="w-full h-full object-cover"
-              />
-            ) : (
-              <div className="w-full h-full flex items-center justify-center text-white/40">
-                <User className="w-10 h-10" />
-              </div>
-            )}
-          </div>
-          
-          {/* Camera Overlay */}
-          <div className="absolute inset-0 rounded-full bg-black/50 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
-            {uploadingAvatar ? (
-              <Loader2 className="w-6 h-6 text-white animate-spin" />
-            ) : (
-              <Camera className="w-6 h-6 text-white" />
-            )}
-          </div>
-          
-          {/* Camera Badge */}
-          <div className="absolute -bottom-1 -right-1 w-8 h-8 bg-amber-500 rounded-full flex items-center justify-center border-2 border-black">
-            <Camera className="w-4 h-4 text-black" />
-          </div>
-        </div>
-        
-        <p className="mt-3 font-medium">{user?.name || user?.username}</p>
-        <p className="text-sm text-white/50">@{user?.username}</p>
-        <p className="text-xs text-white/30 mt-2">Tap to change photo</p>
-        
-        {/* Hidden file input */}
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept="image/jpeg,image/png,image/webp"
-          onChange={handleAvatarChange}
-          className="hidden"
-          data-testid="avatar-file-input"
-        />
-      </div>
-
       {/* The Spark - Admin Tool */}
       <div className="p-4 border-b border-white/10">
         <div className="flex items-center gap-2 mb-4">
@@ -264,34 +212,6 @@ export default function SettingsPage() {
             )}
           </Button>
         </div>
-      </div>
-
-      {/* Culture Calendar */}
-      <div className="p-4 border-b border-white/10">
-        <div className="flex items-center gap-2 mb-4">
-          <Calendar className="h-5 w-5 text-red-500" />
-          <h2 className="font-display text-sm tracking-widest uppercase">Culture Calendar</h2>
-        </div>
-        <p className="text-xs text-white/40 mb-4">
-          Bonita posts for culturally significant dates (MLK Day, Juneteenth, Hispanic Heritage Month, etc.)
-        </p>
-        
-        <Button
-          onClick={handleDropCalendarPost}
-          disabled={droppingCalendar}
-          variant="outline"
-          className="w-full border-white/20 text-white hover:bg-white hover:text-black rounded-none font-display tracking-wider"
-          data-testid="drop-calendar-btn"
-        >
-          {droppingCalendar ? (
-            <Loader2 className="h-4 w-4 animate-spin" />
-          ) : (
-            <>
-              <Calendar className="h-4 w-4 mr-2" />
-              Post Today's Event
-            </>
-          )}
-        </Button>
       </div>
 
       {/* Settings List */}
