@@ -94,7 +94,7 @@ export const AuthProvider = ({ children }) => {
     } finally {
       setLoading(false);
     }
-  }, [location.pathname, navigate, user]);
+  }, [location.pathname, navigate, user, isAuthenticated]);
 
   // Initial auth check on mount
   useEffect(() => {
@@ -112,6 +112,7 @@ export const AuthProvider = ({ children }) => {
         checkAuth();
       }
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Re-check auth when location changes (but not for every tiny change)
@@ -120,6 +121,7 @@ export const AuthProvider = ({ children }) => {
     if (!user && !loading && location.pathname !== '/') {
       checkAuth();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
 
   const login = () => {
