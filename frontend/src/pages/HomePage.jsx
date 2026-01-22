@@ -69,6 +69,8 @@ export default function HomePage() {
     try {
       if (feedType === 'block') {
         await fetchFeed();
+      } else if (feedType === 'cookout') {
+        await fetchCookout();
       } else {
         await fetchExploreFeed();
       }
