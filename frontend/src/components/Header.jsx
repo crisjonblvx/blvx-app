@@ -37,7 +37,7 @@ export const Header = () => {
             <img 
               src={assets.logo}
               alt="BLVX"
-              className="h-7"
+              className="h-9"
             />
           </Link>
 

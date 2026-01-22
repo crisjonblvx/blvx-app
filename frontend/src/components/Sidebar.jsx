@@ -40,9 +40,9 @@ export const Sidebar = () => {
             <img 
               src={assets.logo}
               alt="BLVX"
-              className="h-9"
+              className="h-12"
             />
-            <div className="mt-2 h-0.5 w-12 bg-gradient-to-r from-amber-500 to-transparent rounded-full" />
+            <div className="mt-2 h-0.5 w-16 bg-gradient-to-r from-amber-500 to-transparent rounded-full" />
           </Link>
         </div>
 
