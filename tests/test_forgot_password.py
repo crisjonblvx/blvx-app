@@ -12,7 +12,7 @@ import os
 import time
 from datetime import datetime, timezone, timedelta
 
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://high-context-1.preview.emergentagent.com')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://blvx-context.preview.emergentagent.com')
 
 class TestForgotPasswordAPI:
     """Test forgot password and reset password API endpoints"""

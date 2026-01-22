@@ -11,7 +11,7 @@ import time
 from datetime import datetime
 
 class BLVXAuthTester:
-    def __init__(self, base_url="https://high-context-1.preview.emergentagent.com"):
+    def __init__(self, base_url="https://blvx-context.preview.emergentagent.com"):
         self.base_url = base_url
         self.tests_run = 0
         self.tests_passed = 0
@@ -216,7 +216,7 @@ class BLVXAuthTester:
         
         # This tests the frontend login function behavior
         # The actual OAuth flow happens through the frontend
-        redirect_url = "https://high-context-1.preview.emergentagent.com/home"
+        redirect_url = "https://blvx-context.preview.emergentagent.com/home"
         expected_oauth_url = f"https://auth.emergentagent.com/?redirect={requests.utils.quote(redirect_url)}"
         
         self.log(f"✅ Expected OAuth URL: {expected_oauth_url}")
