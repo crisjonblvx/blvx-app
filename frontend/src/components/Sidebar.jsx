@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Radio, Search, MessageCircle, User, Settings, LogOut, Sparkles, Ticket, Plus } from 'lucide-react';
+import { Home, Radio, Search, MessageCircle, User, Settings, LogOut, Sparkles, Ticket, Plus, Calendar } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useNotificationCount } from '@/hooks/useNotificationCount';
@@ -16,6 +16,7 @@ const navItems = [
   { path: '/gc', icon: MessageCircle, label: 'The GC' },
   { path: '/vouch', icon: Ticket, label: 'The Vouch' },
   { path: '/bonita', icon: Sparkles, label: 'Bonita' },
+  { path: '/calendar', icon: Calendar, label: 'Culture Calendar' },
 ];
 
 export const Sidebar = () => {
