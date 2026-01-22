@@ -849,9 +849,20 @@ async def update_profile(update: UserUpdate, user: UserBase = Depends(get_curren
     updated_user.setdefault("reputation_score", 100)
     updated_user.setdefault("plates_remaining", 10)
     updated_user.setdefault("is_day_one", False)
+    updated_user.setdefault("is_vouched", False)
+    updated_user.setdefault("has_seen_welcome", False)
     updated_user.setdefault("vouched_by", None)
     
     return UserBase(**updated_user)
+
+@users_router.post("/welcome-seen")
+async def mark_welcome_seen(user: UserBase = Depends(get_current_user)):
+    """Mark that user has seen the welcome modal"""
+    await db.users.update_one(
+        {"user_id": user.user_id},
+        {"$set": {"has_seen_welcome": True}}
+    )
+    return {"success": True}
 
 @users_router.post("/avatar")
 async def upload_avatar(file: UploadFile = File(...), user: UserBase = Depends(get_current_user)):
