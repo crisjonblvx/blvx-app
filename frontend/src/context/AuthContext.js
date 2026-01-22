@@ -180,7 +180,8 @@ export const AuthProvider = ({ children }) => {
     logout,
     updateUser,
     checkAuth,
-    setAuthenticatedUser
+    setAuthenticatedUser,
+    refreshUser
   };
 
   return (
