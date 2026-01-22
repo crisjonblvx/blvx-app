@@ -535,7 +535,10 @@ async def verify_email(data: VerifyEmail, response: Response):
     # Send welcome email
     await send_welcome_email(data.email.lower(), user.get("name", "there"))
     
-    return {"message": "Email verified successfully", "user": user}
+    # Create session token for auto-login after verification
+    session_token = await create_session(user["user_id"], response)
+    
+    return {"message": "Email verified successfully", "user": {**user, "session_token": session_token}}
 
 @auth_router.post("/resend-verification")
 async def resend_verification(email: EmailStr):
