@@ -140,6 +140,9 @@ export default function HomePage() {
 
   return (
     <div className="mb-safe" data-testid="home-page">
+      {/* Welcome Modal */}
+      <WelcomeModal open={showWelcome} onOpenChange={setShowWelcome} />
+
       {/* Feed Type Tabs */}
       <div className="sticky top-14 md:top-0 z-30 glass border-b border-white/10">
         <div className="flex">
@@ -154,7 +157,31 @@ export default function HomePage() {
             <Globe className="h-3.5 w-3.5" />
             The Block
             {feedType === 'block' && (
-              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-0.5 bg-white" />
+              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-0.5 bg-amber-500" />
+            )}
+          </button>
+          <button
+            onClick={() => {
+              if (!user?.is_vouched) {
+                toast.error('The Cookout is invite only. Earn plates on The Block to get a Vouch.');
+                return;
+              }
+              setFeedType('cookout');
+            }}
+            className={cn(
+              "flex-1 py-4 text-xs font-display tracking-widest uppercase transition-colors relative flex items-center justify-center gap-2",
+              feedType === 'cookout' ? "text-amber-500" : "text-white/40 hover:text-white/70"
+            )}
+            data-testid="feed-cookout-tab"
+          >
+            {user?.is_vouched ? (
+              <UtensilsCrossed className="h-3.5 w-3.5" />
+            ) : (
+              <Lock className="h-3.5 w-3.5" />
+            )}
+            The Cookout
+            {feedType === 'cookout' && (
+              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-0.5 bg-amber-500" />
             )}
           </button>
           <button
@@ -167,7 +194,7 @@ export default function HomePage() {
           >
             Explore
             {feedType === 'explore' && (
-              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-0.5 bg-white" />
+              <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-0.5 bg-amber-500" />
             )}
           </button>
         </div>
