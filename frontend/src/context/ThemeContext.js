@@ -23,7 +23,7 @@ const ASSETS = {
 };
 
 export const ThemeProvider = ({ children }) => {
-  const [theme, setTheme] = useState('dark'); // Default to Cinema (dark) mode
+  const [theme, setTheme] = useState('light'); // Default to Editorial (light) mode
 
   // Load saved theme from localStorage
   useEffect(() => {

@@ -12,10 +12,10 @@ export const FAB = () => {
       <div className="md:hidden fixed bottom-20 left-4 z-50">
         <Button
           onClick={() => setOpen(true)}
-          className="h-14 w-14 bg-white text-black hover:bg-white/90 shadow-lg btn-hover-effect rounded-none"
+          className="h-11 w-11 bg-white text-black hover:bg-white/90 shadow-lg btn-hover-effect rounded-full"
           data-testid="fab-new-post"
         >
-          <Plus className="h-6 w-6" />
+          <Plus className="h-5 w-5" />
         </Button>
       </div>
       
