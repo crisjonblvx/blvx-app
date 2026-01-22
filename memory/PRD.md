@@ -483,6 +483,21 @@ Build **BLVX**, a "High-Context Social Network" designed to be a "Group Chat" ra
 
 ## Changelog
 
+### v2.0.0 (January 22, 2026) - V1 Launch Ready
+- **Branding & Launch Polish**
+  - Larger BLVX logos for brand prominence (h-12 Sidebar, h-9 Header)
+  - Open Graph meta tags for social media sharing previews
+  - Custom OG image generated with BLVX branding
+  - PWA manifest with display:standalone for native-like mobile experience
+  - Landing page force-dark CSS class ensures brand identity
+  - Database seed endpoint for starter posts
+- **Token-Based Authentication Complete**
+  - Bearer token authentication for Safari/ITP mobile compatibility
+  - All auth endpoints (login, signup, verify-email, OAuth) return session_token
+  - Frontend saves token to localStorage with Axios interceptor
+  - Cookie authentication preserved as fallback
+  - Verify-email now auto-logs in users with session token
+
 ### v1.5.0 (January 20, 2026)
 - **Bonita Conversational AI in Sidebar**: Complete 1-on-1 chat with AI auntie
   - Claude claude-sonnet-4-20250514 integration via Emergent LLM Key
