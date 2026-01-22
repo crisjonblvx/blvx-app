@@ -75,6 +75,7 @@ export default function GCPage() {
       setNewGCName('');
       setUserSearch('');
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [createOpen]);
 
   const fetchAvailableUsers = async () => {
