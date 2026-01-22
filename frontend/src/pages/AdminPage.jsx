@@ -42,12 +42,14 @@ export default function AdminPage() {
 
   useEffect(() => {
     fetchStats();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
     if (activeTab === 'users') fetchUsers();
     if (activeTab === 'posts') fetchPosts();
     if (activeTab === 'alerts') fetchAlerts();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeTab, usersPage, postsPage, alertsPage]);
 
   const fetchStats = async () => {
