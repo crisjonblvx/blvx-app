@@ -432,7 +432,7 @@ async def email_signup(data: EmailSignup, response: Response):
         "verified": False,
         "email_verified": False,
         "reputation_score": 100,
-        "plates_remaining": 3,
+        "plates_remaining": 10,
         "is_day_one": False,
         "followers_count": 0,
         "following_count": 0,
@@ -675,7 +675,7 @@ async def exchange_session(session_id: str, response: Response):
             "verified": False,
             "email_verified": True,  # Google emails are verified
             "reputation_score": 100,
-            "plates_remaining": 3,
+            "plates_remaining": 10,
             "is_day_one": False,
             "followers_count": 0,
             "following_count": 0,
