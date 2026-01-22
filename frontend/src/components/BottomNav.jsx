@@ -17,8 +17,11 @@ export const BottomNav = () => {
   const { count: unreadCount } = useNotificationCount();
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden glass border-t border-white/10 pb-safe">
-      <div className="flex items-center justify-around h-16">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden pb-safe">
+      {/* Amber accent line at top */}
+      <div className="h-0.5 bg-gradient-to-r from-transparent via-amber-500/50 to-transparent" />
+      <div className="glass border-t border-white/10">
+        <div className="flex items-center justify-around h-16">
         {navItems.map(({ path, icon: Icon, label }) => {
           const isActive = location.pathname === path;
           const showBadge = path === '/gc' && unreadCount > 0;
