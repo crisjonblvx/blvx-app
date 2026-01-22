@@ -151,6 +151,18 @@ export const AuthProvider = ({ children }) => {
     setLoading(false);
   };
 
+  // Refresh user data from server
+  const refreshUser = async () => {
+    try {
+      const response = await axios.get(`${API}/auth/me`, { withCredentials: true });
+      setUser(response.data);
+      return response.data;
+    } catch (error) {
+      console.error('Failed to refresh user:', error);
+      return null;
+    }
+  };
+
   // Load session token from localStorage on mount
   useEffect(() => {
     const savedToken = localStorage.getItem('blvx-session-token');
