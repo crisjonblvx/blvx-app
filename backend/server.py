@@ -558,7 +558,7 @@ async def resend_verification(email: EmailStr):
     }
 
 @auth_router.post("/forgot-password")
-async def forgot_password(email: EmailStr):
+async def forgot_password(email: EmailStr, request: Request):
     """Request password reset"""
     user = await db.users.find_one({"email": email.lower()})
     if not user:
@@ -582,12 +582,16 @@ async def forgot_password(email: EmailStr):
         "expires_at": expires_at.isoformat()
     })
     
+    # Get origin from request headers for dynamic URL
+    origin = request.headers.get("origin", "https://blvx.social")
+    
     # Send reset email
     from services.email_service import send_password_reset_email
     email_sent = await send_password_reset_email(
         email.lower(), 
         reset_token, 
-        user.get("name", "there")
+        user.get("name", "there"),
+        origin
     )
     
     logger.info(f"Password reset requested for {email}")
