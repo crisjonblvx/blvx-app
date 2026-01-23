@@ -930,10 +930,6 @@ async def apple_callback(request: Request, response: Response):
             }
             await db.users.insert_one(new_user)
             logger.info(f"Created new Apple user: {user_id}, email: {user_email}, private_relay: {new_user['is_private_relay_email']}")
-                "created_at": datetime.now(timezone.utc).isoformat()
-            }
-            await db.users.insert_one(new_user)
-            logger.info(f"Created new Apple user: {email}")
         
         # Create session with remember_me=True by default for Apple Sign-In
         session_token = await create_session(user_id, response, remember_me=True)
@@ -942,15 +938,22 @@ async def apple_callback(request: Request, response: Response):
         if isinstance(user.get("created_at"), str):
             user["created_at"] = datetime.fromisoformat(user["created_at"])
         
-        logger.info(f"Apple user authenticated: {email}")
+        logger.info(f"Apple user authenticated: {user_id}")
+        
+        # Get the frontend URL for redirect
+        frontend_url = os.environ.get('REACT_APP_BACKEND_URL', 'https://blvx.social').replace('/api', '')
         
         # Redirect to frontend with session token in hash
-        redirect_url = f"https://blvx.social/home#session_token={session_token}"
+        redirect_url = f"{frontend_url}/home#session_token={session_token}"
         
-        # For local development/preview
-        origin = request.headers.get("origin", "")
-        if "localhost" in origin or "preview.emergentagent.com" in origin:
-            redirect_url = f"{origin}/home#session_token={session_token}"
+        # For local development/preview - check referer
+        referer = request.headers.get("referer", "")
+        if "localhost" in referer:
+            redirect_url = f"http://localhost:3000/home#session_token={session_token}"
+        elif "preview.emergentagent.com" in referer:
+            redirect_url = f"{frontend_url}/home#session_token={session_token}"
+        
+        logger.info(f"Apple redirect URL: {redirect_url}")
         
         # Return HTML that redirects (Apple requires form_post response_mode)
         html_response = f"""
