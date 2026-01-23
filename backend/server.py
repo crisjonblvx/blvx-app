@@ -941,7 +941,13 @@ async def apple_callback(request: Request, response: Response):
         logger.info(f"Apple user authenticated: {user_id}")
         
         # Get the frontend URL for redirect - use /auth/callback with token in query params
-        frontend_url = os.environ.get('REACT_APP_BACKEND_URL', 'https://blvx.social').replace('/api', '').rstrip('/')
+        # MUST use environment variable - no fallbacks to avoid wrong domain issues
+        backend_url = os.environ.get('REACT_APP_BACKEND_URL', '')
+        if backend_url:
+            frontend_url = backend_url.replace('/api', '').rstrip('/')
+        else:
+            frontend_url = 'https://blvx.social'
+            logger.warning("REACT_APP_BACKEND_URL not set, using fallback blvx.social")
         
         # Redirect to frontend /auth/callback with token in URL query params (NOT hash)
         redirect_url = f"{frontend_url}/auth/callback?token={session_token}"
