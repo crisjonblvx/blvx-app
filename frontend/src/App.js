@@ -65,12 +65,24 @@ const AuthCallbackHandler = ({ children }) => {
             });
 
             console.log('OAuth successful, user:', response.data.email);
+            console.log('Session token received:', !!response.data.session_token);
+
+            // CRITICAL: Save token to localStorage IMMEDIATELY before anything else
+            if (response.data.session_token) {
+              localStorage.setItem('blvx-session-token', response.data.session_token);
+              console.log('Token saved to localStorage');
+            } else {
+              console.error('No session_token in response!');
+            }
 
             // Clear hash from URL
             window.history.replaceState(null, '', window.location.pathname);
             
             // Set authenticated user in context
             setAuthenticatedUser(response.data);
+            
+            // Small delay to ensure localStorage is written before navigation
+            await new Promise(resolve => setTimeout(resolve, 100));
             
             // Navigate to home
             navigate('/home', { replace: true });
