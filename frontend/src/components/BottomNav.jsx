@@ -56,7 +56,7 @@ export const BottomNav = () => {
         
         {/* Profile */}
         <Link
-          to={user ? `/profile/${user.username}` : '/'}
+          to={user ? `/profile/${user.username || 'me'}` : '/'}
           className={cn(
             "flex flex-col items-center justify-center w-16 h-full relative transition-colors duration-200",
             location.pathname.startsWith('/profile') ? "text-white" : "text-white/40 hover:text-white/70"
