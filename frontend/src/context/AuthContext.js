@@ -130,6 +130,29 @@ export const AuthProvider = ({ children }) => {
     window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
   };
 
+  const loginWithApple = async () => {
+    try {
+      // Get Apple configuration from backend
+      const response = await axios.get(`${API}/auth/apple/config`);
+      const config = response.data;
+      
+      // Build Apple authorization URL
+      const params = new URLSearchParams({
+        client_id: config.client_id,
+        redirect_uri: config.redirect_uri,
+        response_type: config.response_type,
+        response_mode: config.response_mode,
+        scope: config.scope,
+        state: Math.random().toString(36).substring(7)
+      });
+      
+      window.location.href = `https://appleid.apple.com/auth/authorize?${params.toString()}`;
+    } catch (error) {
+      console.error('Apple login error:', error);
+      throw error;
+    }
+  };
+
   const logout = async () => {
     try {
       await axios.post(`${API}/auth/logout`, {}, { withCredentials: true });
