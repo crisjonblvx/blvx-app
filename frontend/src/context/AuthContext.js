@@ -220,6 +220,7 @@ export const AuthProvider = ({ children }) => {
     isAuthenticated,
     sessionToken,
     login,
+    loginWithApple,
     logout,
     updateUser,
     checkAuth,
