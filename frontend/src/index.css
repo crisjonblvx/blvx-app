@@ -37,8 +37,16 @@ html *, body *, #root *, .App * {
     border-color: rgba(255, 255, 255, 0.1);
 }
 
+/* Override any light mode attempts */
+.light-mode,
+body.theme-light,
+body[data-theme="light"],
+.theme-light {
+    background-color: #000000 !important;
+    color: #ffffff !important;
+}
+
 @layer base {
-    /* Dark Mode ONLY - Brand Identity - Override EVERYTHING */
     :root,
     html,
     body,
@@ -68,13 +76,10 @@ html *, body *, #root *, .App * {
         --input: 0 0% 15%;
         --ring: 0 0% 100%;
         --radius: 0.125rem;
-        
-        /* Custom theme colors - ALWAYS DARK */
         --theme-bg: #000000;
         --theme-text: #ffffff;
         --theme-border: rgba(255, 255, 255, 0.1);
         --theme-text-muted: rgba(255, 255, 255, 0.5);
-        
         background-color: #000000 !important;
         color: #ffffff !important;
     }
@@ -97,25 +102,6 @@ html *, body *, #root *, .App * {
     .font-mono {
         font-family: 'JetBrains Mono', monospace;
     }
-}
-    }
-    
-    h1, h2, h3, h4, h5, h6, .font-display {
-        font-family: 'Oswald', sans-serif;
-    }
-    
-    .font-mono {
-        font-family: 'JetBrains Mono', monospace;
-    }
-}
-
-/* Override any light mode attempts - force dark everywhere */
-.light-mode,
-body.theme-light,
-body[data-theme="light"],
-.theme-light {
-    background-color: #000000 !important;
-    color: #ffffff !important;
 }
 
 /* Scrollbar Styling */
@@ -150,21 +136,13 @@ body[data-theme="light"],
 }
 
 @keyframes fadeIn {
-    from {
-        opacity: 0;
-    }
-    to {
-        opacity: 1;
-    }
+    from { opacity: 0; }
+    to { opacity: 1; }
 }
 
 @keyframes pulse-slow {
-    0%, 100% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.7;
-    }
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
 }
 
 .animate-fade-in-up {
@@ -245,20 +223,6 @@ body[data-theme="light"],
 
 .bg-amber-500 {
     background-color: #f59e0b !important;
-}
-
-/* Ensure all main containers are dark */
-main, aside, header, footer, nav, section, article, div.min-h-screen {
-    background-color: inherit;
-}
-
-/* Force dark on any element that might try to be light */
-.bg-white {
-    background-color: #000000 !important;
-}
-
-.text-black {
-    color: #ffffff !important;
 }
 
 /* Exception: Buttons that should be white */
