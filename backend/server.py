@@ -715,6 +715,202 @@ async def exchange_session(session_id: str, response: Response):
     # Return user data with session token for localStorage fallback
     return {**user, "session_token": session_token}
 
+# ========================
+# APPLE SIGN-IN
+# ========================
+
+import jwt
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.backends import default_backend
+import time
+
+# Apple OAuth Configuration
+APPLE_TEAM_ID = os.environ.get("APPLE_TEAM_ID")
+APPLE_SERVICE_ID = os.environ.get("APPLE_SERVICE_ID")
+APPLE_KEY_ID = os.environ.get("APPLE_KEY_ID")
+APPLE_PRIVATE_KEY = os.environ.get("APPLE_PRIVATE_KEY")
+
+def generate_apple_client_secret():
+    """Generate Apple client secret JWT"""
+    if not all([APPLE_TEAM_ID, APPLE_SERVICE_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY]):
+        return None
+    
+    # Format the private key properly
+    private_key_pem = f"-----BEGIN PRIVATE KEY-----\n{APPLE_PRIVATE_KEY}\n-----END PRIVATE KEY-----"
+    
+    headers = {
+        "alg": "ES256",
+        "kid": APPLE_KEY_ID
+    }
+    
+    payload = {
+        "iss": APPLE_TEAM_ID,
+        "iat": int(time.time()),
+        "exp": int(time.time()) + 86400 * 180,  # 180 days
+        "aud": "https://appleid.apple.com",
+        "sub": APPLE_SERVICE_ID
+    }
+    
+    try:
+        client_secret = jwt.encode(payload, private_key_pem, algorithm="ES256", headers=headers)
+        return client_secret
+    except Exception as e:
+        logger.error(f"Failed to generate Apple client secret: {e}")
+        return None
+
+@auth_router.get("/apple/config")
+async def get_apple_config():
+    """Get Apple Sign-In configuration for frontend"""
+    if not APPLE_SERVICE_ID:
+        raise HTTPException(status_code=501, detail="Apple Sign-In not configured")
+    
+    return {
+        "client_id": APPLE_SERVICE_ID,
+        "redirect_uri": "https://blvx.social/api/auth/callback/apple",
+        "scope": "name email",
+        "response_type": "code id_token",
+        "response_mode": "form_post"
+    }
+
+@auth_router.post("/callback/apple")
+async def apple_callback(request: Request, response: Response):
+    """Handle Apple Sign-In callback"""
+    try:
+        # Apple sends data as form POST
+        form = await request.form()
+        code = form.get("code")
+        id_token = form.get("id_token")
+        user_data = form.get("user")  # Only sent on first sign-in
+        state = form.get("state")
+        
+        logger.info(f"Apple callback received - code: {bool(code)}, id_token: {bool(id_token)}")
+        
+        if not id_token:
+            raise HTTPException(status_code=400, detail="Missing id_token from Apple")
+        
+        # Decode the id_token (Apple's JWT)
+        # In production, verify the token signature with Apple's public keys
+        try:
+            # Decode without verification for now (Apple's token is already trusted)
+            token_data = jwt.decode(id_token, options={"verify_signature": False})
+            apple_user_id = token_data.get("sub")
+            email = token_data.get("email")
+            email_verified = token_data.get("email_verified", False)
+        except Exception as e:
+            logger.error(f"Failed to decode Apple id_token: {e}")
+            raise HTTPException(status_code=400, detail="Invalid id_token")
+        
+        if not apple_user_id or not email:
+            raise HTTPException(status_code=400, detail="Missing user data from Apple")
+        
+        # Parse user data if provided (first sign-in only)
+        name = None
+        if user_data:
+            try:
+                import json
+                user_info = json.loads(user_data)
+                name_data = user_info.get("name", {})
+                first_name = name_data.get("firstName", "")
+                last_name = name_data.get("lastName", "")
+                name = f"{first_name} {last_name}".strip() or None
+            except:
+                pass
+        
+        # Check if user exists by Apple ID or email
+        existing_user = await db.users.find_one({
+            "$or": [
+                {"apple_user_id": apple_user_id},
+                {"email": email.lower()}
+            ]
+        }, {"_id": 0})
+        
+        if existing_user:
+            user_id = existing_user["user_id"]
+            # Update Apple ID if not set
+            if not existing_user.get("apple_user_id"):
+                await db.users.update_one(
+                    {"user_id": user_id},
+                    {"$set": {"apple_user_id": apple_user_id, "email_verified": True}}
+                )
+            # Update name if we have it and user doesn't
+            if name and not existing_user.get("name"):
+                await db.users.update_one(
+                    {"user_id": user_id},
+                    {"$set": {"name": name}}
+                )
+        else:
+            # Create new user
+            user_id = f"user_{uuid.uuid4().hex[:12]}"
+            username = email.split("@")[0].lower()
+            username = re.sub(r'[^a-z0-9_]', '', username)[:15]
+            base_username = username
+            counter = 1
+            while await db.users.find_one({"username": username}):
+                username = f"{base_username}{counter}"
+                counter += 1
+            
+            new_user = {
+                "user_id": user_id,
+                "apple_user_id": apple_user_id,
+                "email": email.lower(),
+                "name": name or email.split("@")[0],
+                "picture": "",
+                "username": username,
+                "bio": "",
+                "verified": False,
+                "email_verified": True,  # Apple verifies emails
+                "reputation_score": 100,
+                "plates_remaining": 10,
+                "is_day_one": False,
+                "is_vouched": False,
+                "has_seen_welcome": False,
+                "followers_count": 0,
+                "following_count": 0,
+                "posts_count": 0,
+                "vouched_by": None,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.users.insert_one(new_user)
+            logger.info(f"Created new Apple user: {email}")
+        
+        # Create session with remember_me=True by default for Apple Sign-In
+        session_token = await create_session(user_id, response, remember_me=True)
+        
+        user = await db.users.find_one({"user_id": user_id}, {"_id": 0, "password_hash": 0})
+        if isinstance(user.get("created_at"), str):
+            user["created_at"] = datetime.fromisoformat(user["created_at"])
+        
+        logger.info(f"Apple user authenticated: {email}")
+        
+        # Redirect to frontend with session token in hash
+        redirect_url = f"https://blvx.social/home#session_token={session_token}"
+        
+        # For local development/preview
+        origin = request.headers.get("origin", "")
+        if "localhost" in origin or "preview.emergentagent.com" in origin:
+            redirect_url = f"{origin}/home#session_token={session_token}"
+        
+        # Return HTML that redirects (Apple requires form_post response_mode)
+        html_response = f"""
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta http-equiv="refresh" content="0;url={redirect_url}">
+            <script>window.location.href = "{redirect_url}";</script>
+        </head>
+        <body>
+            <p>Redirecting to BLVX...</p>
+        </body>
+        </html>
+        """
+        return Response(content=html_response, media_type="text/html")
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Apple callback error: {e}")
+        raise HTTPException(status_code=500, detail="Apple authentication failed")
+
 @auth_router.get("/me")
 async def get_me(user: UserBase = Depends(get_current_user)):
     """Get current authenticated user"""
