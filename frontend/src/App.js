@@ -145,6 +145,7 @@ function AppRouter() {
         <Route path="/settings" element={<AppShell><SettingsPage /></AppShell>} />
         <Route path="/calendar" element={<AppShell><CalendarPage /></AppShell>} />
         <Route path="/admin" element={<AppShell><AdminPage /></AppShell>} />
+        <Route path="/auth/callback" element={<AuthCallbackPage />} />
       </Routes>
     </AuthCallbackHandler>
   );
