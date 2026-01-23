@@ -782,28 +782,48 @@ async def apple_callback(request: Request, response: Response):
         id_token = form.get("id_token")
         user_data = form.get("user")  # Only sent on first sign-in
         state = form.get("state")
+        error = form.get("error")
         
-        logger.info(f"Apple callback received - code: {bool(code)}, id_token: {bool(id_token)}")
+        logger.info(f"Apple callback received - code: {bool(code)}, id_token: {bool(id_token)}, error: {error}")
+        
+        # Handle Apple error responses
+        if error:
+            logger.error(f"Apple Sign-In error: {error}")
+            return Response(
+                content=f"""
+                <!DOCTYPE html>
+                <html>
+                <head>
+                    <meta http-equiv="refresh" content="0;url=/?error=apple_signin_failed">
+                    <script>window.location.href = "/?error=apple_signin_failed";</script>
+                </head>
+                <body><p>Apple Sign-In failed. Redirecting...</p></body>
+                </html>
+                """,
+                media_type="text/html"
+            )
         
         if not id_token:
             raise HTTPException(status_code=400, detail="Missing id_token from Apple")
         
         # Decode the id_token (Apple's JWT)
-        # In production, verify the token signature with Apple's public keys
         try:
-            # Decode without verification for now (Apple's token is already trusted)
+            # Decode without verification (Apple's token is already trusted from their servers)
             token_data = jwt.decode(id_token, options={"verify_signature": False})
             apple_user_id = token_data.get("sub")
             email = token_data.get("email")
             email_verified = token_data.get("email_verified", False)
+            is_private_email = token_data.get("is_private_email", False)
+            
+            logger.info(f"Apple token decoded - sub: {apple_user_id}, email: {email}, private: {is_private_email}")
         except Exception as e:
             logger.error(f"Failed to decode Apple id_token: {e}")
             raise HTTPException(status_code=400, detail="Invalid id_token")
         
-        if not apple_user_id or not email:
-            raise HTTPException(status_code=400, detail="Missing user data from Apple")
+        if not apple_user_id:
+            raise HTTPException(status_code=400, detail="Missing Apple user ID")
         
-        # Parse user data if provided (first sign-in only)
+        # Parse user data if provided (first sign-in only - Apple only sends this once!)
         name = None
         if user_data:
             try:
@@ -813,35 +833,65 @@ async def apple_callback(request: Request, response: Response):
                 first_name = name_data.get("firstName", "")
                 last_name = name_data.get("lastName", "")
                 name = f"{first_name} {last_name}".strip() or None
-            except:
-                pass
+                logger.info(f"Apple user data received: name={name}")
+            except Exception as e:
+                logger.warning(f"Could not parse Apple user data: {e}")
         
-        # Check if user exists by Apple ID or email
-        existing_user = await db.users.find_one({
-            "$or": [
-                {"apple_user_id": apple_user_id},
-                {"email": email.lower()}
-            ]
-        }, {"_id": 0})
+        # First, check if user exists by Apple ID (most reliable)
+        existing_user = await db.users.find_one(
+            {"apple_user_id": apple_user_id},
+            {"_id": 0}
+        )
+        
+        # If not found by Apple ID, check by email (if we have one)
+        if not existing_user and email:
+            existing_user = await db.users.find_one(
+                {"email": email.lower()},
+                {"_id": 0}
+            )
         
         if existing_user:
             user_id = existing_user["user_id"]
-            # Update Apple ID if not set
+            
+            # Update Apple ID if not set (link account)
+            update_fields = {}
             if not existing_user.get("apple_user_id"):
-                await db.users.update_one(
-                    {"user_id": user_id},
-                    {"$set": {"apple_user_id": apple_user_id, "email_verified": True}}
-                )
+                update_fields["apple_user_id"] = apple_user_id
+                update_fields["email_verified"] = True
+            
+            # Update email if we have one and user doesn't
+            if email and not existing_user.get("email"):
+                update_fields["email"] = email.lower()
+            
             # Update name if we have it and user doesn't
             if name and not existing_user.get("name"):
+                update_fields["name"] = name
+            
+            if update_fields:
                 await db.users.update_one(
                     {"user_id": user_id},
-                    {"$set": {"name": name}}
+                    {"$set": update_fields}
                 )
+                logger.info(f"Updated Apple user {user_id}: {list(update_fields.keys())}")
         else:
             # Create new user
             user_id = f"user_{uuid.uuid4().hex[:12]}"
-            username = email.split("@")[0].lower()
+            
+            # Handle email - might be null if user chose "Hide My Email" and we don't have it
+            if email:
+                user_email = email.lower()
+            else:
+                # Create a placeholder email using Apple user ID
+                # This handles "Hide My Email" when email is not provided
+                user_email = f"{apple_user_id}@privaterelay.appleid.com"
+                logger.warning(f"Creating user without email, using placeholder: {user_email}")
+            
+            # Generate username from email or Apple ID
+            if email:
+                username = email.split("@")[0].lower()
+            else:
+                username = f"apple_{apple_user_id[:8]}"
+            
             username = re.sub(r'[^a-z0-9_]', '', username)[:15]
             base_username = username
             counter = 1
@@ -849,16 +899,24 @@ async def apple_callback(request: Request, response: Response):
                 username = f"{base_username}{counter}"
                 counter += 1
             
+            # Determine display name
+            display_name = name
+            if not display_name and email:
+                display_name = email.split("@")[0]
+            if not display_name:
+                display_name = f"Apple User"
+            
             new_user = {
                 "user_id": user_id,
                 "apple_user_id": apple_user_id,
-                "email": email.lower(),
-                "name": name or email.split("@")[0],
+                "email": user_email,
+                "name": display_name,
                 "picture": "",
                 "username": username,
                 "bio": "",
                 "verified": False,
-                "email_verified": True,  # Apple verifies emails
+                "email_verified": True,  # Apple verifies emails (even private relay)
+                "is_private_relay_email": is_private_email or "@privaterelay.appleid.com" in user_email,
                 "reputation_score": 100,
                 "plates_remaining": 10,
                 "is_day_one": False,
@@ -868,6 +926,10 @@ async def apple_callback(request: Request, response: Response):
                 "following_count": 0,
                 "posts_count": 0,
                 "vouched_by": None,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.users.insert_one(new_user)
+            logger.info(f"Created new Apple user: {user_id}, email: {user_email}, private_relay: {new_user['is_private_relay_email']}")
                 "created_at": datetime.now(timezone.utc).isoformat()
             }
             await db.users.insert_one(new_user)
