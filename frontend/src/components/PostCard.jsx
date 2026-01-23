@@ -162,14 +162,14 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
         <div className="flex gap-3">
           {/* Avatar */}
           <Link 
-            to={`/profile/${post.user?.username}`}
+            to={`/profile/${postUser.username}`}
             onClick={(e) => e.stopPropagation()}
             className="flex-shrink-0"
           >
             <Avatar className="h-11 w-11 border border-white/20 hover:border-white/40 transition-colors">
-              <AvatarImage src={post.user?.picture} alt={post.user?.name} />
+              <AvatarImage src={postUser.picture} alt={postUser.name} />
               <AvatarFallback className="bg-white/10 text-base font-medium">
-                {post.user?.name?.charAt(0)?.toUpperCase()}
+                {postUser.name?.charAt(0)?.toUpperCase() || 'U'}
               </AvatarFallback>
             </Avatar>
           </Link>
@@ -180,18 +180,18 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
             <div className="flex items-center justify-between mb-1">
               <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
                 <Link 
-                  to={`/profile/${post.user?.username}`}
+                  to={`/profile/${postUser.username}`}
                   onClick={(e) => e.stopPropagation()}
                   className="font-bold text-[15px] hover:underline truncate"
                 >
-                  {post.user?.name}
+                  {postUser.name}
                 </Link>
                 <Link 
-                  to={`/profile/${post.user?.username}`}
+                  to={`/profile/${postUser.username}`}
                   onClick={(e) => e.stopPropagation()}
                   className="text-white/50 text-[15px] truncate"
                 >
-                  @{post.user?.username}
+                  @{postUser.username}
                 </Link>
                 <span className="text-white/30">·</span>
                 <span className="text-white/50 text-[14px] whitespace-nowrap">
