@@ -9,7 +9,7 @@ import time
 
 BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', '').rstrip('/')
 if not BASE_URL:
-    BASE_URL = "https://blvx-context.preview.emergentagent.com"
+    BASE_URL = "https://blacked-out.preview.emergentagent.com"
 
 # Test credentials
 TEST_EMAIL = "testuser@blvx.app"

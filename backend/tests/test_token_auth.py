@@ -9,7 +9,7 @@ import uuid
 import time
 
 # Use the public URL for testing
-BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://blvx-context.preview.emergentagent.com').rstrip('/')
+BASE_URL = os.environ.get('REACT_APP_BACKEND_URL', 'https://blacked-out.preview.emergentagent.com').rstrip('/')
 
 # Test token provided for user testlogin2@blvx.app
 VALID_TEST_TOKEN = "session_4aUVQq316dTRBolbY1H6UnKenHrbHen7IeGP_Gs7CDM"
