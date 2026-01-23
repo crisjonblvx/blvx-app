@@ -659,24 +659,67 @@ async def exchange_session(session_id: str, response: Response):
         logger.error(f"Auth request error: {e}")
         raise HTTPException(status_code=500, detail="Authentication service error")
     
+    # Extract Google user ID if available
+    google_user_id = data.get("sub") or data.get("id") or data.get("google_id")
+    
+    # Generate fallback username from name if email doesn't have good username
+    email = data.get("email", "")
+    name = data.get("name", "")
+    picture = data.get("picture", "")
+    
+    # Generate default avatar if no picture
+    if not picture:
+        picture = f"https://api.dicebear.com/7.x/initials/svg?seed={name or email.split('@')[0]}&backgroundColor=1a1a1a&textColor=ffffff"
+    
     user_id = f"user_{uuid.uuid4().hex[:12]}"
     
-    existing_user = await db.users.find_one({"email": data["email"]}, {"_id": 0})
+    # Check for existing user by email OR google_user_id
+    existing_user = None
+    if google_user_id:
+        existing_user = await db.users.find_one({"google_user_id": google_user_id}, {"_id": 0})
+    if not existing_user:
+        existing_user = await db.users.find_one({"email": email.lower()}, {"_id": 0})
     
     if existing_user:
+        # ACCOUNT MERGING: Update existing user with Google data
         user_id = existing_user["user_id"]
+        update_fields = {
+            "email_verified": True  # Google emails are verified
+        }
+        
+        # Add Google ID if not already set
+        if google_user_id and not existing_user.get("google_user_id"):
+            update_fields["google_user_id"] = google_user_id
+        
+        # Update name if current name is empty or placeholder
+        if name and (not existing_user.get("name") or existing_user.get("name") == "Apple User"):
+            update_fields["name"] = name
+            
+        # Update picture if current is empty or placeholder
+        if picture and not existing_user.get("picture"):
+            update_fields["picture"] = picture
+        
+        # Ensure required fields have defaults
+        if not existing_user.get("is_vouched"):
+            update_fields.setdefault("is_vouched", existing_user.get("is_vouched", False))
+        if existing_user.get("plates_remaining") is None:
+            update_fields["plates_remaining"] = 10
+            
         await db.users.update_one(
-            {"email": data["email"]},
-            {"$set": {
-                "name": data.get("name", existing_user.get("name")),
-                "picture": data.get("picture", existing_user.get("picture")),
-                "email_verified": True  # Google emails are verified
-            }}
+            {"user_id": user_id},
+            {"$set": update_fields}
         )
+        logger.info(f"Google OAuth: Merged/updated existing user {user_id}")
     else:
-        username = data["email"].split("@")[0].lower()
+        # CREATE NEW USER with all required defaults
+        username = email.split("@")[0].lower() if email else ""
+        # Also try to use name if email username is too short
+        if len(username) < 3 and name:
+            username = re.sub(r'\s+', '', name).lower()
         username = re.sub(r'[^a-z0-9_]', '', username)[:15]
-        base_username = username
+        
+        # Ensure username is unique
+        base_username = username or "user"
         counter = 1
         while await db.users.find_one({"username": username}):
             username = f"{base_username}{counter}"
@@ -684,17 +727,18 @@ async def exchange_session(session_id: str, response: Response):
         
         new_user = {
             "user_id": user_id,
-            "email": data["email"],
-            "name": data.get("name", ""),
-            "picture": data.get("picture", ""),
+            "google_user_id": google_user_id,
+            "email": email.lower(),
+            "name": name or email.split("@")[0],  # Fallback to email prefix
+            "picture": picture,
             "username": username,
             "bio": "",
             "verified": False,
             "email_verified": True,  # Google emails are verified
             "reputation_score": 100,
-            "plates_remaining": 10,
+            "plates_remaining": 10,  # Default plates
             "is_day_one": False,
-            "is_vouched": data["email"] == "cj@blvx.social",  # Prime Mover
+            "is_vouched": email.lower() == "cj@blvx.social",  # Prime Mover
             "has_seen_welcome": False,
             "followers_count": 0,
             "following_count": 0,
@@ -703,12 +747,20 @@ async def exchange_session(session_id: str, response: Response):
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.users.insert_one(new_user)
+        logger.info(f"Google OAuth: Created new user {user_id} ({email})")
     
     session_token = await create_session(user_id, response)
     
     user = await db.users.find_one({"user_id": user_id}, {"_id": 0, "password_hash": 0})
     if isinstance(user.get("created_at"), str):
         user["created_at"] = datetime.fromisoformat(user["created_at"])
+    
+    # Ensure user object has all required fields for frontend
+    user.setdefault("is_vouched", False)
+    user.setdefault("plates_remaining", 10)
+    user.setdefault("has_seen_welcome", False)
+    user.setdefault("picture", picture)
+    user.setdefault("username", user.get("email", "user").split("@")[0])
     
     logger.info(f"User authenticated: {user.get('email')}")
     
