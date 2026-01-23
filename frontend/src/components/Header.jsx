@@ -97,7 +97,7 @@ export const Header = () => {
                         className="w-full justify-start text-white hover:bg-white/5"
                         onClick={() => {
                           setOpen(false);
-                          navigate(`/profile/${user.username}`);
+                          navigate(`/profile/${user.username || 'me'}`);
                         }}
                         data-testid="menu-profile-btn"
                       >
