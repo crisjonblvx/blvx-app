@@ -113,6 +113,7 @@ referencing==0.37.0
 regex==2025.11.3
 requests==2.32.5
 requests-oauthlib==2.0.0
+resend==2.19.0
 rich==14.2.0
 rpds-py==0.30.0
 rsa==4.9.1
@@ -142,4 +143,3 @@ watchfiles==1.1.1
 websockets==15.0.1
 yarl==1.22.0
 zipp==3.23.0
-resend>=2.0.0
