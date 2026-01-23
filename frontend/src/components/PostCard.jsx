@@ -79,7 +79,8 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
   };
 
   // Check if post is plated on mount
-  useState(() => {
+  useEffect(() => {
+    if (!isValidPost) return;
     const check = async () => {
       try {
         const plated = await checkLiked(post.post_id);
@@ -91,11 +92,12 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
       }
     };
     check();
-  }, [post.post_id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [post?.post_id]);
 
   const handlePlate = async (e) => {
     e.stopPropagation();
-    if (checkingLike) return;
+    if (!isValidPost || checkingLike) return;
     
     try {
       if (isPlated) {
