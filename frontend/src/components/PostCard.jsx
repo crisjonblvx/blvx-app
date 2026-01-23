@@ -22,7 +22,7 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
   const { user } = useAuth();
   const { likePost, unlikePost, deletePost, checkLiked } = usePosts();
   const [isPlated, setIsPlated] = useState(false);
-  const [plateCount, setPlateCount] = useState(post.like_count || 0);
+  const [plateCount, setPlateCount] = useState(post?.like_count || 0);
   const [replyOpen, setReplyOpen] = useState(false);
   const [quoteOpen, setQuoteOpen] = useState(false);
   const [checkingLike, setCheckingLike] = useState(true);
@@ -30,6 +30,21 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
   const [isPlaying, setIsPlaying] = useState(false);
   const videoRef = useRef(null);
   const containerRef = useRef(null);
+
+  // Safety check - if post is null/undefined, don't render
+  if (!post || !post.post_id) {
+    console.warn('PostCard: Invalid post data', post);
+    return null;
+  }
+
+  // Ensure post.user has default values
+  const postUser = {
+    name: post.user?.name || 'Anonymous',
+    username: post.user?.username || 'user',
+    picture: post.user?.picture || `https://api.dicebear.com/7.x/initials/svg?seed=${post.user?.name || 'U'}&backgroundColor=1a1a1a&textColor=ffffff`,
+    user_id: post.user?.user_id || post.user_id,
+    ...post.user
+  };
 
   // Auto-play video when visible in viewport
   useEffect(() => {
