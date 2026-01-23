@@ -4,17 +4,46 @@
 @tailwind components;
 @tailwind utilities;
 
-/* CRITICAL: Force dark mode globally - BLVX Brand Identity */
-html, body {
+/* ========================================
+   CRITICAL: FORCE DARK MODE - BLVX BRAND
+   This MUST be black on ALL devices
+   ======================================== */
+
+/* Universal dark mode - highest specificity */
+html, body, #root, .App {
     background-color: #000000 !important;
     color: #ffffff !important;
+    min-height: 100vh;
+    min-height: 100dvh;
+}
+
+/* Override any system preferences */
+@media (prefers-color-scheme: light) {
+    html, body, #root, .App {
+        background-color: #000000 !important;
+        color: #ffffff !important;
+    }
+}
+
+@media (prefers-color-scheme: dark) {
+    html, body, #root, .App {
+        background-color: #000000 !important;
+        color: #ffffff !important;
+    }
+}
+
+/* Force every possible container to be dark */
+html *, body *, #root *, .App * {
+    border-color: rgba(255, 255, 255, 0.1);
 }
 
 @layer base {
-    /* Dark Mode ONLY - Brand Identity */
+    /* Dark Mode ONLY - Brand Identity - Override EVERYTHING */
     :root,
     html,
     body,
+    #root,
+    .App,
     .theme-dark,
     .theme-light,
     [data-theme="dark"],
@@ -58,6 +87,17 @@ html, body {
         @apply bg-background text-foreground antialiased;
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         background-color: #000000 !important;
+        color: #ffffff !important;
+    }
+    
+    h1, h2, h3, h4, h5, h6, .font-display {
+        font-family: 'Oswald', sans-serif;
+    }
+    
+    .font-mono {
+        font-family: 'JetBrains Mono', monospace;
+    }
+}
     }
     
     h1, h2, h3, h4, h5, h6, .font-display {
