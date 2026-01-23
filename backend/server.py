@@ -4347,9 +4347,10 @@ async def delete_alert_admin(alert_id: str, admin: UserBase = Depends(get_admin_
 # ========================
 
 @api_router.post("/seed-starter-posts")
-async def seed_starter_posts():
-    """Seed the database with 3 starter posts from Bonita.
-    This creates the Bonita user if not exists and adds starter content."""
+async def seed_starter_posts(force: bool = False):
+    """Seed the database with starter posts from Bonita.
+    This creates the Bonita user if not exists and adds starter content.
+    Use force=true to delete existing posts and re-seed."""
     
     # Ensure Bonita user exists with high-quality profile
     bonita_user = await db.users.find_one({"user_id": "bonita"})
@@ -4382,35 +4383,37 @@ async def seed_starter_posts():
                 {"$set": {"picture": BONITA_AVATAR_URL}}
             )
     
-    # Check if starter posts already exist (by checking for specific content)
-    existing_starter = await db.posts.find_one({"user_id": "bonita", "content": {"$regex": "We don't do Likes"}})
-    if existing_starter:
-        return {
-            "message": "Starter posts already exist. No seeding needed.",
-            "seeded": False
-        }
+    # Check if starter posts already exist (unless force=true)
+    if not force:
+        existing_starter = await db.posts.find_one({"user_id": "bonita", "content": {"$regex": "We serve Plates"}})
+        if existing_starter:
+            return {
+                "message": "Starter posts already exist. Use force=true to re-seed.",
+                "seeded": False
+            }
     
-    # Delete any old Bonita posts to ensure clean slate
-    await db.posts.delete_many({"user_id": "bonita"})
+    # Delete Bonita's posts to ensure clean slate
+    deleted = await db.posts.delete_many({"user_id": "bonita"})
+    logger.info(f"Deleted {deleted.deleted_count} existing Bonita posts")
     
     # Starter posts from Bonita - Per user spec
     starter_posts = [
         {
-            "content": "Welcome to The Block. We don't do Likes. We serve Plates. 🍽️",
+            "content": "Welcome to The Block. We serve Plates, not Likes. 🍽️\n\n#TheBlock",
             "media_url": None,
             "media_type": None,
             "is_spark": True
         },
         {
-            "content": "POV: You just found your new home on the internet.\n\nNo algorithms feeding you rage bait. No strangers in your mentions. Just vibes, context, and people who get it.\n\nWelcome to BLVX. 🏠",
+            "content": "Testing the vision. 📹\n\n#POV",
             "media_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
             "media_type": "video",
             "is_spark": True
         },
         {
-            "content": "Real talk from your AI auntie: 💡\n\nYou start with 10 Plates. Think of them like co-signs.\n\nWhen you plate a post, you're saying 'this one right here' — and putting your reputation on it.\n\nSpend them on posts that actually deserve it. The community notices who got taste.\n\n#BonitaSays",
-            "media_url": None,
-            "media_type": None,
+            "content": "Cinematic vibes only. 🎬\n\n#BLVX #CultureFirst",
+            "media_url": "https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=1200&q=80",
+            "media_type": "image",
             "is_spark": True
         }
     ]
