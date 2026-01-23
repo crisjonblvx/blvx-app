@@ -4361,7 +4361,7 @@ async def delete_alert_admin(alert_id: str, admin: UserBase = Depends(get_admin_
 async def seed_starter_posts(force: bool = False):
     """Seed the database with starter posts from Bonita.
     This creates the Bonita user if not exists and adds starter content.
-    Use force=true to delete existing posts and re-seed."""
+    Use force=true to recreate starter posts (keeps AI-generated posts)."""
     
     # Ensure Bonita user exists with high-quality profile
     bonita_user = await db.users.find_one({"user_id": "bonita"})
@@ -4394,18 +4394,32 @@ async def seed_starter_posts(force: bool = False):
                 {"$set": {"picture": BONITA_AVATAR_URL}}
             )
     
+    # Define starter post signatures (used for detection and cleanup)
+    starter_signatures = [
+        "We serve Plates, not Likes",
+        "Testing the vision",
+        "Cinematic vibes only"
+    ]
+    
     # Check if starter posts already exist (unless force=true)
     if not force:
-        existing_starter = await db.posts.find_one({"user_id": "bonita", "content": {"$regex": "We serve Plates"}})
+        existing_starter = await db.posts.find_one({
+            "user_id": "bonita", 
+            "content": {"$regex": "We serve Plates"}
+        })
         if existing_starter:
             return {
-                "message": "Starter posts already exist. Use force=true to re-seed.",
+                "message": "Starter posts already exist. Use force=true to recreate them.",
                 "seeded": False
             }
     
-    # Delete Bonita's posts to ensure clean slate
-    deleted = await db.posts.delete_many({"user_id": "bonita"})
-    logger.info(f"Deleted {deleted.deleted_count} existing Bonita posts")
+    # Only delete starter posts (not AI-generated content)
+    for sig in starter_signatures:
+        await db.posts.delete_many({
+            "user_id": "bonita",
+            "content": {"$regex": sig}
+        })
+    logger.info("Cleaned up existing starter posts (kept AI-generated content)")
     
     # Starter posts from Bonita - Per user spec
     starter_posts = [
