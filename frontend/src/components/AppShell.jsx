@@ -26,8 +26,8 @@ export const AppShell = ({ children }) => {
     }
   }, [loading, isAuthenticated, checkAuth]);
 
-  // Show loading state while checking auth
-  if (loading) {
+  // Show loading state while checking auth OR if user data not yet loaded
+  if (loading || (isAuthenticated && !user)) {
     return (
       <div className="min-h-screen bg-black flex items-center justify-center">
         <div className="space-y-4 w-full max-w-md p-6">
