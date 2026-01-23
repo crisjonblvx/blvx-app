@@ -4565,6 +4565,96 @@ async def startup_event():
             {"$set": {"created_at": datetime.now(timezone.utc).isoformat()}}
         )
     logger.info("Startup: Bonita's profile initialized")
+    
+    # Auto-seed starter posts if they don't exist
+    existing_starter = await db.posts.find_one({
+        "user_id": "bonita", 
+        "content": {"$regex": "We serve Plates"}
+    })
+    if not existing_starter:
+        logger.info("Startup: Seeding Bonita's starter posts...")
+        await seed_starter_posts_internal()
+        logger.info("Startup: Starter posts seeded successfully")
+
+
+async def seed_starter_posts_internal():
+    """Internal function to seed starter posts - called from startup and API"""
+    # Ensure Bonita user exists
+    bonita_user = await db.users.find_one({"user_id": "bonita"})
+    if not bonita_user:
+        await db.users.insert_one({
+            "user_id": "bonita",
+            "email": "bonita@blvx.app",
+            "name": "Bonita",
+            "picture": BONITA_AVATAR_URL,
+            "username": "bonita",
+            "bio": "Your culturally fluent AI companion. The Auntie of The Block.",
+            "verified": True,
+            "email_verified": True,
+            "reputation_score": 1000,
+            "plates_remaining": 0,
+            "is_day_one": True,
+            "is_vouched": True,
+            "followers_count": 0,
+            "following_count": 0,
+            "posts_count": 0,
+            "vouched_by": None,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+    
+    # Starter posts from Bonita
+    starter_posts = [
+        {
+            "content": "Welcome to The Block. We serve Plates, not Likes. 🍽️\n\n#TheBlock",
+            "media_url": None,
+            "media_type": None,
+            "is_spark": True
+        },
+        {
+            "content": "Testing the vision. 📹\n\n#POV",
+            "media_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+            "media_type": "video",
+            "is_spark": True
+        },
+        {
+            "content": "Cinematic vibes only. 🎬\n\n#BLVX #CultureFirst",
+            "media_url": "https://images.unsplash.com/photo-1478720568477-152d9b164e26?w=1200&q=80",
+            "media_type": "image",
+            "is_spark": True
+        }
+    ]
+    
+    base_time = datetime.now(timezone.utc)
+    for i, post_data in enumerate(starter_posts):
+        post_id = f"post_{uuid.uuid4().hex[:12]}"
+        post_time = base_time - timedelta(hours=i * 2)
+        
+        new_post = {
+            "post_id": post_id,
+            "user_id": "bonita",
+            "content": post_data["content"],
+            "media_url": post_data.get("media_url"),
+            "media_type": post_data.get("media_type"),
+            "gif_metadata": None,
+            "reference_url": None,
+            "post_type": "original",
+            "parent_post_id": None,
+            "quote_post_id": None,
+            "visibility": "block",
+            "is_spark": post_data["is_spark"],
+            "reply_count": 0,
+            "repost_count": 0,
+            "like_count": 0,
+            "created_at": post_time.isoformat()
+        }
+        await db.posts.insert_one(new_post)
+    
+    # Update Bonita's post count
+    post_count = await db.posts.count_documents({"user_id": "bonita"})
+    await db.users.update_one(
+        {"user_id": "bonita"},
+        {"$set": {"posts_count": post_count}}
+    )
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
