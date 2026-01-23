@@ -472,7 +472,7 @@ export default function LandingPage() {
           <Button
             onClick={login}
             variant="outline"
-            className="w-full border-white/20 text-white/60 hover:text-white hover:bg-white/5 rounded-none py-5"
+            className="w-full border border-white/30 text-white/80 hover:text-white hover:bg-white/5 rounded-none py-5"
             data-testid="google-signin-btn"
           >
             <svg className="h-4 w-4 mr-3" viewBox="0 0 24 24">
