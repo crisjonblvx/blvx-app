@@ -4,11 +4,21 @@
 @tailwind components;
 @tailwind utilities;
 
+/* CRITICAL: Force dark mode globally for brand identity */
+html, body {
+    background-color: #000000 !important;
+    color: #ffffff !important;
+}
+
 @layer base {
-    /* Dark Mode (Cinema) - Default */
+    /* Dark Mode (Cinema) - Default and ONLY mode for brand identity */
     :root,
+    html,
+    body,
     .theme-dark,
-    [data-theme="dark"] {
+    .theme-light,
+    [data-theme="dark"],
+    [data-theme="light"] {
         --background: 0 0% 0%;
         --foreground: 0 0% 100%;
         --card: 0 0% 0%;
@@ -30,24 +40,15 @@
         --ring: 0 0% 100%;
         --radius: 0.125rem;
         
-        /* Custom theme colors */
+        /* Custom theme colors - ALWAYS DARK */
         --theme-bg: #000000;
         --theme-text: #ffffff;
         --theme-border: rgba(255, 255, 255, 0.1);
         --theme-text-muted: rgba(255, 255, 255, 0.5);
+        
+        background-color: #000000 !important;
+        color: #ffffff !important;
     }
-    
-    /* Light Mode (Editorial) */
-    .theme-light,
-    [data-theme="light"] {
-        --background: 0 0% 100%;
-        --foreground: 0 0% 0%;
-        --card: 0 0% 100%;
-        --card-foreground: 0 0% 0%;
-        --popover: 0 0% 96%;
-        --popover-foreground: 0 0% 0%;
-        --primary: 0 0% 0%;
-        --primary-foreground: 0 0% 100%;
         --secondary: 0 0% 90%;
         --secondary-foreground: 0 0% 0%;
         --muted: 0 0% 85%;
