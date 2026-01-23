@@ -4348,18 +4348,10 @@ async def delete_alert_admin(alert_id: str, admin: UserBase = Depends(get_admin_
 
 @api_router.post("/seed-starter-posts")
 async def seed_starter_posts():
-    """Seed the database with 3 starter posts from Bonita if the posts collection is empty.
-    This is a one-time operation to kickstart the platform."""
+    """Seed the database with 3 starter posts from Bonita.
+    This creates the Bonita user if not exists and adds starter content."""
     
-    # Check if there are already posts
-    existing_posts = await db.posts.count_documents({})
-    if existing_posts > 0:
-        return {
-            "message": f"Database already has {existing_posts} posts. No seeding needed.",
-            "seeded": False
-        }
-    
-    # Ensure Bonita user exists
+    # Ensure Bonita user exists with high-quality profile
     bonita_user = await db.users.find_one({"user_id": "bonita"})
     if not bonita_user:
         await db.users.insert_one({
@@ -4381,19 +4373,44 @@ async def seed_starter_posts():
             "vouched_by": None,
             "created_at": datetime.now(timezone.utc).isoformat()
         })
+        logger.info("Created Bonita user account")
+    else:
+        # Update avatar if needed
+        if bonita_user.get("picture") != BONITA_AVATAR_URL:
+            await db.users.update_one(
+                {"user_id": "bonita"},
+                {"$set": {"picture": BONITA_AVATAR_URL}}
+            )
     
-    # Starter posts from Bonita to set the tone
+    # Check if starter posts already exist (by checking for specific content)
+    existing_starter = await db.posts.find_one({"user_id": "bonita", "content": {"$regex": "We don't do Likes"}})
+    if existing_starter:
+        return {
+            "message": "Starter posts already exist. No seeding needed.",
+            "seeded": False
+        }
+    
+    # Delete any old Bonita posts to ensure clean slate
+    await db.posts.delete_many({"user_id": "bonita"})
+    
+    # Starter posts from Bonita - Per user spec
     starter_posts = [
         {
-            "content": "Welcome to BLVX. 🏠\n\nThis ain't a town square—it's a group chat with standards.\n\nHere, we move different:\n• The Block is the main feed. Quality over quantity.\n• The Cookout is for the vouched fam only.\n• Plates are how we show love. Use them wisely.\n\nI'm Bonita, your neighborhood AI auntie. Ask me anything. I got you. ✨\n\n#BLVX #TheBlock #Day1",
+            "content": "Welcome to The Block. We don't do Likes. We serve Plates. 🍽️",
+            "media_url": None,
+            "media_type": None,
             "is_spark": True
         },
         {
-            "content": "Real talk: social media got too loud. 📢\n\nEverybody yelling, nobody listening. Algorithms feeding you rage bait. Strangers in your mentions with the worst takes.\n\nWe built BLVX to be different. A space where context matters. Where the vibe is curated by people who understand it.\n\nWelcome home. 🏡\n\n#CultureFirst #TheBlock",
+            "content": "POV: You just found your new home on the internet.\n\nNo algorithms feeding you rage bait. No strangers in your mentions. Just vibes, context, and people who get it.\n\nWelcome to BLVX. 🏠",
+            "media_url": "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",
+            "media_type": "video",
             "is_spark": True
         },
         {
-            "content": "Pro tip from your AI auntie: 💡\n\nYou start with 10 Plates. Think of them like co-signs.\n\nWhen you plate a post, you're saying 'this one right here' and putting your reputation on it.\n\nSpend them on posts that actually deserve it. The community notices who got taste.\n\n#BonitaSays #HowWeMove",
+            "content": "Real talk from your AI auntie: 💡\n\nYou start with 10 Plates. Think of them like co-signs.\n\nWhen you plate a post, you're saying 'this one right here' — and putting your reputation on it.\n\nSpend them on posts that actually deserve it. The community notices who got taste.\n\n#BonitaSays",
+            "media_url": None,
+            "media_type": None,
             "is_spark": True
         }
     ]
@@ -4403,15 +4420,15 @@ async def seed_starter_posts():
     
     for i, post_data in enumerate(starter_posts):
         post_id = f"post_{uuid.uuid4().hex[:12]}"
-        # Stagger timestamps so they appear in order
+        # Stagger timestamps so they appear in order (newest first)
         post_time = base_time - timedelta(hours=i * 2)
         
         new_post = {
             "post_id": post_id,
             "user_id": "bonita",
             "content": post_data["content"],
-            "media_url": None,
-            "media_type": None,
+            "media_url": post_data.get("media_url"),
+            "media_type": post_data.get("media_type"),
             "gif_metadata": None,
             "reference_url": None,
             "post_type": "original",
@@ -4427,11 +4444,12 @@ async def seed_starter_posts():
         
         await db.posts.insert_one(new_post)
         created_posts.append(post_id)
+        logger.info(f"Created starter post: {post_id}")
     
     # Update Bonita's post count
     await db.users.update_one(
         {"user_id": "bonita"},
-        {"$inc": {"posts_count": len(starter_posts)}}
+        {"$set": {"posts_count": len(starter_posts)}}
     )
     
     return {
