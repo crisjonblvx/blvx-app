@@ -55,6 +55,13 @@ Build **BLVX**, a "High-Context Social Network" designed to be a "Group Chat" ra
   - [x] Axios interceptor for automatic token injection
   - [x] Cookie fallback for backwards compatibility
   - [x] Auto-login after email verification
+- [x] **Apple Sign-In** (COMPLETED Jan 23, 2026)
+  - [x] "Continue with Apple" button on landing/login pages
+  - [x] Apple OAuth configuration endpoint (`/api/auth/apple/config`)
+  - [x] Apple callback handler (`/api/auth/callback/apple`)
+  - [x] User creation/linking on first Apple sign-in
+  - [x] 30-day session (Remember Me) for Apple OAuth
+  - [x] Token-based auth (session_token in URL hash)
 
 #### The Block (Public Feed)
 - [x] Chronological feed of posts
