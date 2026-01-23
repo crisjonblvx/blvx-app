@@ -264,6 +264,10 @@ Build **BLVX**, a "High-Context Social Network" designed to be a "Group Chat" ra
 - [ ] Voice messages for Bonita chats
 
 #### ✅ Recently Completed (Jan 23, 2026)
+- [x] **Deployment Fixes (Critical)**
+  - [x] Fixed Google OAuth redirect - now uses `window.location.origin` (works on all domains)
+  - [x] Updated CORS to allow all origins (`CORS_ORIGINS="*"`)
+  - [x] Apple OAuth redirect dynamically detects frontend URL from referer/origin headers
 - [x] **Google Login Black Screen Fix**
   - [x] Added defensive rendering to Header.jsx (fallback for missing user data)
   - [x] Added defensive rendering to Sidebar.jsx (profile link fallback)
