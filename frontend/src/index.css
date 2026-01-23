@@ -4,14 +4,14 @@
 @tailwind components;
 @tailwind utilities;
 
-/* CRITICAL: Force dark mode globally for brand identity */
+/* CRITICAL: Force dark mode globally - BLVX Brand Identity */
 html, body {
     background-color: #000000 !important;
     color: #ffffff !important;
 }
 
 @layer base {
-    /* Dark Mode (Cinema) - Default and ONLY mode for brand identity */
+    /* Dark Mode ONLY - Brand Identity */
     :root,
     html,
     body,
@@ -49,143 +49,33 @@ html, body {
         background-color: #000000 !important;
         color: #ffffff !important;
     }
-        --secondary: 0 0% 90%;
-        --secondary-foreground: 0 0% 0%;
-        --muted: 0 0% 85%;
-        --muted-foreground: 0 0% 37%;
-        --accent: 0 0% 85%;
-        --accent-foreground: 0 0% 0%;
-        --destructive: 0 84% 60%;
-        --destructive-foreground: 0 0% 100%;
-        --border: 0 0% 80%;
-        --input: 0 0% 85%;
-        --ring: 0 0% 0%;
-        
-        /* Custom theme colors */
-        --theme-bg: #ffffff;
-        --theme-text: #000000;
-        --theme-border: rgba(0, 0, 0, 0.1);
-        --theme-text-muted: rgba(0, 0, 0, 0.5);
-    }
-}
-
-/* Force light mode colors */
-.light-mode,
-body.theme-light,
-body[data-theme="light"] {
-    background-color: #ffffff !important;
-    color: #000000 !important;
-}
-
-/* Landing page should ALWAYS be dark (brand identity) */
-.force-dark,
-.force-dark * {
-    --background: 0 0% 0%;
-    --foreground: 0 0% 100%;
-}
-
-.force-dark.bg-black,
-.force-dark .bg-black {
-    background-color: #000000 !important;
-}
-
-.force-dark.text-white,
-.force-dark .text-white {
-    color: #ffffff !important;
-}
-
-.force-dark .text-white\/60,
-.force-dark .text-white\/50,
-.force-dark .text-white\/40,
-.force-dark .text-white\/30,
-.force-dark .text-white\/20,
-.force-dark .text-white\/80 {
-    color: rgba(255, 255, 255, var(--tw-text-opacity, 1)) !important;
-}
-
-.force-dark .border-white\/10,
-.force-dark .border-white\/20,
-.force-dark .border-white\/30 {
-    border-color: rgba(255, 255, 255, var(--tw-border-opacity, 0.1)) !important;
-}
-
-.light-mode .bg-black:not(.force-dark):not(.force-dark *),
-body.theme-light .bg-black:not(.force-dark):not(.force-dark *),
-body[data-theme="light"] .bg-black:not(.force-dark):not(.force-dark *) {
-    background-color: #ffffff !important;
-}
-
-.light-mode .text-white:not(.force-dark):not(.force-dark *),
-body.theme-light .text-white:not(.force-dark):not(.force-dark *),
-body[data-theme="light"] .text-white:not(.force-dark):not(.force-dark *) {
-    color: #000000 !important;
-}
-
-.light-mode .text-white\/60,
-.light-mode .text-white\/50,
-.light-mode .text-white\/40,
-.light-mode .text-white\/30,
-body.theme-light .text-white\/60,
-body.theme-light .text-white\/50,
-body.theme-light .text-white\/40,
-body.theme-light .text-white\/30 {
-    color: rgba(0, 0, 0, 0.6) !important;
-}
-
-.light-mode .border-white\/10,
-.light-mode .border-white\/20,
-body.theme-light .border-white\/10,
-body.theme-light .border-white\/20 {
-    border-color: rgba(0, 0, 0, 0.1) !important;
-}
-
-.light-mode .bg-white\/5,
-.light-mode .bg-white\/10,
-body.theme-light .bg-white\/5,
-body.theme-light .bg-white\/10 {
-    background-color: rgba(0, 0, 0, 0.05) !important;
-}
-
-.light-mode .hover\:bg-white\/5:hover,
-body.theme-light .hover\:bg-white\/5:hover {
-    background-color: rgba(0, 0, 0, 0.05) !important;
-}
-
-/* Glass effect for light mode */
-.light-mode .glass,
-body.theme-light .glass {
-    background: rgba(255, 255, 255, 0.85) !important;
-    backdrop-filter: blur(12px);
-}
-
-/* Sidebar in light mode */
-.light-mode aside.bg-black,
-body.theme-light aside.bg-black {
-    background-color: #fafafa !important;
-    border-color: rgba(0, 0, 0, 0.1) !important;
-}
-
-/* Active nav item in light mode */
-.light-mode .bg-white.text-black,
-body.theme-light .bg-white.text-black {
-    background-color: #000000 !important;
-    color: #ffffff !important;
-}
-
-@layer base {
+    
     * {
         @apply border-border;
     }
+    
     body {
         @apply bg-background text-foreground antialiased;
         font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+        background-color: #000000 !important;
     }
+    
     h1, h2, h3, h4, h5, h6, .font-display {
         font-family: 'Oswald', sans-serif;
     }
+    
     .font-mono {
         font-family: 'JetBrains Mono', monospace;
     }
+}
+
+/* Override any light mode attempts - force dark everywhere */
+.light-mode,
+body.theme-light,
+body[data-theme="light"],
+.theme-light {
+    background-color: #000000 !important;
+    color: #ffffff !important;
 }
 
 /* Scrollbar Styling */
@@ -297,62 +187,69 @@ body.theme-light .bg-white.text-black {
     }
 }
 
-/* Glass morphism effect */
+/* Glass morphism effect - dark mode */
 .glass {
-    background: rgba(0, 0, 0, 0.8);
+    background: rgba(0, 0, 0, 0.85) !important;
     backdrop-filter: blur(12px);
     -webkit-backdrop-filter: blur(12px);
 }
 
-/* Button hover effect */
-.btn-hover-effect {
-    position: relative;
-    overflow: hidden;
+/* Amber accent for brand */
+.text-amber-500 {
+    color: #f59e0b !important;
 }
 
-.btn-hover-effect::after {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
-    transition: left 0.5s ease;
+.border-amber-500 {
+    border-color: #f59e0b !important;
 }
 
-.btn-hover-effect:hover::after {
-    left: 100%;
+.bg-amber-500 {
+    background-color: #f59e0b !important;
 }
 
-/* Hide scrollbar for mobile nav */
-.hide-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
+/* Ensure all main containers are dark */
+main, aside, header, footer, nav, section, article, div.min-h-screen {
+    background-color: inherit;
 }
 
-.hide-scrollbar::-webkit-scrollbar {
-    display: none;
+/* Force dark on any element that might try to be light */
+.bg-white {
+    background-color: #000000 !important;
 }
 
-/* Post card hover */
-.post-card {
-    transition: background-color 0.3s ease, border-color 0.3s ease;
+.text-black {
+    color: #ffffff !important;
 }
 
-.post-card:hover {
-    background-color: rgba(255, 255, 255, 0.02);
-    border-color: rgba(255, 255, 255, 0.15);
+/* Exception: Buttons that should be white */
+button.bg-white,
+a.bg-white,
+.btn-white {
+    background-color: #ffffff !important;
+    color: #000000 !important;
 }
 
-/* Bonita AI glow */
-.bonita-glow {
-    box-shadow: 0 0 30px rgba(255, 255, 255, 0.1);
+/* Card backgrounds */
+.bg-card {
+    background-color: #0a0a0a !important;
 }
 
-/* Debug wrapper fix */
-@layer base {
-    [data-debug-wrapper="true"] {
-        display: contents !important;
-    }
+/* Input backgrounds */
+input, textarea, select {
+    background-color: rgba(255, 255, 255, 0.05) !important;
+    color: #ffffff !important;
+}
+
+input::placeholder, textarea::placeholder {
+    color: rgba(255, 255, 255, 0.4) !important;
+}
+
+/* Modal backgrounds */
+[role="dialog"], .modal, .dialog {
+    background-color: #0a0a0a !important;
+}
+
+/* Dropdown menus */
+[role="menu"], [role="listbox"] {
+    background-color: #0a0a0a !important;
 }
