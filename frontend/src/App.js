@@ -18,6 +18,7 @@ import SidebarPage from "@/pages/SidebarPage";
 import AdminPage from "@/pages/AdminPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import CalendarPage from "@/pages/CalendarPage";
+import AuthCallbackPage from "@/pages/AuthCallbackPage";
 
 // Components
 import { NoiseOverlay } from "@/components/NoiseOverlay";
