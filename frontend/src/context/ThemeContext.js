@@ -23,15 +23,10 @@ const ASSETS = {
 };
 
 export const ThemeProvider = ({ children }) => {
-  // Initialize theme from localStorage synchronously
+  // Initialize theme - ALWAYS dark for BLVX brand identity
   const [theme, setTheme] = useState(() => {
-    if (typeof window !== 'undefined') {
-      const savedTheme = localStorage.getItem('blvx-theme');
-      if (savedTheme === 'light' || savedTheme === 'dark') {
-        return savedTheme;
-      }
-    }
-    return 'light'; // Default to Editorial (light) mode
+    // Force dark mode - BLVX brand identity
+    return 'dark';
   });
 
   // Apply theme class to document and body
