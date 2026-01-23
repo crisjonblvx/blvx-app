@@ -151,7 +151,7 @@ function AppRouter() {
 
 function App() {
   return (
-    <div className="app-container bg-black min-h-screen">
+    <div className="app-container bg-black min-h-screen" style={{ backgroundColor: '#000000', color: '#ffffff' }}>
       <NoiseOverlay />
       <BrowserRouter>
         <ThemeProvider>
