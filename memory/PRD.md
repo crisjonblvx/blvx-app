@@ -492,7 +492,7 @@ Build **BLVX**, a "High-Context Social Network" designed to be a "Group Chat" ra
 
 ## Changelog
 
-### v2.0.0 (January 22, 2026) - V1 Launch Ready
+### v2.0.0 (January 22-23, 2026) - V1 Launch Ready
 - **Branding & Launch Polish**
   - Larger BLVX logos for brand prominence (h-12 Sidebar, h-9 Header)
   - Open Graph meta tags for social media sharing previews
@@ -514,6 +514,13 @@ Build **BLVX**, a "High-Context Social Network" designed to be a "Group Chat" ra
   - Fixed react-hooks/exhaustive-deps warnings in AuthContext
   - Fixed hook dependency warnings across multiple pages
   - Reduced total lint issues from 49 to 38
+- **Apple Sign-In Implementation** (Jan 23, 2026)
+  - "Continue with Apple" button added to landing and login pages
+  - Apple OAuth backend endpoints created (`/api/auth/apple/config`, `/api/auth/callback/apple`)
+  - JWT-based Apple ID token decoding and user creation
+  - Token-based auth flow with session_token in URL hash
+  - 30-day session (Remember Me) enabled by default for Apple OAuth
+  - Apple credentials configured: APPLE_TEAM_ID, APPLE_SERVICE_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY
 
 ### v1.5.0 (January 20, 2026)
 - **Bonita Conversational AI in Sidebar**: Complete 1-on-1 chat with AI auntie
