@@ -72,14 +72,14 @@ export const Header = () => {
                   <div className="mt-6">
                     <div className="flex items-center gap-3 mb-4">
                       <Avatar className="h-12 w-12 border border-white/20">
-                        <AvatarImage src={user.picture} alt={user.name} />
+                        <AvatarImage src={user.picture || `https://api.dicebear.com/7.x/initials/svg?seed=${user.name || 'U'}&backgroundColor=1a1a1a&textColor=ffffff`} alt={user.name || 'User'} />
                         <AvatarFallback className="bg-white/10 text-white">
-                          {user.name?.charAt(0)?.toUpperCase()}
+                          {(user.name || user.username || 'U')?.charAt(0)?.toUpperCase() || 'U'}
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="font-medium text-white">{user.name}</p>
-                        <p className="text-sm text-white/50">@{user.username}</p>
+                        <p className="font-medium text-white">{user.name || user.username || 'User'}</p>
+                        <p className="text-sm text-white/50">@{user.username || 'user'}</p>
                       </div>
                     </div>
                     
