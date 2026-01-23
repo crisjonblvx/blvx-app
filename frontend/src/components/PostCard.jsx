@@ -149,8 +149,14 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
     }
   };
 
-  const isOwner = user?.user_id === post.user_id;
-  const isCookout = post.visibility === 'cookout';
+  const isOwner = user?.user_id === post?.user_id;
+  const isCookout = post?.visibility === 'cookout';
+
+  // Now we can safely return null for invalid posts (after all hooks)
+  if (!isValidPost) {
+    console.warn('PostCard: Invalid post data', post);
+    return null;
+  }
 
   return (
     <>
