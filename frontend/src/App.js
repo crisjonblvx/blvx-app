@@ -189,8 +189,9 @@ function App() {
               fontFamily: 'Inter, sans-serif',
             },
           }}
-      />
-    </div>
+        />
+      </div>
+    </ErrorBoundary>
   );
 }
 
