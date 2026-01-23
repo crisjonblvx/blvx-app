@@ -41,10 +41,10 @@ const AuthCallbackHandler = ({ children }) => {
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
-    // Check for session_id in URL hash on ANY page (could be /home#session_id=...)
+    // Check for session_id or session_token in URL hash on ANY page (could be /home#session_id=...)
     const hash = window.location.hash;
     
-    if (hash && hash.includes('session_id=') && !hasProcessed.current) {
+    if (hash && (hash.includes('session_id=') || hash.includes('session_token=')) && !hasProcessed.current) {
       hasProcessed.current = true;
       setProcessing(true);
 
@@ -52,10 +52,12 @@ const AuthCallbackHandler = ({ children }) => {
         try {
           const params = new URLSearchParams(hash.replace('#', ''));
           const sessionId = params.get('session_id');
+          const sessionToken = params.get('session_token');
 
-          console.log('Processing OAuth callback with session_id:', sessionId?.substring(0, 10) + '...');
+          console.log('Processing OAuth callback');
 
           if (sessionId) {
+            // Google OAuth flow
             const response = await axios.get(`${API}/auth/session`, {
               params: { session_id: sessionId },
               withCredentials: true
@@ -71,9 +73,33 @@ const AuthCallbackHandler = ({ children }) => {
             
             // Navigate to home
             navigate('/home', { replace: true });
+          } else if (sessionToken) {
+            // Apple Sign-In flow - token already created, just validate it
+            console.log('Processing Apple Sign-In callback');
+            
+            // Store the token first
+            localStorage.setItem('blvx-session-token', sessionToken);
+            
+            // Validate by calling /auth/me
+            const response = await axios.get(`${API}/auth/me`, {
+              headers: { Authorization: `Bearer ${sessionToken}` },
+              withCredentials: true
+            });
+
+            console.log('Apple Sign-In successful, user:', response.data.email);
+
+            // Clear hash from URL
+            window.history.replaceState(null, '', window.location.pathname);
+            
+            // Set authenticated user in context (include the token)
+            setAuthenticatedUser({ ...response.data, session_token: sessionToken });
+            
+            // Navigate to home
+            navigate('/home', { replace: true });
           }
         } catch (error) {
           console.error('Auth callback error:', error);
+          localStorage.removeItem('blvx-session-token');
           window.history.replaceState(null, '', window.location.pathname);
           navigate('/', { replace: true });
         } finally {
