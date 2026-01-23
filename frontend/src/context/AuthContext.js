@@ -125,15 +125,8 @@ export const AuthProvider = ({ children }) => {
   }, [location.pathname]);
 
   const login = () => {
-    // For production, ALWAYS redirect to blvx.social custom domain
-    // In development (localhost), use the local origin
-    let redirectUrl;
-    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-      redirectUrl = window.location.origin + '/auth/callback';
-    } else {
-      // Production: always redirect to blvx.social regardless of current domain
-      redirectUrl = 'https://blvx.social/auth/callback';
-    }
+    // Use current origin for OAuth redirect - works on all domains (preview, production, custom)
+    const redirectUrl = window.location.origin + '/auth/callback';
     window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
   };
 
