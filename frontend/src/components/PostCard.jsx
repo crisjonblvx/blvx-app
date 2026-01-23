@@ -18,11 +18,15 @@ import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
 export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop }) => {
+  // Safety check FIRST - before any hooks
+  // If post is invalid, render a placeholder instead of crashing
+  const isValidPost = post && post.post_id;
+  
   const navigate = useNavigate();
   const { user } = useAuth();
   const { likePost, unlikePost, deletePost, checkLiked } = usePosts();
   const [isPlated, setIsPlated] = useState(false);
-  const [plateCount, setPlateCount] = useState(post?.like_count || 0);
+  const [plateCount, setPlateCount] = useState(isValidPost ? (post.like_count || 0) : 0);
   const [replyOpen, setReplyOpen] = useState(false);
   const [quoteOpen, setQuoteOpen] = useState(false);
   const [checkingLike, setCheckingLike] = useState(true);
@@ -31,24 +35,18 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
   const videoRef = useRef(null);
   const containerRef = useRef(null);
 
-  // Safety check - if post is null/undefined, don't render
-  if (!post || !post.post_id) {
-    console.warn('PostCard: Invalid post data', post);
-    return null;
-  }
-
-  // Ensure post.user has default values
-  const postUser = {
+  // Ensure post.user has default values (computed, not a hook)
+  const postUser = isValidPost ? {
     name: post.user?.name || 'Anonymous',
     username: post.user?.username || 'user',
     picture: post.user?.picture || `https://api.dicebear.com/7.x/initials/svg?seed=${post.user?.name || 'U'}&backgroundColor=1a1a1a&textColor=ffffff`,
     user_id: post.user?.user_id || post.user_id,
     ...post.user
-  };
+  } : { name: 'Unknown', username: 'user', picture: '', user_id: '' };
 
   // Auto-play video when visible in viewport
   useEffect(() => {
-    if (post.media_type !== 'video' || !videoRef.current) return;
+    if (!isValidPost || post.media_type !== 'video' || !videoRef.current) return;
 
     const observer = new IntersectionObserver(
       (entries) => {
