@@ -349,7 +349,7 @@ async def get_current_user(request: Request) -> UserBase:
     if isinstance(user.get("created_at"), str):
         user["created_at"] = datetime.fromisoformat(user["created_at"])
     
-    # Set defaults for optional fields
+    # Set defaults for ALL optional fields to prevent frontend crashes
     user.setdefault("email_verified", True)  # Default for existing users
     user.setdefault("reputation_score", 100)
     user.setdefault("plates_remaining", 10)
@@ -357,6 +357,24 @@ async def get_current_user(request: Request) -> UserBase:
     user.setdefault("is_vouched", False)
     user.setdefault("has_seen_welcome", False)
     user.setdefault("vouched_by", None)
+    user.setdefault("bio", "")
+    user.setdefault("followers_count", 0)
+    user.setdefault("following_count", 0)
+    user.setdefault("posts_count", 0)
+    user.setdefault("verified", False)
+    
+    # Generate default avatar if missing
+    if not user.get("picture"):
+        user["picture"] = f"https://api.dicebear.com/7.x/initials/svg?seed={user.get('name', 'U')}&backgroundColor=1a1a1a&textColor=ffffff"
+    
+    # Generate default username if missing
+    if not user.get("username"):
+        email = user.get("email", "")
+        user["username"] = email.split("@")[0] if email else f"user_{user.get('user_id', '')[:8]}"
+    
+    # Generate default name if missing
+    if not user.get("name"):
+        user["name"] = user.get("username", "User")
     
     # The Prime Mover - CJ is always vouched
     if user.get("email") == "cj@blvx.social":
