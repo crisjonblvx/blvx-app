@@ -45,9 +45,19 @@ export const ThemeProvider = ({ children }) => {
     document.documentElement.setAttribute('data-theme', 'dark');
     document.body.setAttribute('data-theme', 'dark');
     
-    // Force dark style
+    // Force dark style on ALL elements
+    document.documentElement.style.backgroundColor = '#000000';
+    document.documentElement.style.color = '#ffffff';
     document.body.style.backgroundColor = '#000000';
     document.body.style.color = '#ffffff';
+    
+    // Also force on #root
+    const root = document.getElementById('root');
+    if (root) {
+      root.style.backgroundColor = '#000000';
+      root.style.color = '#ffffff';
+      root.style.minHeight = '100vh';
+    }
     
     localStorage.setItem('blvx-theme', 'dark');
   }, [theme]);
