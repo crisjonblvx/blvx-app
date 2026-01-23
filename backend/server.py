@@ -3232,8 +3232,11 @@ async def upload_file(
     with open(filepath, "wb") as f:
         f.write(contents)
     
-    # Return local file URL
-    file_url = f"{os.environ.get('REACT_APP_BACKEND_URL', '')}/api/media/{filename}"
+    # Return local file URL - use environment variable
+    backend_url = os.environ.get('REACT_APP_BACKEND_URL', '')
+    if not backend_url:
+        logger.warning("REACT_APP_BACKEND_URL not set for media URL")
+    file_url = f"{backend_url}/api/media/{filename}"
     
     return {
         "url": file_url,
