@@ -905,26 +905,35 @@ async def apple_callback(request: Request, response: Response):
         if existing_user:
             user_id = existing_user["user_id"]
             
-            # Update Apple ID if not set (link account)
+            # ACCOUNT MERGING: Update existing user with Apple data
             update_fields = {}
+            
+            # Add Apple ID if not already set (link accounts)
             if not existing_user.get("apple_user_id"):
                 update_fields["apple_user_id"] = apple_user_id
                 update_fields["email_verified"] = True
+                logger.info(f"Apple OAuth: Linking Apple ID to existing user {user_id}")
             
             # Update email if we have one and user doesn't
             if email and not existing_user.get("email"):
                 update_fields["email"] = email.lower()
             
-            # Update name if we have it and user doesn't
-            if name and not existing_user.get("name"):
+            # Update name if we have it and user doesn't or has placeholder
+            if name and (not existing_user.get("name") or existing_user.get("name") == "Apple User"):
                 update_fields["name"] = name
+            
+            # Ensure required fields have defaults
+            if existing_user.get("plates_remaining") is None:
+                update_fields["plates_remaining"] = 10
+            if existing_user.get("is_vouched") is None:
+                update_fields["is_vouched"] = False
             
             if update_fields:
                 await db.users.update_one(
                     {"user_id": user_id},
                     {"$set": update_fields}
                 )
-                logger.info(f"Updated Apple user {user_id}: {list(update_fields.keys())}")
+                logger.info(f"Apple OAuth: Merged/updated user {user_id}: {list(update_fields.keys())}")
         else:
             # Create new user
             user_id = f"user_{uuid.uuid4().hex[:12]}"
