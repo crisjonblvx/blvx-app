@@ -4519,6 +4519,24 @@ api_router.include_router(lookout_router)
 api_router.include_router(push_router)
 api_router.include_router(admin_router)
 
+# ========================
+# DEBUG SEED ENDPOINT
+# ========================
+
+@api_router.get("/debug/seed")
+async def debug_seed():
+    """Manual trigger to seed Bonita's starter posts - visit in browser to trigger"""
+    await seed_starter_posts_internal()
+    
+    # Count posts
+    post_count = await db.posts.count_documents({"user_id": "bonita"})
+    
+    return {
+        "status": "Database Seeded",
+        "bonita_posts": post_count,
+        "message": "Bonita's starter posts have been created. Refresh the feed to see them."
+    }
+
 app.include_router(api_router)
 
 # Root-level health check for Kubernetes
