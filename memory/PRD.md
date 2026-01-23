@@ -263,6 +263,21 @@ Build **BLVX**, a "High-Context Social Network" designed to be a "Group Chat" ra
 - [ ] Analytics
 - [ ] Voice messages for Bonita chats
 
+#### ✅ Recently Completed (Jan 23, 2026)
+- [x] **Production Launch Configuration**
+  - [x] Custom domain redirect enforcement (`FRONTEND_URL=https://blvx.social`)
+  - [x] Google OAuth redirect always uses blvx.social
+  - [x] Apple OAuth callback redirects to blvx.social
+  - [x] Updated OG meta tags: "High-Context Social. We serve Plates."
+  - [x] Premium social preview for iMessage/Twitter Cards
+  - [x] Seed endpoint with Bonita starter posts including video
+- [x] **Feed Cold Start Solution**
+  - [x] `/api/seed-starter-posts` endpoint
+  - [x] Creates Bonita user with verified status
+  - [x] 3 starter "Plates" from Bonita
+  - [x] Includes video post (BigBuckBunny sample)
+  - [x] Video rendering verified in PostCard.jsx
+
 #### ✅ Recently Completed (Jan 22, 2026)
 - [x] **Branding & Launch Polish**
   - [x] Larger logos (h-12 in Sidebar, h-9 in Header)
