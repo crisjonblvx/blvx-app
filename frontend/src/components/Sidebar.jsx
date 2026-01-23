@@ -80,7 +80,7 @@ export const Sidebar = () => {
           {/* Profile Link */}
           {user && (
             <Link
-              to={`/profile/${user.username}`}
+              to={`/profile/${user.username || 'me'}`}
               className={cn(
                 "flex items-center gap-4 px-4 py-3 mb-1 transition-colors duration-200",
                 location.pathname.startsWith('/profile') 
