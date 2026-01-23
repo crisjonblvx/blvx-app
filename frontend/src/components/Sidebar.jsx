@@ -127,19 +127,22 @@ export const Sidebar = () => {
             {/* Plates remaining */}
             <div className="flex items-center gap-2 text-xs text-white/40 mb-4 px-2">
               <Ticket className="h-4 w-4" />
-              <span>{user.plates_remaining || 0} Plates</span>
+              <span>{user.plates_remaining ?? 10} Plates</span>
             </div>
             
             <div className="flex items-center gap-3 mb-4">
               <Avatar className="h-10 w-10 border border-white/20">
-                <AvatarImage src={user.picture} alt={user.name} />
+                <AvatarImage 
+                  src={user.picture || `https://api.dicebear.com/7.x/initials/svg?seed=${user.name || 'U'}&backgroundColor=1a1a1a&textColor=ffffff`} 
+                  alt={user.name || 'User'} 
+                />
                 <AvatarFallback className="bg-white/10 text-white text-sm">
-                  {user.name?.charAt(0)?.toUpperCase()}
+                  {(user.name || user.username || 'U').charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-white text-sm truncate">{user.name}</p>
-                <p className="text-xs text-white/40 truncate">@{user.username}</p>
+                <p className="font-medium text-white text-sm truncate">{user.name || 'User'}</p>
+                <p className="text-xs text-white/40 truncate">@{user.username || 'user'}</p>
               </div>
             </div>
             
