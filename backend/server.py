@@ -999,6 +999,14 @@ async def apple_callback(request: Request, response: Response):
         if isinstance(user.get("created_at"), str):
             user["created_at"] = datetime.fromisoformat(user["created_at"])
         
+        # Ensure user object has all required fields for frontend (prevent black screen crashes)
+        user.setdefault("is_vouched", False)
+        user.setdefault("plates_remaining", 10)
+        user.setdefault("has_seen_welcome", False)
+        user.setdefault("username", user.get("email", "user").split("@")[0] if user.get("email") else f"apple_{apple_user_id[:8]}")
+        user.setdefault("picture", f"https://api.dicebear.com/7.x/initials/svg?seed={user.get('name', 'U')}&backgroundColor=1a1a1a&textColor=ffffff")
+        user.setdefault("name", "Apple User")
+        
         logger.info(f"Apple user authenticated: {user_id}")
         
         # Get the frontend URL for redirect - use /auth/callback with token in query params
