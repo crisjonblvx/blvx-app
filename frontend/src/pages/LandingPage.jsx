@@ -12,7 +12,7 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export default function LandingPage() {
   const navigate = useNavigate();
-  const { login, isAuthenticated, loading: authLoading, setAuthenticatedUser } = useAuth();
+  const { login, loginWithApple, isAuthenticated, loading: authLoading, setAuthenticatedUser } = useAuth();
   const [authMode, setAuthMode] = useState('landing'); // landing, login, signup, verify, forgot
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
