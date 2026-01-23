@@ -169,25 +169,26 @@ function AppRouter() {
 
 function App() {
   return (
-    <div className="app-container bg-black min-h-screen" style={{ backgroundColor: '#000000', color: '#ffffff' }}>
-      <NoiseOverlay />
-      <BrowserRouter>
-        <ThemeProvider>
-          <AuthProvider>
-            <AppRouter />
-          </AuthProvider>
-        </ThemeProvider>
-      </BrowserRouter>
-      <Toaster 
-        position="top-center" 
-        toastOptions={{
-          style: {
-            background: '#000',
-            border: '1px solid #333',
-            color: '#fff',
-            fontFamily: 'Inter, sans-serif',
-          },
-        }}
+    <ErrorBoundary>
+      <div className="app-container bg-black min-h-screen" style={{ backgroundColor: '#000000', color: '#ffffff' }}>
+        <NoiseOverlay />
+        <BrowserRouter>
+          <ThemeProvider>
+            <AuthProvider>
+              <AppRouter />
+            </AuthProvider>
+          </ThemeProvider>
+        </BrowserRouter>
+        <Toaster 
+          position="top-center" 
+          toastOptions={{
+            style: {
+              background: '#000',
+              border: '1px solid #333',
+              color: '#fff',
+              fontFamily: 'Inter, sans-serif',
+            },
+          }}
       />
     </div>
   );
