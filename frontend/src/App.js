@@ -24,12 +24,16 @@ import AuthCallbackPage from "@/pages/AuthCallbackPage";
 import { NoiseOverlay } from "@/components/NoiseOverlay";
 import { AppShell } from "@/components/AppShell";
 import { Toaster } from "@/components/ui/sonner";
+import ErrorBoundary from "@/components/ErrorBoundary";
 
 // Context
 import { AuthProvider, useAuth } from "@/context/AuthContext";
 import { ThemeProvider } from "@/context/ThemeContext";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+// Default avatar for users without a profile picture
+const DEFAULT_AVATAR = "https://api.dicebear.com/7.x/initials/svg?seed=User&backgroundColor=1a1a1a&textColor=ffffff";
 
 // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
 
