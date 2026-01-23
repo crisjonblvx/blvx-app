@@ -264,19 +264,26 @@ Build **BLVX**, a "High-Context Social Network" designed to be a "Group Chat" ra
 - [ ] Voice messages for Bonita chats
 
 #### ✅ Recently Completed (Jan 23, 2026)
+- [x] **Google Login Black Screen Fix**
+  - [x] Added defensive rendering to Header.jsx (fallback for missing user data)
+  - [x] Added defensive rendering to Sidebar.jsx (profile link fallback)
+  - [x] All navigation links now use `user.username || 'me'` pattern
+  - [x] Avatar fallbacks using DiceBear API for missing pictures
+- [x] **Feed Seeding ("Seed the Feed" Feature)**
+  - [x] Updated `/api/seed-starter-posts` endpoint with force parameter
+  - [x] 3 starter posts from Bonita:
+    - Post 1 (Text): "Welcome to The Block. We serve Plates, not Likes."
+    - Post 2 (Video): BigBuckBunny.mp4 sample video
+    - Post 3 (Image): Cinematic unsplash image
+  - [x] All posts set to `visibility: 'block'` (public)
+- [x] **Default Feed Tab**
+  - [x] Verified `feedType` defaults to `'block'` in HomePage.jsx
+  - [x] New users land on "The Block" (public feed) immediately
 - [x] **Production Launch Configuration**
   - [x] Custom domain redirect enforcement (`FRONTEND_URL=https://blvx.social`)
   - [x] Google OAuth redirect always uses blvx.social
   - [x] Apple OAuth callback redirects to blvx.social
   - [x] Updated OG meta tags: "High-Context Social. We serve Plates."
-  - [x] Premium social preview for iMessage/Twitter Cards
-  - [x] Seed endpoint with Bonita starter posts including video
-- [x] **Feed Cold Start Solution**
-  - [x] `/api/seed-starter-posts` endpoint
-  - [x] Creates Bonita user with verified status
-  - [x] 3 starter "Plates" from Bonita
-  - [x] Includes video post (BigBuckBunny sample)
-  - [x] Video rendering verified in PostCard.jsx
 
 #### ✅ Recently Completed (Jan 22, 2026)
 - [x] **Branding & Launch Polish**
