@@ -940,18 +940,16 @@ async def apple_callback(request: Request, response: Response):
         
         logger.info(f"Apple user authenticated: {user_id}")
         
-        # Get the frontend URL for redirect
-        frontend_url = os.environ.get('REACT_APP_BACKEND_URL', 'https://blvx.social').replace('/api', '')
+        # Get the frontend URL for redirect - use /auth/callback with token in query params
+        frontend_url = os.environ.get('REACT_APP_BACKEND_URL', 'https://blvx.social').replace('/api', '').rstrip('/')
         
-        # Redirect to frontend with session token in hash
-        redirect_url = f"{frontend_url}/home#session_token={session_token}"
+        # Redirect to frontend /auth/callback with token in URL query params (NOT hash)
+        redirect_url = f"{frontend_url}/auth/callback?token={session_token}"
         
         # For local development/preview - check referer
         referer = request.headers.get("referer", "")
         if "localhost" in referer:
-            redirect_url = f"http://localhost:3000/home#session_token={session_token}"
-        elif "preview.emergentagent.com" in referer:
-            redirect_url = f"{frontend_url}/home#session_token={session_token}"
+            redirect_url = f"http://localhost:3000/auth/callback?token={session_token}"
         
         logger.info(f"Apple redirect URL: {redirect_url}")
         
