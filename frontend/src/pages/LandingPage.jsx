@@ -219,7 +219,7 @@ export default function LandingPage() {
                 onClick={login}
                 variant="ghost"
                 size="lg"
-                className="w-full text-white/60 hover:text-white hover:bg-white/5 rounded-none px-8 py-6 text-sm"
+                className="w-full border border-white/30 text-white/80 hover:text-white hover:bg-white/5 rounded-none px-8 py-6 text-sm"
                 data-testid="google-login-btn"
               >
                 <svg className="h-4 w-4 mr-3" viewBox="0 0 24 24">
