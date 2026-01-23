@@ -773,12 +773,27 @@ async def exchange_session(session_id: str, response: Response):
     if isinstance(user.get("created_at"), str):
         user["created_at"] = datetime.fromisoformat(user["created_at"])
     
-    # Ensure user object has all required fields for frontend
+    # Ensure user object has ALL required fields for frontend (prevents black screen crashes)
     user.setdefault("is_vouched", False)
     user.setdefault("plates_remaining", 10)
     user.setdefault("has_seen_welcome", False)
-    user.setdefault("picture", picture)
-    user.setdefault("username", user.get("email", "user").split("@")[0])
+    user.setdefault("bio", "")
+    user.setdefault("followers_count", 0)
+    user.setdefault("following_count", 0)
+    user.setdefault("posts_count", 0)
+    user.setdefault("verified", False)
+    
+    # Generate username if missing
+    if not user.get("username"):
+        user["username"] = user.get("email", "user").split("@")[0].lower() or "user"
+    
+    # Generate name if missing  
+    if not user.get("name"):
+        user["name"] = user.get("username", "User").title()
+    
+    # Generate avatar if missing or empty
+    if not user.get("picture"):
+        user["picture"] = f"https://api.dicebear.com/7.x/initials/svg?seed={user.get('name', 'U')}&backgroundColor=1a1a1a&textColor=ffffff"
     
     logger.info(f"User authenticated: {user.get('email')}")
     
