@@ -522,11 +522,15 @@ Build **BLVX**, a "High-Context Social Network" designed to be a "Group Chat" ra
   - 30-day session (Remember Me) enabled by default for Apple OAuth
   - Apple credentials configured: APPLE_TEAM_ID, APPLE_SERVICE_ID, APPLE_KEY_ID, APPLE_PRIVATE_KEY
 - **Critical UI/UX Fixes** (Jan 23, 2026)
-  - FORCED DARK MODE: Removed all light mode, enforced black background globally
+  - FORCED DARK MODE: Complete CSS rewrite with `#root, html, body` all forced to `#000000`
+  - Added inline styles to index.html, App.js, ThemeContext for maximum coverage
+  - Added `@media (prefers-color-scheme)` overrides to ignore system light mode
   - UNIFIED LANDING BUTTONS: Apple + Google directly visible on landing (no extra clicks)
+  - Layout: Apple (white) → Google (outlined) → OR → Email signup → Sign in link
   - APPLE BUG FIX: Handles "Hide My Email" private relay emails (@privaterelay.appleid.com)
   - APPLE BUG FIX: Creates user even when email is null (uses Apple ID as placeholder)
-  - ThemeContext.js now always returns 'dark' - no light mode option
+  - TOKEN HANDOFF: Both Google and Apple callbacks return JWT session_token
+  - ThemeContext.js forces dark on `documentElement`, `body`, and `#root`
 
 ### v1.5.0 (January 20, 2026)
 - **Bonita Conversational AI in Sidebar**: Complete 1-on-1 chat with AI auntie
