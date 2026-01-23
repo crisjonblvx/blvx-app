@@ -1027,9 +1027,20 @@ async def apple_callback(request: Request, response: Response):
         
         logger.info(f"Apple user authenticated: {user_id}")
         
-        # Get the frontend URL for redirect - ALWAYS use custom domain
-        # FRONTEND_URL is explicitly set to https://blvx.social in .env
-        frontend_url = os.environ.get('FRONTEND_URL', 'https://blvx.social')
+        # Determine frontend URL for redirect
+        # Priority: 1. Referer header, 2. FRONTEND_URL env, 3. fallback
+        referer = request.headers.get("referer", "")
+        origin = request.headers.get("origin", "")
+        
+        if referer:
+            # Extract origin from referer (e.g., https://blvx.social/some/path -> https://blvx.social)
+            from urllib.parse import urlparse
+            parsed = urlparse(referer)
+            frontend_url = f"{parsed.scheme}://{parsed.netloc}"
+        elif origin:
+            frontend_url = origin
+        else:
+            frontend_url = os.environ.get('FRONTEND_URL', 'https://blvx.social')
         
         # Redirect to frontend /auth/callback with token in URL query params
         redirect_url = f"{frontend_url}/auth/callback?token={session_token}"
