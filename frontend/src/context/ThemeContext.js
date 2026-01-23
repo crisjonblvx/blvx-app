@@ -29,32 +29,27 @@ export const ThemeProvider = ({ children }) => {
     return 'dark';
   });
 
-  // Apply theme class to document and body
+  // Apply theme class to document and body - ALWAYS DARK
   useEffect(() => {
     // Remove old classes
     document.documentElement.classList.remove('theme-dark', 'theme-light', 'dark', 'light');
     document.body.classList.remove('theme-dark', 'theme-light', 'light-mode', 'dark-mode');
     
-    // Add new classes
-    document.documentElement.classList.add(`theme-${theme}`);
-    document.documentElement.classList.add(theme);
-    document.body.classList.add(`${theme}-mode`);
-    document.body.classList.add(`theme-${theme}`);
+    // Force dark mode classes - BLVX brand identity
+    document.documentElement.classList.add('theme-dark');
+    document.documentElement.classList.add('dark');
+    document.body.classList.add('dark-mode');
+    document.body.classList.add('theme-dark');
     
     // Set data attribute for CSS selectors
-    document.documentElement.setAttribute('data-theme', theme);
-    document.body.setAttribute('data-theme', theme);
+    document.documentElement.setAttribute('data-theme', 'dark');
+    document.body.setAttribute('data-theme', 'dark');
     
-    // Force style updates
-    if (theme === 'light') {
-      document.body.style.backgroundColor = '#ffffff';
-      document.body.style.color = '#000000';
-    } else {
-      document.body.style.backgroundColor = '#000000';
-      document.body.style.color = '#ffffff';
-    }
+    // Force dark style
+    document.body.style.backgroundColor = '#000000';
+    document.body.style.color = '#ffffff';
     
-    localStorage.setItem('blvx-theme', theme);
+    localStorage.setItem('blvx-theme', 'dark');
   }, [theme]);
 
   const toggleTheme = () => {
