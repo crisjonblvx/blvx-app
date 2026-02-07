@@ -219,7 +219,7 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="bg-black border-white/20">
+                <DropdownMenuContent align="end" className="bg-card border-border">
                   {onBonitaContext && (
                     <DropdownMenuItem 
                       onClick={(e) => {

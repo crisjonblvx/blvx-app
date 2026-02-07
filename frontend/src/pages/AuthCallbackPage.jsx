@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 import axios from 'axios';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -19,8 +20,16 @@ export default function AuthCallbackPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const { setAuthenticatedUser } = useAuth();
+  const { isDark, assets } = useTheme();
   const [status, setStatus] = useState('Processing...');
   const [error, setError] = useState(null);
+
+  // Theme-aware classes
+  const bgClass = isDark ? 'bg-black' : 'bg-white';
+  const textClass = isDark ? 'text-white/70' : 'text-gray-600';
+  const textMutedClass = isDark ? 'text-white/50' : 'text-gray-400';
+  const textVeryMutedClass = isDark ? 'text-white/30' : 'text-gray-300';
+  const spinnerClass = isDark ? 'border-white/30 border-t-white' : 'border-gray-300 border-t-gray-700';
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -103,22 +112,22 @@ export default function AuthCallbackPage() {
   }, [searchParams, navigate, setAuthenticatedUser]);
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center">
+    <div className={`min-h-screen ${bgClass} flex items-center justify-center`}>
       <div className="text-center">
         <img 
-          src="/assets/logo-white.png" 
+          src={assets.logo} 
           alt="BLVX" 
           className="h-12 mx-auto mb-6"
         />
         {error ? (
           <div className="text-red-500">
             <p className="text-lg mb-2">Authentication Failed</p>
-            <p className="text-sm text-white/50">{error}</p>
-            <p className="text-xs text-white/30 mt-4">Redirecting to login...</p>
+            <p className={`text-sm ${textMutedClass}`}>{error}</p>
+            <p className={`text-xs ${textVeryMutedClass} mt-4`}>Redirecting to login...</p>
           </div>
         ) : (
-          <div className="text-white/70">
-            <div className="animate-spin h-8 w-8 border-2 border-white/30 border-t-white rounded-full mx-auto mb-4"></div>
+          <div className={textClass}>
+            <div className={`animate-spin h-8 w-8 border-2 ${spinnerClass} rounded-full mx-auto mb-4`}></div>
             <p>{status}</p>
           </div>
         )}

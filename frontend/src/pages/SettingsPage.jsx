@@ -186,7 +186,7 @@ export default function SettingsPage() {
             <SelectTrigger className="flex-1 bg-transparent border-white/20 focus:border-white rounded-none">
               <SelectValue placeholder="Select topic" />
             </SelectTrigger>
-            <SelectContent className="bg-black border-white/20">
+            <SelectContent className="bg-card border-border">
               <SelectItem value="random">Random</SelectItem>
               <SelectItem value="music">Music</SelectItem>
               <SelectItem value="tech">Tech</SelectItem>

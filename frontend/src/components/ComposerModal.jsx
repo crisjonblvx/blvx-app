@@ -107,8 +107,8 @@ export const ComposerModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-black border border-white/20 sm:max-w-[500px] p-0">
-        <DialogHeader className="p-4 border-b border-white/10">
+      <DialogContent className="bg-card border border-border sm:max-w-[500px] p-0">
+        <DialogHeader className="p-4 border-b border-border">
           <div className="flex items-center justify-between">
             <DialogTitle className="font-display text-sm tracking-widest uppercase">
               {replyTo ? 'Reply' : quotedPost ? 'Quote' : 'New Post'}
@@ -119,7 +119,7 @@ export const ComposerModal = ({
         <div className="p-4">
           {/* Reply context */}
           {replyTo && (
-            <div className="mb-4 p-3 bg-white/5 border border-white/10">
+            <div className="mb-4 p-3 bg-muted border border-border">
               <p className="text-[10px] text-white/40 mb-1 uppercase tracking-wider">Replying to @{replyTo.user?.username}</p>
               <p className="text-sm text-white/60 line-clamp-2">{replyTo.content}</p>
             </div>
@@ -127,7 +127,7 @@ export const ComposerModal = ({
 
           {/* Composer */}
           <div className="flex gap-3">
-            <Avatar className="h-10 w-10 border border-white/20 flex-shrink-0">
+            <Avatar className="h-10 w-10 border border-border flex-shrink-0">
               <AvatarImage src={user?.picture} alt={user?.name} />
               <AvatarFallback className="bg-white/10 text-white text-sm">
                 {user?.name?.charAt(0)?.toUpperCase()}
@@ -145,7 +145,7 @@ export const ComposerModal = ({
               />
               
               {/* Media Toolbar - The Receipts Bar */}
-              <div className="mt-2 pt-2 border-t border-white/5">
+              <div className="mt-2 pt-2 border-t border-border">
                 <MediaToolbar
                   onMediaSelect={handleMediaSelect}
                   selectedMedia={selectedMedia}
@@ -155,7 +155,7 @@ export const ComposerModal = ({
               
               {/* Quoted post */}
               {quotedPost && (
-                <div className="mt-3 p-3 border border-white/20">
+                <div className="mt-3 p-3 border border-border">
                   <div className="flex items-center gap-2 mb-2">
                     <Avatar className="h-5 w-5">
                       <AvatarImage src={quotedPost.user?.picture} />
@@ -172,7 +172,7 @@ export const ComposerModal = ({
           </div>
 
           {/* Visibility Toggle */}
-          <div className="flex items-center gap-2 mt-4 pt-4 border-t border-white/10">
+          <div className="flex items-center gap-2 mt-4 pt-4 border-t border-border">
             <Button
               variant="ghost"
               size="sm"
@@ -201,7 +201,7 @@ export const ComposerModal = ({
 
           {/* Bonita Tone Lab */}
           {showBonita && (
-            <div className="mt-4 p-4 bg-white/5 border border-white/10 animate-fade-in">
+            <div className="mt-4 p-4 bg-muted border border-border animate-fade-in">
               <div className="flex items-center gap-2 mb-3">
                 <Sparkles className="h-4 w-4 text-white" />
                 <span className="text-xs font-display tracking-wider uppercase">Bonita's Tone Lab</span>
@@ -224,14 +224,14 @@ export const ComposerModal = ({
               {bonitaSuggestions && (
                 <div className="space-y-2 text-xs">
                   <p className="text-white/40 mb-2">Bonita's options:</p>
-                  <pre className="text-white/70 whitespace-pre-wrap p-2 bg-white/5 rounded-sm">{bonitaSuggestions}</pre>
+                  <pre className="text-white/70 whitespace-pre-wrap p-2 bg-muted rounded-sm">{bonitaSuggestions}</pre>
                 </div>
               )}
             </div>
           )}
 
           {/* Footer */}
-          <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/10">
+          <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
             <div className="flex items-center gap-4">
               <Button
                 variant="ghost"

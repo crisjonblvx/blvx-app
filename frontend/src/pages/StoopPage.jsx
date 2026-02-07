@@ -425,7 +425,7 @@ export default function StoopPage() {
           </div>
           
           {/* LiveKit Status Debug */}
-          <div className="mt-3 p-2 bg-black/50 rounded text-[10px] text-white/50 space-y-1">
+          <div className="mt-3 p-2 bg-muted rounded text-[10px] text-white/50 space-y-1">
             <div className="flex items-center justify-between">
               <span>
                 LiveKit: {connectionState} • 
@@ -496,7 +496,7 @@ export default function StoopPage() {
 
       {/* Create Stoop Dialog */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="bg-black border border-white/20 sm:max-w-[400px]">
+        <DialogContent className="bg-card border border-border sm:max-w-[400px]">
           <DialogHeader>
             <DialogTitle className="font-display text-sm tracking-widest uppercase">Start a Stoop</DialogTitle>
           </DialogHeader>

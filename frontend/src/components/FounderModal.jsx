@@ -9,7 +9,7 @@ const CJ_AVATAR = "https://customer-assets.emergentagent.com/job_high-context/ar
 export const FounderModal = ({ open, onOpenChange }) => {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-black border border-white/20 sm:max-w-[500px]">
+      <DialogContent className="bg-card border border-border sm:max-w-[500px]">
         <DialogHeader>
           <DialogTitle className="font-display text-sm tracking-widest uppercase text-center">
             The Architect
@@ -61,7 +61,7 @@ export const FounderModal = ({ open, onOpenChange }) => {
           </div>
           
           {/* Tagline */}
-          <div className="text-center border-t border-b border-white/10 py-4 w-full">
+          <div className="text-center border-t border-b border-border py-4 w-full">
             <p className="text-white/80 text-sm italic">
               "Built for the culture. Owned by the people."
             </p>

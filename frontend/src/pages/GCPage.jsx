@@ -519,7 +519,7 @@ export default function GCPage() {
 
       {/* Create GC Dialog - with User Selection */}
       <Dialog open={createOpen} onOpenChange={setCreateOpen}>
-        <DialogContent className="bg-black border border-white/20 sm:max-w-[450px] max-h-[80vh] p-0 overflow-hidden">
+        <DialogContent className="bg-card border border-border sm:max-w-[450px] max-h-[80vh] p-0 overflow-hidden">
           <DialogHeader className="p-4 border-b border-white/10">
             <DialogTitle className="font-display text-sm tracking-widest uppercase">Start Chat</DialogTitle>
           </DialogHeader>

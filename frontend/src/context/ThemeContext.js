@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 
 const ThemeContext = createContext(null);
 
@@ -22,16 +22,51 @@ const ASSETS = {
   }
 };
 
+// Check if it's "evening" (6 PM - 6 AM)
+const isEveningTime = () => {
+  const hour = new Date().getHours();
+  return hour >= 18 || hour < 6; // 6 PM to 6 AM
+};
+
+// Get the appropriate theme based on time
+const getTimeBasedTheme = () => {
+  return isEveningTime() ? 'dark' : 'light';
+};
+
 export const ThemeProvider = ({ children }) => {
-  // Initialize theme - default to light, respect user preference
-  const [theme, setTheme] = useState(() => {
-    const saved = localStorage.getItem('blvx-theme');
-    if (saved === 'dark' || saved === 'light') {
-      return saved;
-    }
-    // Default to light
-    return 'light';
+  // Check if user has manually set a preference
+  const [isManualOverride, setIsManualOverride] = useState(() => {
+    return localStorage.getItem('blvx-theme-manual') === 'true';
   });
+  
+  // Initialize theme
+  const [theme, setThemeState] = useState(() => {
+    // If user manually set a preference, use it
+    if (localStorage.getItem('blvx-theme-manual') === 'true') {
+      const saved = localStorage.getItem('blvx-theme');
+      if (saved === 'dark' || saved === 'light') {
+        return saved;
+      }
+    }
+    // Otherwise, use time-based auto theme
+    return getTimeBasedTheme();
+  });
+
+  // Update theme when time changes (check every minute)
+  useEffect(() => {
+    if (isManualOverride) return; // Don't auto-switch if user set manually
+    
+    const checkTime = () => {
+      const newTheme = getTimeBasedTheme();
+      if (newTheme !== theme) {
+        setThemeState(newTheme);
+      }
+    };
+    
+    // Check every minute
+    const interval = setInterval(checkTime, 60000);
+    return () => clearInterval(interval);
+  }, [theme, isManualOverride]);
 
   // Apply theme class to document and body
   useEffect(() => {
@@ -75,9 +110,26 @@ export const ThemeProvider = ({ children }) => {
     localStorage.setItem('blvx-theme', theme);
   }, [theme]);
 
-  const toggleTheme = () => {
-    setTheme(prev => prev === 'dark' ? 'light' : 'dark');
-  };
+  // Set theme (used internally)
+  const setTheme = useCallback((newTheme) => {
+    setThemeState(newTheme);
+  }, []);
+
+  // Toggle theme (marks as manual override)
+  const toggleTheme = useCallback(() => {
+    const newTheme = theme === 'dark' ? 'light' : 'dark';
+    setThemeState(newTheme);
+    setIsManualOverride(true);
+    localStorage.setItem('blvx-theme-manual', 'true');
+    localStorage.setItem('blvx-theme', newTheme);
+  }, [theme]);
+
+  // Reset to auto mode (time-based)
+  const resetToAuto = useCallback(() => {
+    setIsManualOverride(false);
+    localStorage.removeItem('blvx-theme-manual');
+    setThemeState(getTimeBasedTheme());
+  }, []);
 
   const assets = ASSETS[theme];
 
@@ -85,6 +137,8 @@ export const ThemeProvider = ({ children }) => {
     theme,
     setTheme,
     toggleTheme,
+    resetToAuto,
+    isManualOverride,
     isDark: theme === 'dark',
     isLight: theme === 'light',
     assets,

@@ -1,6 +1,7 @@
 import { useState, useRef } from 'react';
 import { Camera, Loader2, User } from 'lucide-react';
 import { useUsers } from '@/hooks/useUsers';
+import { useTheme } from '@/context/ThemeContext';
 import {
   Dialog,
   DialogContent,
@@ -19,6 +20,7 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export const EditProfileModal = ({ open, onOpenChange, profile, onUpdate }) => {
   const { updateProfile, loading } = useUsers();
+  const { isDark } = useTheme();
   const [formData, setFormData] = useState({
     name: profile?.name || '',
     username: profile?.username || '',
@@ -28,6 +30,17 @@ export const EditProfileModal = ({ open, onOpenChange, profile, onUpdate }) => {
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Theme-aware classes
+  const bgClass = isDark ? 'bg-black' : 'bg-white';
+  const borderClass = isDark ? 'border-white/20' : 'border-gray-200';
+  const borderLightClass = isDark ? 'border-white/10' : 'border-gray-100';
+  const textClass = isDark ? 'text-white' : 'text-gray-900';
+  const textMutedClass = isDark ? 'text-white/60' : 'text-gray-500';
+  const textVeryMutedClass = isDark ? 'text-white/40' : 'text-gray-400';
+  const inputClass = isDark ? 'bg-transparent border-white/20 focus:border-white' : 'bg-gray-50 border-gray-200 focus:border-amber-500';
+  const avatarFallbackClass = isDark ? 'bg-white/10 text-white' : 'bg-gray-100 text-gray-700';
+  const primaryBtnClass = isDark ? 'bg-white text-black hover:bg-white/90' : 'bg-black text-white hover:bg-black/90';
 
   const handleAvatarClick = () => {
     fileInputRef.current?.click();
@@ -104,10 +117,10 @@ export const EditProfileModal = ({ open, onOpenChange, profile, onUpdate }) => {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-black border border-white/20 sm:max-w-[425px] p-0">
-        <DialogHeader className="p-4 border-b border-white/10">
+      <DialogContent className={`${bgClass} border ${borderClass} sm:max-w-[425px] p-0`}>
+        <DialogHeader className={`p-4 border-b ${borderLightClass}`}>
           <div className="flex items-center justify-between">
-            <DialogTitle className="font-display text-lg tracking-wide uppercase">
+            <DialogTitle className={`font-display text-lg tracking-wide uppercase ${textClass}`}>
               Edit Profile
             </DialogTitle>
           </div>
@@ -121,9 +134,9 @@ export const EditProfileModal = ({ open, onOpenChange, profile, onUpdate }) => {
               onClick={handleAvatarClick}
               data-testid="avatar-upload-trigger"
             >
-              <Avatar className="h-24 w-24 border-2 border-white/20 group-hover:border-amber-500 transition-colors">
+              <Avatar className={`h-24 w-24 border-2 ${borderClass} group-hover:border-amber-500 transition-colors`}>
                 <AvatarImage src={displayPicture} alt={formData.name} />
-                <AvatarFallback className="bg-white/10 text-white text-2xl">
+                <AvatarFallback className={`${avatarFallbackClass} text-2xl`}>
                   {formData.name?.charAt(0)?.toUpperCase() || <User className="w-8 h-8" />}
                 </AvatarFallback>
               </Avatar>
@@ -138,12 +151,12 @@ export const EditProfileModal = ({ open, onOpenChange, profile, onUpdate }) => {
               </div>
               
               {/* Camera Badge */}
-              <div className="absolute -bottom-1 -right-1 w-7 h-7 bg-amber-500 rounded-full flex items-center justify-center border-2 border-black">
+              <div className={`absolute -bottom-1 -right-1 w-7 h-7 bg-amber-500 rounded-full flex items-center justify-center border-2 ${isDark ? 'border-black' : 'border-white'}`}>
                 <Camera className="w-3.5 h-3.5 text-black" />
               </div>
             </div>
             
-            <p className="text-xs text-white/40">Tap to change photo</p>
+            <p className={`text-xs ${textVeryMutedClass}`}>Tap to change photo</p>
             
             {/* Hidden file input */}
             <input
@@ -158,39 +171,39 @@ export const EditProfileModal = ({ open, onOpenChange, profile, onUpdate }) => {
 
           {/* Name */}
           <div className="space-y-2">
-            <Label htmlFor="name" className="text-white/60">Name</Label>
+            <Label htmlFor="name" className={textMutedClass}>Name</Label>
             <Input
               id="name"
               value={formData.name}
               onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
               placeholder="Your name"
-              className="bg-transparent border-white/20 focus:border-white"
+              className={inputClass}
               data-testid="edit-name-input"
             />
           </div>
 
           {/* Username */}
           <div className="space-y-2">
-            <Label htmlFor="username" className="text-white/60">Username</Label>
+            <Label htmlFor="username" className={textMutedClass}>Username</Label>
             <Input
               id="username"
               value={formData.username}
               onChange={(e) => setFormData(prev => ({ ...prev, username: e.target.value.toLowerCase().replace(/[^a-z0-9_]/g, '') }))}
               placeholder="username"
-              className="bg-transparent border-white/20 focus:border-white"
+              className={inputClass}
               data-testid="edit-username-input"
             />
           </div>
 
           {/* Bio */}
           <div className="space-y-2">
-            <Label htmlFor="bio" className="text-white/60">Bio</Label>
+            <Label htmlFor="bio" className={textMutedClass}>Bio</Label>
             <Textarea
               id="bio"
               value={formData.bio}
               onChange={(e) => setFormData(prev => ({ ...prev, bio: e.target.value }))}
               placeholder="Tell us about yourself..."
-              className="bg-transparent border-white/20 focus:border-white min-h-[80px] resize-none"
+              className={`${inputClass} min-h-[80px] resize-none`}
               data-testid="edit-bio-input"
             />
           </div>
@@ -199,7 +212,7 @@ export const EditProfileModal = ({ open, onOpenChange, profile, onUpdate }) => {
           <Button
             type="submit"
             disabled={loading || uploadingAvatar}
-            className="w-full bg-white text-black hover:bg-white/90 rounded-sm"
+            className={`w-full ${primaryBtnClass} rounded-sm`}
             data-testid="save-profile-btn"
           >
             {loading ? 'Saving...' : 'Save Changes'}

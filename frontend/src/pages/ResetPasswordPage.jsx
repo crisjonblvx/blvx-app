@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { KeyRound, ArrowLeft, Loader2, Check } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useTheme } from '@/context/ThemeContext';
 import { toast } from 'sonner';
 import axios from 'axios';
 
@@ -12,12 +13,25 @@ export default function ResetPasswordPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const token = searchParams.get('token');
+  const { isDark, assets } = useTheme();
   
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [initialized, setInitialized] = useState(false);
+
+  // Theme-aware classes
+  const bgClass = isDark ? 'bg-black' : 'bg-white';
+  const textClass = isDark ? 'text-white' : 'text-gray-900';
+  const textMutedClass = isDark ? 'text-white/60' : 'text-gray-500';
+  const textVeryMutedClass = isDark ? 'text-white/40' : 'text-gray-400';
+  const inputBgClass = isDark ? 'bg-white/5' : 'bg-gray-50';
+  const inputBorderClass = isDark ? 'border-white/20' : 'border-gray-300';
+  const spinnerClass = isDark ? 'text-white' : 'text-gray-700';
+  const primaryBtnClass = isDark 
+    ? 'bg-white text-black hover:bg-white/90' 
+    : 'bg-black text-white hover:bg-black/90';
 
   useEffect(() => {
     // Give URL params time to initialize
@@ -34,8 +48,8 @@ export default function ResetPasswordPage() {
   // Show loading while initializing
   if (!initialized) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <Loader2 className="h-8 w-8 text-white animate-spin" />
+      <div className={`min-h-screen ${bgClass} flex items-center justify-center`}>
+        <Loader2 className={`h-8 w-8 ${spinnerClass} animate-spin`} />
       </div>
     );
   }
@@ -68,33 +82,33 @@ export default function ResetPasswordPage() {
 
   if (success) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center p-4">
+      <div className={`min-h-screen ${bgClass} flex items-center justify-center p-4`}>
         <div className="w-full max-w-sm text-center">
           <div className="w-16 h-16 bg-green-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
             <Check className="h-8 w-8 text-green-500" />
           </div>
-          <h1 className="text-2xl font-display text-white mb-2">You're back in!</h1>
-          <p className="text-white/60 text-sm">Redirecting to login...</p>
+          <h1 className={`text-2xl font-display ${textClass} mb-2`}>You're back in!</h1>
+          <p className={`${textMutedClass} text-sm`}>Redirecting to login...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black flex items-center justify-center p-4">
+    <div className={`min-h-screen ${bgClass} flex items-center justify-center p-4`}>
       <div className="w-full max-w-sm">
         {/* Header */}
         <div className="text-center mb-8">
           <img 
-            src="/assets/logo-white.png" 
+            src={assets.logo} 
             alt="BLVX" 
             className="h-8 mx-auto mb-6"
           />
           <div className="w-12 h-12 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-4">
             <KeyRound className="h-6 w-6 text-amber-500" />
           </div>
-          <h1 className="text-xl font-display text-white mb-2">Reset Your Password</h1>
-          <p className="text-white/60 text-sm">Enter a new password to secure your account</p>
+          <h1 className={`text-xl font-display ${textClass} mb-2`}>Reset Your Password</h1>
+          <p className={`${textMutedClass} text-sm`}>Enter a new password to secure your account</p>
         </div>
 
         {/* Form */}
@@ -105,7 +119,7 @@ export default function ResetPasswordPage() {
               placeholder="New password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className="bg-white/5 border-white/20 h-12"
+              className={`${inputBgClass} ${inputBorderClass} h-12`}
               required
               minLength={8}
               data-testid="new-password-input"
@@ -118,7 +132,7 @@ export default function ResetPasswordPage() {
               placeholder="Confirm new password"
               value={confirmPassword}
               onChange={(e) => setConfirmPassword(e.target.value)}
-              className="bg-white/5 border-white/20 h-12"
+              className={`${inputBgClass} ${inputBorderClass} h-12`}
               required
               minLength={8}
               data-testid="confirm-password-input"
@@ -128,7 +142,7 @@ export default function ResetPasswordPage() {
           <Button
             type="submit"
             disabled={loading}
-            className="w-full h-12 bg-white text-black hover:bg-white/90 font-medium"
+            className={`w-full h-12 ${primaryBtnClass} font-medium`}
             data-testid="reset-password-btn"
           >
             {loading ? (
@@ -142,7 +156,7 @@ export default function ResetPasswordPage() {
         {/* Back Link */}
         <button
           onClick={() => navigate('/')}
-          className="flex items-center gap-2 text-white/40 hover:text-white text-sm mt-6 mx-auto"
+          className={`flex items-center gap-2 ${textVeryMutedClass} hover:${textClass} text-sm mt-6 mx-auto`}
         >
           <ArrowLeft className="h-4 w-4" />
           Back to login

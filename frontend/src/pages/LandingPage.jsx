@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -13,6 +14,7 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 export default function LandingPage() {
   const navigate = useNavigate();
   const { login, loginWithApple, isAuthenticated, loading: authLoading, setAuthenticatedUser } = useAuth();
+  const { isDark, assets } = useTheme();
   const [authMode, setAuthMode] = useState('landing'); // landing, login, signup, verify, forgot
   const [loading, setLoading] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -27,6 +29,26 @@ export default function LandingPage() {
     name: '',
     rememberMe: false
   });
+
+  // Theme-aware classes
+  const bgClass = isDark ? 'bg-black' : 'bg-white';
+  const textClass = isDark ? 'text-white' : 'text-gray-900';
+  const textMutedClass = isDark ? 'text-white/80' : 'text-gray-600';
+  const textVeryMutedClass = isDark ? 'text-white/50' : 'text-gray-400';
+  const textSuperMutedClass = isDark ? 'text-white/30' : 'text-gray-300';
+  const borderClass = isDark ? 'border-white/10' : 'border-gray-200';
+  const borderInputClass = isDark ? 'border-white/20' : 'border-gray-300';
+  const iconMutedClass = isDark ? 'text-white/30' : 'text-gray-400';
+  const inputBgClass = isDark ? 'bg-transparent' : 'bg-gray-50';
+  const primaryBtnClass = isDark 
+    ? 'bg-white text-black hover:bg-white/90' 
+    : 'bg-black text-white hover:bg-black/90';
+  const outlineBtnClass = isDark 
+    ? 'border-white/30 text-white hover:bg-white/10' 
+    : 'border-gray-300 text-gray-700 hover:bg-gray-100';
+  const ghostBtnClass = isDark 
+    ? 'border-white/20 text-white/70 hover:text-white hover:bg-white/5' 
+    : 'border-gray-200 text-gray-600 hover:text-gray-900 hover:bg-gray-100';
 
   // Redirect if already authenticated
   if (!authLoading && isAuthenticated) {
@@ -152,23 +174,23 @@ export default function LandingPage() {
   // Landing view
   if (authMode === 'landing') {
     return (
-      <div className="min-h-screen bg-black flex flex-col force-dark">
+      <div className={`min-h-screen ${bgClass} flex flex-col`}>
         <div className="flex-1 flex flex-col items-center justify-center px-6 py-12 relative overflow-hidden">
-          <div className="absolute inset-0 bg-black" />
+          <div className={`absolute inset-0 ${bgClass}`} />
           
           <div className="relative z-10 text-center max-w-md mx-auto">
             <img 
-              src="/assets/logo-white.png"
+              src={assets.logo}
               alt="BLVX"
               className="h-16 sm:h-20 mx-auto mb-8 animate-fade-in"
               data-testid="landing-logo"
             />
             
-            <p className="font-display text-base sm:text-lg text-white/80 mb-3 tracking-wider uppercase animate-fade-in stagger-1">
+            <p className={`font-display text-base sm:text-lg ${textMutedClass} mb-3 tracking-wider uppercase animate-fade-in stagger-1`}>
               High-Context Social
             </p>
             
-            <p className="text-sm text-white/50 max-w-sm mx-auto mb-10 animate-fade-in stagger-2">
+            <p className={`text-sm ${textVeryMutedClass} max-w-sm mx-auto mb-10 animate-fade-in stagger-2`}>
               The world's first culture-native network. Not a town square. A group chat with standards.
             </p>
             
@@ -177,7 +199,7 @@ export default function LandingPage() {
               <Button
                 onClick={loginWithApple}
                 size="lg"
-                className="w-full bg-white text-black hover:bg-white/90 rounded-none px-8 py-6 text-sm"
+                className={`w-full ${primaryBtnClass} rounded-none px-8 py-6 text-sm`}
                 data-testid="apple-signin-landing"
               >
                 <svg className="h-5 w-5 mr-3" viewBox="0 0 24 24" fill="currentColor">
@@ -191,7 +213,7 @@ export default function LandingPage() {
                 onClick={login}
                 variant="outline"
                 size="lg"
-                className="w-full border-white/30 text-white hover:bg-white/10 rounded-none px-8 py-6 text-sm"
+                className={`w-full ${outlineBtnClass} rounded-none px-8 py-6 text-sm`}
                 data-testid="google-signin-landing"
               >
                 <svg className="h-5 w-5 mr-3" viewBox="0 0 24 24">
@@ -205,10 +227,10 @@ export default function LandingPage() {
               
               <div className="relative py-4">
                 <div className="absolute inset-0 flex items-center">
-                  <div className="w-full border-t border-white/10" />
+                  <div className={`w-full border-t ${borderClass}`} />
                 </div>
                 <div className="relative flex justify-center">
-                  <span className="bg-black px-4 text-xs text-white/30 uppercase tracking-wider">or</span>
+                  <span className={`${bgClass} px-4 text-xs ${textSuperMutedClass} uppercase tracking-wider`}>or</span>
                 </div>
               </div>
               
@@ -217,16 +239,16 @@ export default function LandingPage() {
                 onClick={() => setAuthMode('signup')}
                 variant="outline"
                 size="lg"
-                className="w-full border-white/20 text-white/70 hover:text-white hover:bg-white/5 rounded-none px-8 py-5 text-sm"
+                className={`w-full ${ghostBtnClass} rounded-none px-8 py-5 text-sm`}
                 data-testid="signup-btn"
               >
                 <Mail className="h-4 w-4 mr-3" />
                 Sign up with Email
               </Button>
               
-              <p className="text-center text-white/40 text-xs mt-4">
+              <p className={`text-center ${textVeryMutedClass} text-xs mt-4`}>
                 Already have an account?{' '}
-                <button onClick={() => setAuthMode('login')} className="text-white hover:underline">
+                <button onClick={() => setAuthMode('login')} className={`${textClass} hover:underline`}>
                   Sign in with email
                 </button>
               </p>
@@ -234,27 +256,27 @@ export default function LandingPage() {
           </div>
         </div>
 
-        <div className="border-t border-white/10 py-6 px-6">
+        <div className={`border-t ${borderClass} py-6 px-6`}>
           <div className="max-w-4xl mx-auto grid grid-cols-3 gap-4 text-center">
             <div>
-              <p className="font-display text-[10px] text-white/30 tracking-widest uppercase mb-1">The Block</p>
-              <p className="text-[9px] text-white/20">Public Feed</p>
+              <p className={`font-display text-[10px] ${textSuperMutedClass} tracking-widest uppercase mb-1`}>The Block</p>
+              <p className={`text-[9px] ${textSuperMutedClass}`}>Public Feed</p>
             </div>
             <div>
-              <p className="font-display text-[10px] text-white/30 tracking-widest uppercase mb-1">The Cookout</p>
-              <p className="text-[9px] text-white/20">Vetted Circles</p>
+              <p className={`font-display text-[10px] ${textSuperMutedClass} tracking-widest uppercase mb-1`}>The Cookout</p>
+              <p className={`text-[9px] ${textSuperMutedClass}`}>Vetted Circles</p>
             </div>
             <div>
-              <p className="font-display text-[10px] text-white/30 tracking-widest uppercase mb-1">The Stoop</p>
-              <p className="text-[9px] text-white/20">Live Audio</p>
+              <p className={`font-display text-[10px] ${textSuperMutedClass} tracking-widest uppercase mb-1`}>The Stoop</p>
+              <p className={`text-[9px] ${textSuperMutedClass}`}>Live Audio</p>
             </div>
           </div>
         </div>
 
-        <footer className="border-t border-white/10 py-3 px-6">
+        <footer className={`border-t ${borderClass} py-3 px-6`}>
           <div className="max-w-4xl mx-auto flex items-center justify-between">
-            <p className="text-[9px] text-white/20">© 2025 BLVX</p>
-            <div className="flex items-center gap-1.5 text-[9px] text-white/20">
+            <p className={`text-[9px] ${textSuperMutedClass}`}>© 2025 BLVX</p>
+            <div className={`flex items-center gap-1.5 text-[9px] ${textSuperMutedClass}`}>
               <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
               Bonita Online
             </div>
@@ -267,66 +289,66 @@ export default function LandingPage() {
   // Signup view
   if (authMode === 'signup') {
     return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center px-6 py-12 force-dark">
+      <div className={`min-h-screen ${bgClass} flex flex-col items-center justify-center px-6 py-12`}>
         <div className="w-full max-w-sm">
           <img 
-            src="/assets/logo-white.png"
+            src={assets.logo}
             alt="BLVX"
             className="h-10 mx-auto mb-8"
           />
           
-          <h1 className="font-display text-lg tracking-widest uppercase text-center mb-8">Create Account</h1>
+          <h1 className={`font-display text-lg tracking-widest uppercase text-center mb-8 ${textClass}`}>Create Account</h1>
           
           <form onSubmit={handleEmailSignup} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name" className="text-white/60 text-xs uppercase tracking-wider">Name</Label>
+              <Label htmlFor="name" className={`${textVeryMutedClass} text-xs uppercase tracking-wider`}>Name</Label>
               <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+                <User className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${iconMutedClass}`} />
                 <Input
                   id="name"
                   type="text"
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
                   placeholder="Your name"
-                  className="pl-10 bg-transparent border-white/20 focus:border-white rounded-none"
+                  className={`pl-10 ${inputBgClass} ${borderInputClass} focus:border-amber-500 rounded-none`}
                   data-testid="signup-name"
                 />
               </div>
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-white/60 text-xs uppercase tracking-wider">Email</Label>
+              <Label htmlFor="email" className={`${textVeryMutedClass} text-xs uppercase tracking-wider`}>Email</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+                <Mail className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${iconMutedClass}`} />
                 <Input
                   id="email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({...formData, email: e.target.value})}
                   placeholder="you@example.com"
-                  className="pl-10 bg-transparent border-white/20 focus:border-white rounded-none"
+                  className={`pl-10 ${inputBgClass} ${borderInputClass} focus:border-amber-500 rounded-none`}
                   data-testid="signup-email"
                 />
               </div>
             </div>
             
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-white/60 text-xs uppercase tracking-wider">Password</Label>
+              <Label htmlFor="password" className={`${textVeryMutedClass} text-xs uppercase tracking-wider`}>Password</Label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+                <Lock className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${iconMutedClass}`} />
                 <Input
                   id="password"
                   type={showPassword ? "text" : "password"}
                   value={formData.password}
                   onChange={(e) => setFormData({...formData, password: e.target.value})}
                   placeholder="Min. 8 characters"
-                  className="pl-10 pr-10 bg-transparent border-white/20 focus:border-white rounded-none"
+                  className={`pl-10 pr-10 ${inputBgClass} ${borderInputClass} focus:border-amber-500 rounded-none`}
                   data-testid="signup-password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white"
+                  className={`absolute right-3 top-1/2 -translate-y-1/2 ${iconMutedClass} hover:${textClass}`}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -336,23 +358,23 @@ export default function LandingPage() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-white text-black hover:bg-white/90 rounded-none py-6 font-display tracking-widest uppercase"
+              className={`w-full ${primaryBtnClass} rounded-none py-6 font-display tracking-widest uppercase`}
               data-testid="signup-submit"
             >
               {loading ? 'Creating...' : 'Create Account'}
             </Button>
           </form>
           
-          <p className="text-center text-white/40 text-xs mt-6">
+          <p className={`text-center ${textVeryMutedClass} text-xs mt-6`}>
             Already have an account?{' '}
-            <button onClick={() => setAuthMode('login')} className="text-white hover:underline">
+            <button onClick={() => setAuthMode('login')} className={`${textClass} hover:underline`}>
               Sign in
             </button>
           </p>
           
           <button 
             onClick={() => setAuthMode('landing')}
-            className="block w-full text-center text-white/30 text-xs mt-4 hover:text-white"
+            className={`block w-full text-center ${textSuperMutedClass} text-xs mt-4 hover:${textClass}`}
           >
             ← Back
           </button>
@@ -364,28 +386,28 @@ export default function LandingPage() {
   // Login view
   if (authMode === 'login') {
     return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center px-6 py-12 force-dark">
+      <div className={`min-h-screen ${bgClass} flex flex-col items-center justify-center px-6 py-12`}>
         <div className="w-full max-w-sm">
           <img 
-            src="/assets/logo-white.png"
+            src={assets.logo}
             alt="BLVX"
             className="h-10 mx-auto mb-8"
           />
           
-          <h1 className="font-display text-lg tracking-widest uppercase text-center mb-8">Sign In</h1>
+          <h1 className={`font-display text-lg tracking-widest uppercase text-center mb-8 ${textClass}`}>Sign In</h1>
           
           <form onSubmit={handleEmailLogin} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="login-email" className="text-white/60 text-xs uppercase tracking-wider">Email</Label>
+              <Label htmlFor="login-email" className={`${textVeryMutedClass} text-xs uppercase tracking-wider`}>Email</Label>
               <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+                <Mail className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${iconMutedClass}`} />
                 <Input
                   id="login-email"
                   type="email"
                   value={formData.email}
                   onChange={(e) => setFormData({...formData, email: e.target.value})}
                   placeholder="you@example.com"
-                  className="pl-10 bg-transparent border-white/20 focus:border-white rounded-none"
+                  className={`pl-10 ${inputBgClass} ${borderInputClass} focus:border-amber-500 rounded-none`}
                   data-testid="login-email"
                 />
               </div>
@@ -393,7 +415,7 @@ export default function LandingPage() {
             
             <div className="space-y-2">
               <div className="flex items-center justify-between">
-                <Label htmlFor="login-password" className="text-white/60 text-xs uppercase tracking-wider">Password</Label>
+                <Label htmlFor="login-password" className={`${textVeryMutedClass} text-xs uppercase tracking-wider`}>Password</Label>
                 <button
                   type="button"
                   onClick={() => setAuthMode('forgot')}
@@ -404,20 +426,20 @@ export default function LandingPage() {
                 </button>
               </div>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+                <Lock className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${iconMutedClass}`} />
                 <Input
                   id="login-password"
                   type={showPassword ? "text" : "password"}
                   value={formData.password}
                   onChange={(e) => setFormData({...formData, password: e.target.value})}
                   placeholder="Your password"
-                  className="pl-10 pr-10 bg-transparent border-white/20 focus:border-white rounded-none"
+                  className={`pl-10 pr-10 ${inputBgClass} ${borderInputClass} focus:border-amber-500 rounded-none`}
                   data-testid="login-password"
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-white/30 hover:text-white"
+                  className={`absolute right-3 top-1/2 -translate-y-1/2 ${iconMutedClass} hover:${textClass}`}
                 >
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
@@ -430,10 +452,10 @@ export default function LandingPage() {
                 id="remember-me"
                 checked={formData.rememberMe}
                 onChange={(e) => setFormData({...formData, rememberMe: e.target.checked})}
-                className="w-4 h-4 bg-transparent border-white/30 rounded accent-amber-500"
+                className="w-4 h-4 bg-transparent border-gray-300 rounded accent-amber-500"
                 data-testid="remember-me-checkbox"
               />
-              <label htmlFor="remember-me" className="text-white/50 text-xs cursor-pointer">
+              <label htmlFor="remember-me" className={`${textVeryMutedClass} text-xs cursor-pointer`}>
                 Remember me for 30 days
               </label>
             </div>
@@ -441,7 +463,7 @@ export default function LandingPage() {
             <Button
               type="submit"
               disabled={loading}
-              className="w-full bg-white text-black hover:bg-white/90 rounded-none py-6 font-display tracking-widest uppercase"
+              className={`w-full ${primaryBtnClass} rounded-none py-6 font-display tracking-widest uppercase`}
               data-testid="login-submit"
             >
               {loading ? 'Signing in...' : 'Sign In'}
@@ -450,17 +472,17 @@ export default function LandingPage() {
           
           <div className="relative py-6">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-white/10" />
+              <div className={`w-full border-t ${borderClass}`} />
             </div>
             <div className="relative flex justify-center">
-              <span className="bg-black px-4 text-xs text-white/30 uppercase tracking-wider">or</span>
+              <span className={`${bgClass} px-4 text-xs ${textSuperMutedClass} uppercase tracking-wider`}>or</span>
             </div>
           </div>
           
           <Button
             onClick={loginWithApple}
             variant="outline"
-            className="w-full bg-white text-black hover:bg-white/90 rounded-none py-5 mb-3"
+            className={`w-full ${primaryBtnClass} rounded-none py-5 mb-3`}
             data-testid="apple-signin-btn"
           >
             <svg className="h-4 w-4 mr-3" viewBox="0 0 24 24" fill="currentColor">
@@ -472,7 +494,7 @@ export default function LandingPage() {
           <Button
             onClick={login}
             variant="outline"
-            className="w-full border border-white/30 text-white/80 hover:text-white hover:bg-white/5 rounded-none py-5"
+            className={`w-full ${outlineBtnClass} rounded-none py-5`}
             data-testid="google-signin-btn"
           >
             <svg className="h-4 w-4 mr-3" viewBox="0 0 24 24">
@@ -484,16 +506,16 @@ export default function LandingPage() {
             Continue with Google
           </Button>
           
-          <p className="text-center text-white/40 text-xs mt-6">
+          <p className={`text-center ${textVeryMutedClass} text-xs mt-6`}>
             Don't have an account?{' '}
-            <button onClick={() => setAuthMode('signup')} className="text-white hover:underline">
+            <button onClick={() => setAuthMode('signup')} className={`${textClass} hover:underline`}>
               Create one
             </button>
           </p>
           
           <button 
             onClick={() => setAuthMode('landing')}
-            className="block w-full text-center text-white/30 text-xs mt-4 hover:text-white"
+            className={`block w-full text-center ${textSuperMutedClass} text-xs mt-4 hover:${textClass}`}
           >
             ← Back
           </button>
@@ -505,18 +527,18 @@ export default function LandingPage() {
   // Verify email view
   if (authMode === 'verify') {
     return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center px-6 py-12 force-dark">
+      <div className={`min-h-screen ${bgClass} flex flex-col items-center justify-center px-6 py-12`}>
         <div className="w-full max-w-sm">
           <img 
-            src="/assets/logo-white.png"
+            src={assets.logo}
             alt="BLVX"
             className="h-10 mx-auto mb-8"
           />
           
-          <h1 className="font-display text-lg tracking-widest uppercase text-center mb-4">Verify Email</h1>
-          <p className="text-white/50 text-sm text-center mb-8">
+          <h1 className={`font-display text-lg tracking-widest uppercase text-center mb-4 ${textClass}`}>Verify Email</h1>
+          <p className={`${textVeryMutedClass} text-sm text-center mb-8`}>
             Enter the 6-digit code sent to<br />
-            <span className="text-white">{verificationEmail}</span>
+            <span className={textClass}>{verificationEmail}</span>
           </p>
           
           <form onSubmit={handleVerifyEmail} className="space-y-4">
@@ -525,7 +547,7 @@ export default function LandingPage() {
               value={verificationCode}
               onChange={(e) => setVerificationCode(e.target.value.replace(/\D/g, '').slice(0, 6))}
               placeholder="000000"
-              className="text-center text-2xl tracking-[0.5em] bg-transparent border-white/20 focus:border-white rounded-none py-6 font-mono"
+              className={`text-center text-2xl tracking-[0.5em] ${inputBgClass} ${borderInputClass} focus:border-amber-500 rounded-none py-6 font-mono`}
               maxLength={6}
               data-testid="verify-code"
             />
@@ -533,7 +555,7 @@ export default function LandingPage() {
             <Button
               type="submit"
               disabled={loading || verificationCode.length !== 6}
-              className="w-full bg-white text-black hover:bg-white/90 rounded-none py-6 font-display tracking-widest uppercase"
+              className={`w-full ${primaryBtnClass} rounded-none py-6 font-display tracking-widest uppercase`}
               data-testid="verify-submit"
             >
               {loading ? 'Verifying...' : 'Verify'}
@@ -543,14 +565,14 @@ export default function LandingPage() {
           <button
             onClick={handleResendCode}
             disabled={loading}
-            className="block w-full text-center text-white/40 text-xs mt-6 hover:text-white"
+            className={`block w-full text-center ${textVeryMutedClass} text-xs mt-6 hover:${textClass}`}
           >
             Resend code
           </button>
           
           <button 
             onClick={() => setAuthMode('signup')}
-            className="block w-full text-center text-white/30 text-xs mt-4 hover:text-white"
+            className={`block w-full text-center ${textSuperMutedClass} text-xs mt-4 hover:${textClass}`}
           >
             ← Back
           </button>
@@ -562,10 +584,10 @@ export default function LandingPage() {
   // Forgot password view
   if (authMode === 'forgot') {
     return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center px-6 py-12 force-dark">
+      <div className={`min-h-screen ${bgClass} flex flex-col items-center justify-center px-6 py-12`}>
         <div className="w-full max-w-sm">
           <img 
-            src="/assets/logo-white.png"
+            src={assets.logo}
             alt="BLVX"
             className="h-10 mx-auto mb-8"
           />
@@ -575,12 +597,12 @@ export default function LandingPage() {
               <div className="w-16 h-16 bg-amber-500/20 rounded-full flex items-center justify-center mx-auto mb-6">
                 <Mail className="h-8 w-8 text-amber-500" />
               </div>
-              <h1 className="font-display text-xl text-white mb-3">Check your inbox</h1>
-              <p className="text-white/50 text-sm mb-6">
+              <h1 className={`font-display text-xl ${textClass} mb-3`}>Check your inbox</h1>
+              <p className={`${textVeryMutedClass} text-sm mb-6`}>
                 We sent a reset link to<br />
-                <span className="text-white">{forgotEmail}</span>
+                <span className={textClass}>{forgotEmail}</span>
               </p>
-              <p className="text-white/30 text-xs mb-8">
+              <p className={`${textSuperMutedClass} text-xs mb-8`}>
                 The link expires in 1 hour. Check your spam folder if you don't see it.
               </p>
               <button 
@@ -596,23 +618,23 @@ export default function LandingPage() {
             </div>
           ) : (
             <>
-              <h1 className="font-display text-lg tracking-widest uppercase text-center mb-4">Reset Password</h1>
-              <p className="text-white/50 text-sm text-center mb-8">
+              <h1 className={`font-display text-lg tracking-widest uppercase text-center mb-4 ${textClass}`}>Reset Password</h1>
+              <p className={`${textVeryMutedClass} text-sm text-center mb-8`}>
                 No stress. Enter your email and we'll send you a reset link.
               </p>
               
               <form onSubmit={handleForgotPassword} className="space-y-4">
                 <div className="space-y-2">
-                  <Label htmlFor="forgot-email" className="text-white/60 text-xs uppercase tracking-wider">Email</Label>
+                  <Label htmlFor="forgot-email" className={`${textVeryMutedClass} text-xs uppercase tracking-wider`}>Email</Label>
                   <div className="relative">
-                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+                    <Mail className={`absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 ${iconMutedClass}`} />
                     <Input
                       id="forgot-email"
                       type="email"
                       value={forgotEmail}
                       onChange={(e) => setForgotEmail(e.target.value)}
                       placeholder="you@example.com"
-                      className="pl-10 bg-transparent border-white/20 focus:border-white rounded-none"
+                      className={`pl-10 ${inputBgClass} ${borderInputClass} focus:border-amber-500 rounded-none`}
                       data-testid="forgot-email"
                     />
                   </div>
@@ -621,7 +643,7 @@ export default function LandingPage() {
                 <Button
                   type="submit"
                   disabled={loading}
-                  className="w-full bg-white text-black hover:bg-white/90 rounded-none py-6 font-display tracking-widest uppercase"
+                  className={`w-full ${primaryBtnClass} rounded-none py-6 font-display tracking-widest uppercase`}
                   data-testid="forgot-submit"
                 >
                   {loading ? <Loader2 className="h-5 w-5 animate-spin mx-auto" /> : 'Send Reset Link'}
@@ -630,7 +652,7 @@ export default function LandingPage() {
               
               <button 
                 onClick={() => setAuthMode('login')}
-                className="block w-full text-center text-white/30 text-xs mt-6 hover:text-white"
+                className={`block w-full text-center ${textSuperMutedClass} text-xs mt-6 hover:${textClass}`}
               >
                 ← Back to login
               </button>
