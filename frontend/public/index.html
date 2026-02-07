@@ -1,19 +1,11 @@
 <!doctype html>
-<html lang="en" style="background-color: #000000 !important;">
+<html lang="en">
     <head>
         <meta charset="utf-8" />
         <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-        <meta name="theme-color" content="#000000" />
-        <meta name="color-scheme" content="dark" />
-        
-        <!-- CRITICAL: Force dark mode on mobile -->
-        <style>
-            html, body, #root { 
-                background-color: #000000 !important; 
-                color: #ffffff !important; 
-                min-height: 100vh;
-            }
-        </style>
+        <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+        <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)" />
+        <meta name="color-scheme" content="light dark" />
         
         <!-- BLVX Branding -->
         <title>BLVX</title>
@@ -24,18 +16,19 @@
         <meta property="og:title" content="BLVX" />
         <meta property="og:description" content="High-Context Social. We serve Plates." />
         <meta property="og:site_name" content="BLVX" />
-        <meta property="og:image" content="https://static.prod-images.emergentagent.com/jobs/133ef95f-2b48-4c4c-95d3-a6448bf50edd/images/ecdd9836342320a039d857bdf114a487d8051b0c974bfa8d8f1783277a97ce02.png" />
+        <meta property="og:image" content="/assets/og-image.png" />
         <meta property="og:url" content="https://blvx.social" />
         
         <!-- Twitter Card -->
         <meta name="twitter:card" content="summary_large_image" />
         <meta name="twitter:title" content="BLVX" />
         <meta name="twitter:description" content="High-Context Social. We serve Plates." />
-        <meta name="twitter:image" content="https://static.prod-images.emergentagent.com/jobs/133ef95f-2b48-4c4c-95d3-a6448bf50edd/images/ecdd9836342320a039d857bdf114a487d8051b0c974bfa8d8f1783277a97ce02.png" />
+        <meta name="twitter:image" content="/assets/og-image.png" />
         
         <!-- PWA / iOS -->
+        <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="BLVX" />
         <link rel="apple-touch-icon" href="/assets/logo-icon.png" />
         
@@ -44,29 +37,10 @@
         
         <!-- Manifest -->
         <link rel="manifest" href="/manifest.json" />
-        
-        <script src="https://assets.emergent.sh/scripts/emergent-main.js"></script>
-        <script>
-            // Only load visual edit scripts when inside an iframe
-            if (window.self !== window.top) {
-                var debugMonitorScript = document.createElement('script');
-                debugMonitorScript.src = 'https://assets.emergent.sh/scripts/debug-monitor.js';
-                document.head.appendChild(debugMonitorScript);
-
-                window.tailwind = window.tailwind || {};
-                tailwind.config = {
-                    corePlugins: { preflight: false },
-                };
-
-                var tailwindScript = document.createElement('script');
-                tailwindScript.src = 'https://cdn.tailwindcss.com';
-                document.head.appendChild(tailwindScript);
-            }
-        </script>
     </head>
-    <body style="background-color: #000000 !important; color: #ffffff !important;">
+    <body>
         <noscript>You need to enable JavaScript to run this app.</noscript>
-        <div id="root" style="background-color: #000000 !important;"></div>
+        <div id="root"></div>
         <script>
             !(function (t, e) {
                 var o, n, p, r;

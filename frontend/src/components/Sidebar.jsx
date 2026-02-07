@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Radio, Search, MessageCircle, User, Settings, LogOut, Sparkles, Ticket, Plus, Calendar } from 'lucide-react';
+import { Home, Radio, Search, MessageCircle, User, Settings, LogOut, Sparkles, Ticket, Plus, Calendar, Sun, Moon } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useNotificationCount } from '@/hooks/useNotificationCount';
@@ -23,7 +23,7 @@ export const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { assets, isDark } = useTheme();
+  const { assets, isDark, toggleTheme } = useTheme();
   const { count: unreadCount } = useNotificationCount();
   const [composerOpen, setComposerOpen] = useState(false);
 
@@ -117,6 +117,20 @@ export const Sidebar = () => {
             <Settings className="h-5 w-5" strokeWidth={1.5} />
             <span className="font-medium text-sm">Settings</span>
           </Link>
+          
+          {/* Theme Toggle - Cinematic Mode */}
+          <button
+            onClick={toggleTheme}
+            className={cn(
+              "flex items-center gap-4 px-4 py-3 mb-1 transition-colors duration-200 w-full text-left",
+              `${textMutedClass} ${hoverBgClass} hover:${textClass}`
+            )}
+            data-testid="sidebar-theme-toggle"
+            aria-label={isDark ? 'Switch to light mode' : 'Switch to cinematic mode'}
+          >
+            {isDark ? <Sun className="h-5 w-5" strokeWidth={1.5} /> : <Moon className="h-5 w-5" strokeWidth={1.5} />}
+            <span className="font-medium text-sm">{isDark ? 'Light Mode' : 'Cinematic Mode'}</span>
+          </button>
           
           {/* New Post Button - below Settings, pushes down with margin */}
           <div className="mt-5 mb-auto px-1">

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, Settings, LogOut, User, Ticket, Bell } from 'lucide-react';
+import { Menu, Settings, LogOut, User, Ticket, Bell, Sun, Moon } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useNotificationCount } from '@/hooks/useNotificationCount';
@@ -17,7 +17,7 @@ import { Separator } from '@/components/ui/separator';
 
 export const Header = () => {
   const { user, logout } = useAuth();
-  const { assets, isDark } = useTheme();
+  const { assets, isDark, toggleTheme } = useTheme();
   const { count: unreadCount } = useNotificationCount();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -51,6 +51,17 @@ export const Header = () => {
 
           {/* Right side */}
           <div className="flex items-center gap-2">
+            {/* Theme Toggle */}
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className={textMutedClass}
+              onClick={toggleTheme}
+              aria-label={isDark ? 'Switch to light mode' : 'Switch to cinematic mode'}
+            >
+              {isDark ? <Sun className="h-5 w-5" /> : <Moon className="h-5 w-5" />}
+            </Button>
+            
             {/* Notifications */}
             <Button 
               variant="ghost" 

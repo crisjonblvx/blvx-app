@@ -170,7 +170,7 @@ function AppRouter() {
 function App() {
   return (
     <ErrorBoundary>
-      <div className="app-container bg-black min-h-screen" style={{ backgroundColor: '#000000', color: '#ffffff' }}>
+      <div className="app-container min-h-screen bg-background text-foreground">
         <NoiseOverlay />
         <BrowserRouter>
           <ThemeProvider>
@@ -182,12 +182,7 @@ function App() {
         <Toaster 
           position="top-center" 
           toastOptions={{
-            style: {
-              background: '#000',
-              border: '1px solid #333',
-              color: '#fff',
-              fontFamily: 'Inter, sans-serif',
-            },
+            className: 'bg-card border-border text-foreground font-sans',
           }}
         />
       </div>
