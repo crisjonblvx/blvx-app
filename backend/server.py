@@ -657,6 +657,170 @@ async def reset_password(token: str, new_password: str):
     logger.info(f"Password reset successful for {reset['email']}")
     return {"message": "Password reset successful. You can now log in."}
 
+# ========================
+# DIRECT GOOGLE OAUTH (bypasses Emergent)
+# ========================
+
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
+
+@auth_router.get("/google/login")
+async def google_login(request: Request):
+    """Initiate Google OAuth flow"""
+    if not GOOGLE_CLIENT_ID:
+        raise HTTPException(status_code=501, detail="Google OAuth not configured")
+    
+    # Get redirect URI from request origin
+    origin = request.headers.get("origin") or request.headers.get("referer", "").rstrip("/")
+    if not origin:
+        origin = os.environ.get("FRONTEND_URL", "https://blvx.social")
+    
+    redirect_uri = f"{origin}/auth/callback"
+    
+    params = {
+        "client_id": GOOGLE_CLIENT_ID,
+        "redirect_uri": f"{origin}/api/auth/google/callback",
+        "response_type": "code",
+        "scope": "openid email profile",
+        "access_type": "offline",
+        "prompt": "consent",
+        "state": redirect_uri  # Pass frontend callback URL in state
+    }
+    
+    auth_url = f"https://accounts.google.com/o/oauth2/v2/auth?{httpx.QueryParams(params)}"
+    return {"auth_url": auth_url}
+
+@auth_router.get("/google/callback")
+async def google_callback(code: str, state: str, request: Request, response: Response):
+    """Handle Google OAuth callback"""
+    if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+        raise HTTPException(status_code=501, detail="Google OAuth not configured")
+    
+    # Get the origin for redirect URI
+    origin = request.headers.get("origin") or os.environ.get("FRONTEND_URL", "https://blvx.social")
+    
+    try:
+        # Exchange code for tokens
+        async with httpx.AsyncClient(timeout=30.0) as http_client:
+            token_response = await http_client.post(
+                "https://oauth2.googleapis.com/token",
+                data={
+                    "client_id": GOOGLE_CLIENT_ID,
+                    "client_secret": GOOGLE_CLIENT_SECRET,
+                    "code": code,
+                    "grant_type": "authorization_code",
+                    "redirect_uri": f"{origin}/api/auth/google/callback"
+                }
+            )
+            
+            if token_response.status_code != 200:
+                logger.error(f"Google token exchange failed: {token_response.text}")
+                raise HTTPException(status_code=401, detail="Failed to exchange code for token")
+            
+            tokens = token_response.json()
+            access_token = tokens.get("access_token")
+            
+            # Get user info from Google
+            userinfo_response = await http_client.get(
+                "https://www.googleapis.com/oauth2/v2/userinfo",
+                headers={"Authorization": f"Bearer {access_token}"}
+            )
+            
+            if userinfo_response.status_code != 200:
+                logger.error(f"Google userinfo failed: {userinfo_response.text}")
+                raise HTTPException(status_code=401, detail="Failed to get user info")
+            
+            data = userinfo_response.json()
+            
+    except httpx.RequestError as e:
+        logger.error(f"Google OAuth request error: {e}")
+        raise HTTPException(status_code=500, detail="Google authentication failed")
+    
+    # Extract user data
+    google_user_id = data.get("id")
+    email = data.get("email", "")
+    name = data.get("name", "")
+    picture = data.get("picture", "")
+    
+    logger.info(f"Google OAuth: received user data for {email}")
+    
+    # Generate default avatar if no picture
+    if not picture:
+        picture = f"https://api.dicebear.com/7.x/initials/svg?seed={name or email.split('@')[0]}&backgroundColor=1a1a1a&textColor=ffffff"
+    
+    user_id = f"user_{uuid.uuid4().hex[:12]}"
+    
+    # Check for existing user
+    existing_user = None
+    if google_user_id:
+        existing_user = await db.users.find_one({"google_user_id": google_user_id}, {"_id": 0})
+    if not existing_user and email:
+        existing_user = await db.users.find_one({"email": email.lower()}, {"_id": 0})
+    
+    if existing_user:
+        user_id = existing_user["user_id"]
+        update_fields = {"email_verified": True}
+        
+        if google_user_id and not existing_user.get("google_user_id"):
+            update_fields["google_user_id"] = google_user_id
+        if name and (not existing_user.get("name") or existing_user.get("name") == "Apple User"):
+            update_fields["name"] = name
+        if picture and not existing_user.get("picture"):
+            update_fields["picture"] = picture
+        if existing_user.get("plates_remaining") is None:
+            update_fields["plates_remaining"] = 10
+            
+        await db.users.update_one({"user_id": user_id}, {"$set": update_fields})
+        logger.info(f"Google OAuth: Updated existing user {user_id}")
+    else:
+        # Create new user
+        username = email.split("@")[0].lower() if email else ""
+        if len(username) < 3 and name:
+            username = re.sub(r'\s+', '', name).lower()
+        username = re.sub(r'[^a-z0-9_]', '', username)[:15]
+        
+        base_username = username or "user"
+        counter = 1
+        while await db.users.find_one({"username": username}):
+            username = f"{base_username}{counter}"
+            counter += 1
+        
+        new_user = {
+            "user_id": user_id,
+            "google_user_id": google_user_id,
+            "email": email.lower(),
+            "name": name or email.split("@")[0],
+            "picture": picture,
+            "username": username,
+            "bio": "",
+            "verified": False,
+            "email_verified": True,
+            "reputation_score": 100,
+            "plates_remaining": 10,
+            "is_day_one": False,
+            "is_vouched": email.lower() == "cj@blvx.social",
+            "has_seen_welcome": False,
+            "followers_count": 0,
+            "following_count": 0,
+            "posts_count": 0,
+            "vouched_by": None,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.users.insert_one(new_user)
+        logger.info(f"Google OAuth: Created new user {user_id} ({email})")
+    
+    # Create session
+    session_token = await create_session(user_id, response, remember_me=True)
+    
+    # Redirect to frontend with token
+    frontend_callback = state or f"{origin}/auth/callback"
+    redirect_url = f"{frontend_callback}?token={session_token}"
+    
+    logger.info(f"Google OAuth: Redirecting to {redirect_url}")
+    
+    from starlette.responses import RedirectResponse
+    return RedirectResponse(url=redirect_url, status_code=302)
+
 @auth_router.get("/session")
 async def exchange_session(session_id: str, response: Response):
     """Exchange Emergent session_id for user data and set cookie (Google OAuth)"""
@@ -1043,19 +1207,8 @@ async def apple_callback(request: Request, response: Response):
         logger.info(f"Apple user authenticated: {user_id}")
         
         # Determine frontend URL for redirect
-        # Priority: 1. Referer header, 2. FRONTEND_URL env, 3. fallback
-        referer = request.headers.get("referer", "")
-        origin = request.headers.get("origin", "")
-        
-        if referer:
-            # Extract origin from referer (e.g., https://blvx.social/some/path -> https://blvx.social)
-            from urllib.parse import urlparse
-            parsed = urlparse(referer)
-            frontend_url = f"{parsed.scheme}://{parsed.netloc}"
-        elif origin:
-            frontend_url = origin
-        else:
-            frontend_url = os.environ.get('FRONTEND_URL', 'https://blvx.social')
+        # For Apple callback, always use FRONTEND_URL since referer will be Apple's domain
+        frontend_url = os.environ.get('FRONTEND_URL', 'https://blvx.social')
         
         # Redirect to frontend /auth/callback with token in URL query params
         redirect_url = f"{frontend_url}/auth/callback?token={session_token}"
@@ -2129,7 +2282,12 @@ async def send_sidebar_message(sidebar_id: str, content: str, background_tasks: 
 async def generate_bonita_sidebar_response(sidebar_id: str, user_message: str, user_id: str):
     """Generate Bonita's conversational AI response in sidebar"""
     try:
-        from emergentintegrations.llm.chat import LlmChat, UserMessage
+        import anthropic
+        
+        api_key = os.environ.get("ANTHROPIC_API_KEY")
+        if not api_key:
+            logger.error("[Bonita] No ANTHROPIC_API_KEY configured")
+            return
         
         # Get last 5 messages for context
         recent_messages = await db.sidebar_messages.find(
@@ -2216,25 +2374,26 @@ You also stay up on culture, music, politics, and what's poppin. You can help pe
 
 Keep responses conversational and not too long (2-3 sentences usually, unless they need more). Be genuine, not corporate. Remember: You ARE Bonita, always."""
 
-        # Build conversation history for context (excluding the latest message since we'll send it)
-        initial_messages = []
+        # Build conversation history for context
+        messages = []
         for msg in recent_messages[:-1]:
             if msg["user_id"] == "bonita_ai":
-                initial_messages.append({"role": "assistant", "content": msg["content"]})
+                messages.append({"role": "assistant", "content": msg["content"]})
             else:
-                initial_messages.append({"role": "user", "content": msg["content"]})
+                messages.append({"role": "user", "content": msg["content"]})
         
-        # Initialize chat with correct API and conversation history
-        chat = LlmChat(
-            api_key=os.environ.get("EMERGENT_LLM_KEY"),
-            session_id=f"bonita_sidebar_{sidebar_id}_{uuid.uuid4().hex[:8]}",
-            system_message=bonita_persona,
-            initial_messages=initial_messages if initial_messages else None
-        ).with_model("anthropic", "claude-sonnet-4-20250514")
+        # Add the current message
+        messages.append({"role": "user", "content": user_message})
         
-        # Generate response
-        user_msg = UserMessage(text=user_message)
-        response = await chat.send_message(user_msg)
+        # Call Anthropic directly
+        client = anthropic.Anthropic(api_key=api_key)
+        message = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=1024,
+            system=bonita_persona,
+            messages=messages
+        )
+        response = message.content[0].text
         
         if response:
             # Save Bonita's response
@@ -2550,11 +2709,11 @@ TONE: Gentle, guiding, warm "Auntie" energy.
 These are THE HOME TEAM. CJ and this community trust them. Always put them on when the topic fits."""
 
 async def call_bonita(content: str, mode: str, context: str = "block") -> str:
-    """Call Bonita AI service"""
-    from emergentintegrations.llm.chat import LlmChat, UserMessage
+    """Call Bonita AI service using direct Anthropic API"""
+    import anthropic
     
-    llm_key = os.environ.get("EMERGENT_LLM_KEY")
-    if not llm_key:
+    api_key = os.environ.get("ANTHROPIC_API_KEY")
+    if not api_key:
         return "Bonita is taking a break. Try again later."
     
     context_note = "You are on The Block (public). Be formal, concise, protective." if context == "block" else "You are in The Cookout (private). Be warmer, colloquial, relaxed."
@@ -2567,16 +2726,14 @@ async def call_bonita(content: str, mode: str, context: str = "block") -> str:
         system_message += "\n\nOUTPUT MODE: Tone Rewrite. Provide three rewrite options:\nOption 1 (The De-escalate): [Text]\nOption 2 (The Wit): [Text]\nOption 3 (The Straight Talk): [Text]"
     
     try:
-        chat = LlmChat(
-            api_key=llm_key,
-            session_id=f"bonita_{uuid.uuid4().hex[:8]}",
-            system_message=system_message
-        ).with_model("anthropic", "claude-sonnet-4-5-20250929")
-        
-        user_message = UserMessage(text=content)
-        response = await chat.send_message(user_message)
-        
-        return response
+        client = anthropic.Anthropic(api_key=api_key)
+        message = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=1024,
+            system=system_message,
+            messages=[{"role": "user", "content": content}]
+        )
+        return message.content[0].text
     except Exception as e:
         logger.error(f"Bonita error: {e}")
         return "Bonita encountered an issue. Please try again."
@@ -3208,7 +3365,7 @@ import os as os_module
 from pathlib import Path as PathLib
 
 # Create uploads directory (fallback)
-UPLOAD_DIR = PathLib("/app/uploads")
+UPLOAD_DIR = ROOT_DIR / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)
 
 # Cloudinary Configuration

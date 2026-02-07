@@ -23,7 +23,7 @@ export const Sidebar = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { user, logout } = useAuth();
-  const { assets } = useTheme();
+  const { assets, isDark } = useTheme();
   const { count: unreadCount } = useNotificationCount();
   const [composerOpen, setComposerOpen] = useState(false);
 
@@ -31,11 +31,21 @@ export const Sidebar = () => {
     await logout();
   };
 
+  // Theme-aware classes
+  const bgClass = isDark ? 'bg-black' : 'bg-white';
+  const borderClass = isDark ? 'border-white/10' : 'border-black/10';
+  const textClass = isDark ? 'text-white' : 'text-black';
+  const textMutedClass = isDark ? 'text-white/60' : 'text-black/60';
+  const textVeryMutedClass = isDark ? 'text-white/40' : 'text-black/40';
+  const hoverBgClass = isDark ? 'hover:bg-white/5' : 'hover:bg-black/5';
+  const activeBgClass = isDark ? 'bg-white text-black' : 'bg-black text-white';
+  const badgeClass = isDark ? 'bg-white text-black' : 'bg-black text-white';
+
   return (
     <>
-      <aside className="hidden md:flex fixed left-0 top-0 bottom-0 w-64 flex-col border-r border-white/10 bg-black z-40">
+      <aside className={`hidden md:flex fixed left-0 top-0 bottom-0 w-64 flex-col border-r ${borderClass} ${bgClass} z-40`}>
         {/* Logo with amber accent */}
-        <div className="p-6 border-b border-white/5">
+        <div className={`p-6 border-b ${borderClass}`}>
           <Link to="/home" data-testid="sidebar-logo" className="block">
             <img 
               src={assets.logo}
@@ -59,15 +69,15 @@ export const Sidebar = () => {
                 className={cn(
                   "flex items-center gap-4 px-4 py-3 mb-1 transition-colors duration-200",
                   isActive 
-                    ? "bg-white text-black" 
-                    : "text-white/60 hover:bg-white/5 hover:text-white"
+                    ? activeBgClass 
+                    : `${textMutedClass} ${hoverBgClass} hover:${textClass}`
                 )}
                 data-testid={`sidebar-${label.toLowerCase().replace(' ', '-')}`}
               >
                 <div className="relative">
                   <Icon className="h-5 w-5" strokeWidth={1.5} />
                   {showBadge && (
-                    <span className="absolute -top-1 -right-1 bg-white text-black text-[9px] font-bold min-w-[14px] h-[14px] rounded-full flex items-center justify-center">
+                    <span className={`absolute -top-1 -right-1 ${badgeClass} text-[9px] font-bold min-w-[14px] h-[14px] rounded-full flex items-center justify-center`}>
                       {unreadCount > 9 ? '9+' : unreadCount}
                     </span>
                   )}
@@ -84,8 +94,8 @@ export const Sidebar = () => {
               className={cn(
                 "flex items-center gap-4 px-4 py-3 mb-1 transition-colors duration-200",
                 location.pathname.startsWith('/profile') 
-                  ? "bg-white text-black" 
-                  : "text-white/60 hover:bg-white/5 hover:text-white"
+                  ? activeBgClass 
+                  : `${textMutedClass} ${hoverBgClass} hover:${textClass}`
               )}
               data-testid="sidebar-profile"
             >
@@ -99,8 +109,8 @@ export const Sidebar = () => {
             className={cn(
               "flex items-center gap-4 px-4 py-3 mb-1 transition-colors duration-200",
               location.pathname === '/settings' 
-                ? "bg-white text-black" 
-                : "text-white/60 hover:bg-white/5 hover:text-white"
+                ? activeBgClass 
+                : `${textMutedClass} ${hoverBgClass} hover:${textClass}`
             )}
             data-testid="sidebar-settings"
           >
@@ -112,7 +122,7 @@ export const Sidebar = () => {
           <div className="mt-5 mb-auto px-1">
             <Button
               onClick={() => setComposerOpen(true)}
-              className="w-full h-12 bg-white text-black hover:bg-white/90 font-display tracking-wider text-sm"
+              className={`w-full h-12 ${isDark ? 'bg-white text-black hover:bg-white/90' : 'bg-black text-white hover:bg-black/90'} font-display tracking-wider text-sm`}
               data-testid="sidebar-new-post-btn"
             >
               <Plus className="h-5 w-5 mr-2" />
@@ -123,32 +133,32 @@ export const Sidebar = () => {
 
         {/* User Section */}
         {user && (
-          <div className="p-4 border-t border-white/10">
+          <div className={`p-4 border-t ${borderClass}`}>
             {/* Plates remaining */}
-            <div className="flex items-center gap-2 text-xs text-white/40 mb-4 px-2">
+            <div className={`flex items-center gap-2 text-xs ${textVeryMutedClass} mb-4 px-2`}>
               <Ticket className="h-4 w-4" />
               <span>{user.plates_remaining ?? 10} Plates</span>
             </div>
             
             <div className="flex items-center gap-3 mb-4">
-              <Avatar className="h-10 w-10 border border-white/20">
+              <Avatar className={`h-10 w-10 border ${borderClass}`}>
                 <AvatarImage 
-                  src={user.picture || `https://api.dicebear.com/7.x/initials/svg?seed=${user.name || 'U'}&backgroundColor=1a1a1a&textColor=ffffff`} 
+                  src={user.picture || `https://api.dicebear.com/7.x/initials/svg?seed=${user.name || 'U'}&backgroundColor=${isDark ? '1a1a1a' : 'f5f5f5'}&textColor=${isDark ? 'ffffff' : '111111'}`} 
                   alt={user.name || 'User'} 
                 />
-                <AvatarFallback className="bg-white/10 text-white text-sm">
+                <AvatarFallback className={`${isDark ? 'bg-white/10 text-white' : 'bg-black/10 text-black'} text-sm`}>
                   {(user.name || user.username || 'U').charAt(0).toUpperCase()}
                 </AvatarFallback>
               </Avatar>
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-white text-sm truncate">{user.name || 'User'}</p>
-                <p className="text-xs text-white/40 truncate">@{user.username || 'user'}</p>
+                <p className={`font-medium ${textClass} text-sm truncate`}>{user.name || 'User'}</p>
+                <p className={`text-xs ${textVeryMutedClass} truncate`}>@{user.username || 'user'}</p>
               </div>
             </div>
             
             <Button 
               variant="ghost" 
-              className="w-full justify-start text-white/40 hover:text-white hover:bg-white/5 text-sm"
+              className={`w-full justify-start ${textVeryMutedClass} hover:${textClass} ${hoverBgClass} text-sm`}
               onClick={handleLogout}
               data-testid="sidebar-logout"
             >

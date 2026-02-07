@@ -17,10 +17,18 @@ import { Separator } from '@/components/ui/separator';
 
 export const Header = () => {
   const { user, logout } = useAuth();
-  const { assets } = useTheme();
+  const { assets, isDark } = useTheme();
   const { count: unreadCount } = useNotificationCount();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
+
+  // Theme-aware classes
+  const borderClass = isDark ? 'border-white/10' : 'border-black/10';
+  const textClass = isDark ? 'text-white' : 'text-black';
+  const textMutedClass = isDark ? 'text-white/60' : 'text-black/60';
+  const textVeryMutedClass = isDark ? 'text-white/50' : 'text-black/50';
+  const bgClass = isDark ? 'bg-black' : 'bg-white';
+  const hoverBgClass = isDark ? 'hover:bg-white/5' : 'hover:bg-black/5';
 
   const handleLogout = async () => {
     setOpen(false);
@@ -30,7 +38,7 @@ export const Header = () => {
   return (
     <header className="fixed top-0 left-0 right-0 z-50 md:hidden pt-safe">
       {/* Main header bar */}
-      <div className="glass border-b border-white/10">
+      <div className={`glass border-b ${borderClass}`}>
         <div className="flex items-center justify-between px-4 h-14">
           {/* Logo - More prominent */}
           <Link to="/home" data-testid="header-logo" className="flex items-center gap-2">
@@ -47,7 +55,7 @@ export const Header = () => {
             <Button 
               variant="ghost" 
               size="icon" 
-              className="text-white/60 relative"
+              className={`${textMutedClass} relative`}
               onClick={() => navigate('/gc')}
             >
               <Bell className="h-5 w-5" />
@@ -59,27 +67,27 @@ export const Header = () => {
             {/* Menu Button */}
             <Sheet open={open} onOpenChange={setOpen}>
               <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="text-white/60" data-testid="header-menu-btn">
+                <Button variant="ghost" size="icon" className={textMutedClass} data-testid="header-menu-btn">
                   <Menu className="h-5 w-5" />
                 </Button>
               </SheetTrigger>
-              <SheetContent side="right" className="bg-black border-l border-white/10 w-[280px]">
+              <SheetContent side="right" className={`${bgClass} border-l ${borderClass} w-[280px]`}>
                 <SheetHeader className="text-left">
-                  <SheetTitle className="text-white font-display tracking-widest text-sm">MENU</SheetTitle>
+                  <SheetTitle className={`${textClass} font-display tracking-widest text-sm`}>MENU</SheetTitle>
                 </SheetHeader>
                 
                 {user && (
                   <div className="mt-6">
                     <div className="flex items-center gap-3 mb-4">
-                      <Avatar className="h-12 w-12 border border-white/20">
-                        <AvatarImage src={user.picture || `https://api.dicebear.com/7.x/initials/svg?seed=${user.name || 'U'}&backgroundColor=1a1a1a&textColor=ffffff`} alt={user.name || 'User'} />
-                        <AvatarFallback className="bg-white/10 text-white">
+                      <Avatar className={`h-12 w-12 border ${borderClass}`}>
+                        <AvatarImage src={user.picture || `https://api.dicebear.com/7.x/initials/svg?seed=${user.name || 'U'}&backgroundColor=${isDark ? '1a1a1a' : 'f5f5f5'}&textColor=${isDark ? 'ffffff' : '111111'}`} alt={user.name || 'User'} />
+                        <AvatarFallback className={isDark ? 'bg-white/10 text-white' : 'bg-black/10 text-black'}>
                           {(user.name || user.username || 'U')?.charAt(0)?.toUpperCase() || 'U'}
                         </AvatarFallback>
                       </Avatar>
                       <div>
-                        <p className="font-medium text-white">{user.name || user.username || 'User'}</p>
-                        <p className="text-sm text-white/50">@{user.username || 'user'}</p>
+                        <p className={`font-medium ${textClass}`}>{user.name || user.username || 'User'}</p>
+                        <p className={`text-sm ${textVeryMutedClass}`}>@{user.username || 'user'}</p>
                       </div>
                     </div>
                     
@@ -89,12 +97,12 @@ export const Header = () => {
                       <span>{user.plates_remaining || 0} Plates remaining</span>
                     </div>
                     
-                    <Separator className="bg-white/10 my-4" />
+                    <Separator className={isDark ? 'bg-white/10' : 'bg-black/10'} />
                     
-                    <nav className="space-y-1">
+                    <nav className="space-y-1 mt-4">
                       <Button 
                         variant="ghost" 
-                        className="w-full justify-start text-white hover:bg-white/5"
+                        className={`w-full justify-start ${textClass} ${hoverBgClass}`}
                         onClick={() => {
                           setOpen(false);
                           navigate(`/profile/${user.username || 'me'}`);
@@ -106,7 +114,7 @@ export const Header = () => {
                       </Button>
                       <Button 
                         variant="ghost" 
-                        className="w-full justify-start text-white hover:bg-white/5"
+                        className={`w-full justify-start ${textClass} ${hoverBgClass}`}
                         onClick={() => {
                           setOpen(false);
                           navigate('/settings');
@@ -117,11 +125,11 @@ export const Header = () => {
                         Settings
                       </Button>
                       
-                      <Separator className="bg-white/10 my-4" />
+                      <Separator className={`my-4 ${isDark ? 'bg-white/10' : 'bg-black/10'}`} />
                       
                       <Button 
                         variant="ghost" 
-                        className="w-full justify-start text-white/50 hover:text-white hover:bg-white/5"
+                        className={`w-full justify-start ${textVeryMutedClass} hover:${textClass} ${hoverBgClass}`}
                         onClick={handleLogout}
                         data-testid="menu-logout-btn"
                       >

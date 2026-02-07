@@ -1,6 +1,7 @@
 import { Link, useLocation } from 'react-router-dom';
 import { Home, Radio, Search, MessageCircle, User, MessageSquare } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 import { useNotificationCount } from '@/hooks/useNotificationCount';
 import { cn } from '@/lib/utils';
 
@@ -14,13 +15,19 @@ const navItems = [
 export const BottomNav = () => {
   const location = useLocation();
   const { user } = useAuth();
+  const { isDark } = useTheme();
   const { count: unreadCount } = useNotificationCount();
+
+  const borderClass = isDark ? 'border-white/10' : 'border-black/10';
+  const textActiveClass = isDark ? 'text-white' : 'text-black';
+  const textInactiveClass = isDark ? 'text-white/40 hover:text-white/70' : 'text-black/40 hover:text-black/70';
+  const badgeClass = isDark ? 'bg-white text-black' : 'bg-black text-white';
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 md:hidden pb-safe">
       {/* Amber accent line at top */}
       <div className="h-0.5 bg-gradient-to-r from-transparent via-amber-500/50 to-transparent" />
-      <div className="glass border-t border-white/10">
+      <div className={`glass border-t ${borderClass}`}>
         <div className="flex items-center justify-around h-16">
         {navItems.map(({ path, icon: Icon, label }) => {
           const isActive = location.pathname === path;
@@ -32,14 +39,14 @@ export const BottomNav = () => {
               to={path}
               className={cn(
                 "flex flex-col items-center justify-center w-16 h-full relative transition-colors duration-200",
-                isActive ? "text-white" : "text-white/40 hover:text-white/70"
+                isActive ? textActiveClass : textInactiveClass
               )}
               data-testid={`nav-${label.toLowerCase()}`}
             >
               <div className="relative">
                 <Icon className="h-5 w-5" strokeWidth={isActive ? 2 : 1.5} />
                 {showBadge && (
-                  <span className="absolute -top-1 -right-1.5 bg-white text-black text-[9px] font-bold min-w-[14px] h-[14px] rounded-full flex items-center justify-center">
+                  <span className={`absolute -top-1 -right-1.5 ${badgeClass} text-[9px] font-bold min-w-[14px] h-[14px] rounded-full flex items-center justify-center`}>
                     {unreadCount > 9 ? '9+' : unreadCount}
                   </span>
                 )}
@@ -59,7 +66,7 @@ export const BottomNav = () => {
           to={user ? `/profile/${user.username || 'me'}` : '/'}
           className={cn(
             "flex flex-col items-center justify-center w-16 h-full relative transition-colors duration-200",
-            location.pathname.startsWith('/profile') ? "text-white" : "text-white/40 hover:text-white/70"
+            location.pathname.startsWith('/profile') ? textActiveClass : textInactiveClass
           )}
           data-testid="nav-profile"
         >

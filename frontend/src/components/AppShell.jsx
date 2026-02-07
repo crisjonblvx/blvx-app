@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { useTheme } from '@/context/ThemeContext';
 import { BottomNav } from '@/components/BottomNav';
 import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
@@ -11,9 +12,15 @@ import { Skeleton } from '@/components/ui/skeleton';
 
 export const AppShell = ({ children }) => {
   const { user, loading, isAuthenticated, checkAuth } = useAuth();
+  const { isDark } = useTheme();
   const navigate = useNavigate();
   const checkedRef = useRef(false);
   const [lookoutOpen, setLookoutOpen] = useState(false);
+
+  const bgClass = isDark ? 'bg-black' : 'bg-white';
+  const borderClass = isDark ? 'border-white/10' : 'border-black/10';
+  const textMutedClass = isDark ? 'text-white/20' : 'text-black/40';
+  const spinnerClass = isDark ? 'border-white/20 border-t-white' : 'border-black/20 border-t-black';
 
   useEffect(() => {
     // Only redirect if we've finished loading and confirmed not authenticated
@@ -29,7 +36,7 @@ export const AppShell = ({ children }) => {
   // Show loading state while checking auth OR if user data not yet loaded
   if (loading || (isAuthenticated && !user)) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className={`min-h-screen ${bgClass} flex items-center justify-center`}>
         <div className="space-y-4 w-full max-w-md p-6">
           <Skeleton className="h-8 w-24 mx-auto" />
           <Skeleton className="h-4 w-full" />
@@ -43,16 +50,16 @@ export const AppShell = ({ children }) => {
   // If not authenticated after loading, show nothing (redirect will happen)
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
+      <div className={`min-h-screen ${bgClass} flex items-center justify-center`}>
         <div className="text-center">
-          <div className="w-10 h-10 border-2 border-white/20 border-t-white rounded-full animate-spin mx-auto" />
+          <div className={`w-10 h-10 border-2 ${spinnerClass} rounded-full animate-spin mx-auto`} />
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black">
+    <div className={`min-h-screen ${bgClass}`}>
       {/* Mobile Header */}
       <Header />
       
@@ -71,11 +78,11 @@ export const AppShell = ({ children }) => {
           </div>
           
           {/* Right Sidebar - "The Word" Trending Widget (Desktop Only) */}
-          <aside className="hidden lg:block w-72 flex-shrink-0 sticky top-0 h-screen overflow-y-auto border-l border-white/10 p-4">
+          <aside className={`hidden lg:block w-72 flex-shrink-0 sticky top-0 h-screen overflow-y-auto border-l ${borderClass} p-4`}>
             <TrendingWidget className="mb-6" />
             
             {/* Footer */}
-            <div className="mt-8 text-[10px] text-white/20 space-y-1">
+            <div className={`mt-8 text-[10px] ${textMutedClass} space-y-1`}>
               <p>© 2025 BLVX</p>
               <p>Culture first. Scale second.</p>
               <div className="flex items-center gap-1.5 mt-2">

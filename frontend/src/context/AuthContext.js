@@ -124,10 +124,19 @@ export const AuthProvider = ({ children }) => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [location.pathname]);
 
-  const login = () => {
-    // Use current origin for OAuth redirect - works on all domains (preview, production, custom)
-    const redirectUrl = window.location.origin + '/auth/callback';
-    window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+  const login = async () => {
+    // Direct Google OAuth (bypasses Emergent)
+    try {
+      const response = await axios.get(`${API}/auth/google/login`, {
+        headers: { 'Origin': window.location.origin }
+      });
+      window.location.href = response.data.auth_url;
+    } catch (error) {
+      console.error('Failed to initiate Google login:', error);
+      // Fallback to Emergent if direct OAuth fails
+      const redirectUrl = window.location.origin + '/auth/callback';
+      window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+    }
   };
 
   const loginWithApple = async () => {
