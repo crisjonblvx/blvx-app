@@ -68,7 +68,7 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
     }
 
     return () => observer.disconnect();
-  }, [post.media_type]);
+  }, [isValidPost, post.media_type]);
 
   const toggleMute = (e) => {
     e.stopPropagation();
