@@ -37,11 +37,74 @@
         
         <!-- Manifest -->
         <link rel="manifest" href="/manifest.json" />
+        
+        <!-- CRITICAL: Theme initialization script - runs before React -->
+        <script>
+            (function() {
+                // Check if user manually set a theme preference
+                var isManual = localStorage.getItem('blvx-theme-manual') === 'true';
+                var savedTheme = localStorage.getItem('blvx-theme');
+                
+                // Determine theme: manual override > time-based auto
+                var theme;
+                if (isManual && (savedTheme === 'dark' || savedTheme === 'light')) {
+                    theme = savedTheme;
+                } else {
+                    // Time-based: 6 PM - 6 AM = dark, otherwise light
+                    var hour = new Date().getHours();
+                    theme = (hour >= 18 || hour < 6) ? 'dark' : 'light';
+                }
+                
+                // Apply theme immediately to prevent flash
+                var isDark = theme === 'dark';
+                document.documentElement.setAttribute('data-theme', theme);
+                document.documentElement.classList.add('theme-' + theme, theme);
+                document.documentElement.style.backgroundColor = isDark ? '#000000' : '#ffffff';
+                document.documentElement.style.color = isDark ? '#ffffff' : '#111111';
+                
+                // Store for React to pick up
+                window.__BLVX_INITIAL_THEME__ = theme;
+            })();
+        </script>
+        
+        <!-- Inline critical CSS for immediate theme application -->
+        <style>
+            html, body, #root {
+                min-height: 100vh;
+                min-height: 100dvh;
+                transition: background-color 0.3s ease, color 0.3s ease;
+            }
+            
+            /* Light mode (default) */
+            html:not([data-theme="dark"]),
+            html[data-theme="light"] {
+                background-color: #ffffff !important;
+                color: #111111 !important;
+            }
+            
+            html:not([data-theme="dark"]) body,
+            html[data-theme="light"] body {
+                background-color: #ffffff !important;
+                color: #111111 !important;
+            }
+            
+            /* Dark mode */
+            html[data-theme="dark"] {
+                background-color: #000000 !important;
+                color: #ffffff !important;
+            }
+            
+            html[data-theme="dark"] body {
+                background-color: #000000 !important;
+                color: #ffffff !important;
+            }
+        </style>
     </head>
     <body>
         <noscript>You need to enable JavaScript to run this app.</noscript>
         <div id="root"></div>
         <script>
+            // PostHog Analytics
             !(function (t, e) {
                 var o, n, p, r;
                 e.__SV ||

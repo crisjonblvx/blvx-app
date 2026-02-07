@@ -9,6 +9,30 @@
    Default: Light | Toggle: Dark
    ======================================== */
 
+/* CRITICAL: Force light mode as absolute default */
+html:not([data-theme="dark"]) {
+    background-color: #ffffff !important;
+    color: #111111 !important;
+}
+
+html:not([data-theme="dark"]) body {
+    background-color: #ffffff !important;
+    color: #111111 !important;
+}
+
+html:not([data-theme="dark"]) #root {
+    background-color: #ffffff !important;
+    color: #111111 !important;
+}
+
+/* Dark mode - only when explicitly set */
+html[data-theme="dark"],
+html[data-theme="dark"] body,
+html[data-theme="dark"] #root {
+    background-color: #000000 !important;
+    color: #ffffff !important;
+}
+
 @layer base {
     /* Light theme (default) */
     :root,

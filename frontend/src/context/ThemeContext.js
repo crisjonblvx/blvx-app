@@ -25,7 +25,7 @@ const ASSETS = {
 // Check if it's "evening" (6 PM - 6 AM)
 const isEveningTime = () => {
   const hour = new Date().getHours();
-  return hour >= 18 || hour < 6; // 6 PM to 6 AM
+  return hour >= 18 || hour < 6;
 };
 
 // Get the appropriate theme based on time
@@ -33,28 +33,35 @@ const getTimeBasedTheme = () => {
   return isEveningTime() ? 'dark' : 'light';
 };
 
+// Get initial theme - prioritize what HTML already set to avoid flash
+const getInitialTheme = () => {
+  // Check if HTML already determined theme (set by inline script)
+  if (typeof window !== 'undefined' && window.__BLVX_INITIAL_THEME__) {
+    return window.__BLVX_INITIAL_THEME__;
+  }
+  
+  // Fallback: check localStorage
+  if (localStorage.getItem('blvx-theme-manual') === 'true') {
+    const saved = localStorage.getItem('blvx-theme');
+    if (saved === 'dark' || saved === 'light') {
+      return saved;
+    }
+  }
+  
+  // Default: time-based
+  return getTimeBasedTheme();
+};
+
 export const ThemeProvider = ({ children }) => {
-  // Check if user has manually set a preference
   const [isManualOverride, setIsManualOverride] = useState(() => {
     return localStorage.getItem('blvx-theme-manual') === 'true';
   });
   
-  // Initialize theme
-  const [theme, setThemeState] = useState(() => {
-    // If user manually set a preference, use it
-    if (localStorage.getItem('blvx-theme-manual') === 'true') {
-      const saved = localStorage.getItem('blvx-theme');
-      if (saved === 'dark' || saved === 'light') {
-        return saved;
-      }
-    }
-    // Otherwise, use time-based auto theme
-    return getTimeBasedTheme();
-  });
+  const [theme, setThemeState] = useState(getInitialTheme);
 
   // Update theme when time changes (check every minute)
   useEffect(() => {
-    if (isManualOverride) return; // Don't auto-switch if user set manually
+    if (isManualOverride) return;
     
     const checkTime = () => {
       const newTheme = getTimeBasedTheme();
@@ -63,59 +70,53 @@ export const ThemeProvider = ({ children }) => {
       }
     };
     
-    // Check every minute
     const interval = setInterval(checkTime, 60000);
     return () => clearInterval(interval);
   }, [theme, isManualOverride]);
 
-  // Apply theme class to document and body
+  // Apply theme to DOM
   useEffect(() => {
     const isDark = theme === 'dark';
+    const html = document.documentElement;
+    const body = document.body;
     
     // Remove old classes
-    document.documentElement.classList.remove('theme-dark', 'theme-light', 'dark', 'light');
-    document.body.classList.remove('theme-dark', 'theme-light', 'light-mode', 'dark-mode');
+    html.classList.remove('theme-dark', 'theme-light', 'dark', 'light');
+    body.classList.remove('theme-dark', 'theme-light', 'light-mode', 'dark-mode');
     
-    // Apply theme classes
-    document.documentElement.classList.add(`theme-${theme}`);
-    document.documentElement.classList.add(theme);
-    document.body.classList.add(`${theme}-mode`);
-    document.body.classList.add(`theme-${theme}`);
+    // Apply new classes
+    html.classList.add(`theme-${theme}`, theme);
+    body.classList.add(`${theme}-mode`, `theme-${theme}`);
     
-    // Set data attribute for CSS selectors
-    document.documentElement.setAttribute('data-theme', theme);
-    document.body.setAttribute('data-theme', theme);
+    // Set data attribute
+    html.setAttribute('data-theme', theme);
+    body.setAttribute('data-theme', theme);
     
-    // Apply theme colors
-    if (isDark) {
-      document.documentElement.style.backgroundColor = '#000000';
-      document.documentElement.style.color = '#ffffff';
-      document.body.style.backgroundColor = '#000000';
-      document.body.style.color = '#ffffff';
-    } else {
-      document.documentElement.style.backgroundColor = '#ffffff';
-      document.documentElement.style.color = '#111111';
-      document.body.style.backgroundColor = '#ffffff';
-      document.body.style.color = '#111111';
-    }
+    // Apply inline styles (backup for specificity)
+    const bgColor = isDark ? '#000000' : '#ffffff';
+    const textColor = isDark ? '#ffffff' : '#111111';
     
-    // Also apply to #root
+    html.style.backgroundColor = bgColor;
+    html.style.color = textColor;
+    body.style.backgroundColor = bgColor;
+    body.style.color = textColor;
+    
+    // Also style #root
     const root = document.getElementById('root');
     if (root) {
-      root.style.backgroundColor = isDark ? '#000000' : '#ffffff';
-      root.style.color = isDark ? '#ffffff' : '#111111';
+      root.style.backgroundColor = bgColor;
+      root.style.color = textColor;
       root.style.minHeight = '100vh';
     }
     
+    // Persist to localStorage
     localStorage.setItem('blvx-theme', theme);
   }, [theme]);
 
-  // Set theme (used internally)
   const setTheme = useCallback((newTheme) => {
     setThemeState(newTheme);
   }, []);
 
-  // Toggle theme (marks as manual override)
   const toggleTheme = useCallback(() => {
     const newTheme = theme === 'dark' ? 'light' : 'dark';
     setThemeState(newTheme);
@@ -124,7 +125,6 @@ export const ThemeProvider = ({ children }) => {
     localStorage.setItem('blvx-theme', newTheme);
   }, [theme]);
 
-  // Reset to auto mode (time-based)
   const resetToAuto = useCallback(() => {
     setIsManualOverride(false);
     localStorage.removeItem('blvx-theme-manual');
@@ -133,19 +133,17 @@ export const ThemeProvider = ({ children }) => {
 
   const assets = ASSETS[theme];
 
-  const value = {
-    theme,
-    setTheme,
-    toggleTheme,
-    resetToAuto,
-    isManualOverride,
-    isDark: theme === 'dark',
-    isLight: theme === 'light',
-    assets,
-  };
-
   return (
-    <ThemeContext.Provider value={value}>
+    <ThemeContext.Provider value={{
+      theme,
+      setTheme,
+      toggleTheme,
+      resetToAuto,
+      isManualOverride,
+      isDark: theme === 'dark',
+      isLight: theme === 'light',
+      assets,
+    }}>
       {children}
     </ThemeContext.Provider>
   );
