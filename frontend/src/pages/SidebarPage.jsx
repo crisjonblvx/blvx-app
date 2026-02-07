@@ -13,7 +13,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 // Bonita's avatar URL
-const BONITA_AVATAR = "https://customer-assets.emergentagent.com/job_high-context/artifacts/on1dw2e3_Real%20Bonita%202%20avatar.jpg";
+const BONITA_AVATAR = "/assets/bonita-profile.jpeg";
 
 export default function SidebarPage() {
   const { user } = useAuth();

@@ -4,7 +4,7 @@ import { Avatar, AvatarImage, AvatarFallback } from '@/components/ui/avatar';
 import { ExternalLink, Sparkles, Code, Heart, Trophy, Users } from 'lucide-react';
 
 // CJ Nurse profile pic
-const CJ_AVATAR = "https://customer-assets.emergentagent.com/job_high-context/artifacts/wv7mkbdo_309b6b7d-5dd6-4073-9776-a5671d58e0d6.png";
+const CJ_AVATAR = "/assets/cj-avatar.png";
 
 export const FounderModal = ({ open, onOpenChange }) => {
   return (

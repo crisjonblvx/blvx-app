@@ -26,11 +26,11 @@ export const BonitaPanel = () => {
   };
 
   return (
-    <aside className="hidden xl:flex fixed right-0 top-0 bottom-0 w-80 flex-col border-l border-white/10 bg-black z-40 bonita-panel">
+    <aside className="hidden xl:flex fixed right-0 top-0 bottom-0 w-80 flex-col border-l border-border bg-card z-40 bonita-panel">
       {/* Header */}
-      <div className="p-6 border-b border-white/10">
+      <div className="p-6 border-b border-border">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-white/10 rounded-sm bonita-glow">
+          <div className="p-2 bg-muted rounded-sm bonita-glow">
             <Sparkles className="h-5 w-5 text-white" />
           </div>
           <div>
@@ -41,7 +41,7 @@ export const BonitaPanel = () => {
       </div>
 
       {/* Type Selector */}
-      <div className="p-4 border-b border-white/10">
+      <div className="p-4 border-b border-border">
         <div className="flex gap-2">
           {promptTypes.map((type) => (
             <Button
@@ -53,7 +53,7 @@ export const BonitaPanel = () => {
                 "flex-1 text-xs transition-colors",
                 selectedType === type.id 
                   ? "bg-white text-black hover:bg-white/90" 
-                  : "text-white/60 hover:text-white hover:bg-white/10"
+                  : "text-white/60 hover:text-white hover:bg-muted"
               )}
               data-testid={`bonita-type-${type.id}`}
             >
@@ -83,8 +83,8 @@ export const BonitaPanel = () => {
                 className={cn(
                   "p-3 rounded-sm text-sm animate-fade-in",
                   msg.role === 'user' 
-                    ? "bg-white/10 text-white/80" 
-                    : "bg-white/5 text-white border border-white/10"
+                    ? "bg-muted text-white/80" 
+                    : "bg-white/5 text-white border border-border"
                 )}
               >
                 {msg.role === 'assistant' && (
@@ -97,7 +97,7 @@ export const BonitaPanel = () => {
               </div>
             ))}
             {loading && (
-              <div className="p-3 bg-white/5 rounded-sm border border-white/10 animate-pulse">
+              <div className="p-3 bg-white/5 rounded-sm border border-border animate-pulse">
                 <div className="flex items-center gap-2 text-xs text-white/50">
                   <Sparkles className="h-3 w-3 animate-pulse-slow" />
                   <span>Bonita is thinking...</span>
@@ -109,7 +109,7 @@ export const BonitaPanel = () => {
       </ScrollArea>
 
       {/* Input */}
-      <form onSubmit={handleSubmit} className="p-4 border-t border-white/10">
+      <form onSubmit={handleSubmit} className="p-4 border-t border-border">
         <div className="flex gap-2 mb-2">
           <Textarea
             value={input}
@@ -125,7 +125,7 @@ export const BonitaPanel = () => {
             variant="ghost"
             size="sm"
             onClick={clearMessages}
-            className="text-white/50 hover:text-white hover:bg-white/10"
+            className="text-white/50 hover:text-white hover:bg-muted"
             data-testid="bonita-clear"
           >
             <RefreshCw className="h-4 w-4" />

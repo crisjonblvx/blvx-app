@@ -44,9 +44,9 @@ export default function BonitaPage() {
   return (
     <div className="mb-safe flex flex-col min-h-[calc(100vh-8rem)]" data-testid="bonita-page">
       {/* Header */}
-      <div className="sticky top-14 md:top-0 z-30 glass border-b border-white/10 p-4">
+      <div className="sticky top-14 md:top-0 z-30 glass border-b border-border p-4">
         <div className="flex items-center gap-3">
-          <div className="p-2 bg-white/10">
+          <div className="p-2 bg-muted">
             <Sparkles className="h-5 w-5 text-white" />
           </div>
           <div>
@@ -57,7 +57,7 @@ export default function BonitaPage() {
       </div>
 
       {/* Mode Selector */}
-      <div className="p-4 border-b border-white/10">
+      <div className="p-4 border-b border-border">
         <div className="grid grid-cols-3 gap-2">
           {modes.map((mode) => {
             const Icon = mode.icon;
@@ -86,7 +86,7 @@ export default function BonitaPage() {
       </div>
 
       {/* Context Toggle */}
-      <div className="px-4 py-2 border-b border-white/10 flex items-center gap-2">
+      <div className="px-4 py-2 border-b border-border flex items-center gap-2">
         <span className="text-[10px] text-white/40 uppercase tracking-wider">Context:</span>
         <Button
           variant="ghost"
@@ -94,7 +94,7 @@ export default function BonitaPage() {
           onClick={() => setContext('block')}
           className={cn(
             "text-[10px] h-6 px-2 rounded-none",
-            context === 'block' ? "bg-white/10 text-white" : "text-white/40"
+            context === 'block' ? "bg-muted text-white" : "text-white/40"
           )}
         >
           The Block
@@ -105,7 +105,7 @@ export default function BonitaPage() {
           onClick={() => setContext('cookout')}
           className={cn(
             "text-[10px] h-6 px-2 rounded-none",
-            context === 'cookout' ? "bg-white/10 text-white" : "text-white/40"
+            context === 'cookout' ? "bg-muted text-white" : "text-white/40"
           )}
         >
           The Cookout
@@ -133,8 +133,8 @@ export default function BonitaPage() {
                 className={cn(
                   "p-4 animate-fade-in",
                   msg.role === 'user' 
-                    ? "bg-white/10 text-white/80 ml-8" 
-                    : "bg-white/5 text-white border border-white/10 mr-8"
+                    ? "bg-muted text-white/80 ml-8" 
+                    : "bg-white/5 text-white border border-border mr-8"
                 )}
               >
                 {msg.role === 'assistant' && (
@@ -147,7 +147,7 @@ export default function BonitaPage() {
               </div>
             ))}
             {loading && (
-              <div className="p-4 bg-white/5 border border-white/10 mr-8 animate-pulse">
+              <div className="p-4 bg-white/5 border border-border mr-8 animate-pulse">
                 <div className="flex items-center gap-2 text-[10px] text-white/40">
                   <Sparkles className="h-3 w-3 animate-pulse" />
                   <span>Bonita is thinking...</span>
@@ -159,7 +159,7 @@ export default function BonitaPage() {
       </ScrollArea>
 
       {/* Input */}
-      <div className="p-4 border-t border-white/10 glass">
+      <div className="p-4 border-t border-border glass">
         <form onSubmit={handleSubmit}>
           <Textarea
             value={input}
