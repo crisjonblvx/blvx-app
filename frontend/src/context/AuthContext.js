@@ -125,7 +125,7 @@ export const AuthProvider = ({ children }) => {
   }, [location.pathname]);
 
   const login = async () => {
-    // Direct Google OAuth (bypasses Emergent)
+    // Direct Google OAuth
     try {
       const response = await axios.get(`${API}/auth/google/login`, {
         headers: { 'Origin': window.location.origin }
@@ -133,9 +133,8 @@ export const AuthProvider = ({ children }) => {
       window.location.href = response.data.auth_url;
     } catch (error) {
       console.error('Failed to initiate Google login:', error);
-      // Fallback to Emergent if direct OAuth fails
-      const redirectUrl = window.location.origin + '/auth/callback';
-      window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+      // Show error to user instead of falling back to Emergent
+      alert('Google login is temporarily unavailable. Please use Apple Sign-In or Email.');
     }
   };
 
