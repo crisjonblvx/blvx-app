@@ -20,6 +20,7 @@ export default function VouchPage() {
   const [redeemCode, setRedeemCode] = useState('');
   const [redeeming, setRedeeming] = useState(false);
   const [copiedCode, setCopiedCode] = useState(null);
+  const { isDark, textClass, textMutedClass, textVeryMutedClass, borderClass, hoverBgClass } = useThemeClasses();
 
   useEffect(() => {
     fetchPlates();

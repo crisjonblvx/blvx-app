@@ -14,6 +14,7 @@ export default function NotificationsPage() {
   const { notifications, loading, fetchNotifications, markAllRead } = useNotifications();
   const { refetch: refetchCount } = useNotificationCount();
   const [marking, setMarking] = useState(false);
+  const { isDark, textClass, textMutedClass, textVeryMutedClass, borderClass, hoverBgClass } = useThemeClasses();
 
   useEffect(() => {
     fetchNotifications();
@@ -74,16 +75,16 @@ export default function NotificationsPage() {
   return (
     <div className="mb-safe" data-testid="notifications-page">
       {/* Header */}
-      <div className="sticky top-14 md:top-0 z-30 glass border-b border-white/10 p-4">
+      <div className={cn("sticky top-14 md:top-0 z-30 glass border-b p-4", borderClass)}>
         <div className="flex items-center justify-between">
-          <h1 className="font-display text-xl font-semibold tracking-wide uppercase">Notifications</h1>
+          <h1 className={cn("font-display text-xl font-semibold tracking-wide uppercase", textClass)}>Notifications</h1>
           {hasUnread && (
             <Button
               variant="ghost"
               size="sm"
               onClick={handleMarkAllRead}
               disabled={marking}
-              className="text-white/60 hover:text-white"
+              className={cn(isDark ? "text-white/60 hover:text-white" : "text-gray-600 hover:text-gray-900")}
               data-testid="mark-all-read"
             >
               <Check className="h-4 w-4 mr-2" />
@@ -108,18 +109,19 @@ export default function NotificationsPage() {
         </div>
       ) : notifications.length === 0 ? (
         <div className="text-center py-16 px-6">
-          <p className="text-white/50 text-lg mb-2">No notifications yet</p>
-          <p className="text-white/30 text-sm">When people interact with your posts, you'll see it here</p>
+          <p className={cn("text-lg mb-2", textMutedClass)}>No notifications yet</p>
+          <p className={cn("text-sm", isDark ? "text-white/30" : "text-gray-400")}>When people interact with your posts, you'll see it here</p>
         </div>
       ) : (
-        <div className="divide-y divide-white/10">
+        <div className={cn("divide-y", borderClass)}>
           {notifications.map((notif, index) => (
             <Link
               key={notif.notification_id}
               to={notif.post_id ? `/post/${notif.post_id}` : `/profile/${notif.from_user?.username}`}
               className={cn(
-                "flex items-start gap-3 p-4 hover:bg-white/5 transition-colors animate-fade-in",
-                !notif.read && "bg-white/5"
+                "flex items-start gap-3 p-4 transition-colors animate-fade-in",
+                hoverBgClass,
+                !notif.read && (isDark ? "bg-white/5" : "bg-gray-50")
               )}
               style={{ animationDelay: `${index * 50}ms` }}
               data-testid={`notification-${notif.notification_id}`}

@@ -31,6 +31,7 @@ export default function CalendarPage() {
   const navigate = useNavigate();
   const [posting, setPosting] = useState(false);
   const [todayEvent, setTodayEvent] = useState(null);
+  const { isDark, textClass, textMutedClass, textVeryMutedClass, borderClass, hoverBgClass } = useThemeClasses();
 
   useEffect(() => {
     // Check if today matches any cultural date

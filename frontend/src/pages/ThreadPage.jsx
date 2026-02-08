@@ -17,6 +17,7 @@ export default function ThreadPage() {
   const [thread, setThread] = useState(null);
   const [bonitaLoading, setBonitaLoading] = useState(false);
   const [bonitaSummary, setBonitaSummary] = useState(null);
+  const { isDark, textClass, textMutedClass, textVeryMutedClass, borderClass, hoverBgClass } = useThemeClasses();
 
   useEffect(() => {
     const loadThread = async () => {
