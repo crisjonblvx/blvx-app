@@ -2455,6 +2455,143 @@ async def join_stoop(stoop_id: str, user: UserBase = Depends(get_current_user)):
     
     return {"message": "Joined the Stoop", "is_speaker": is_speaker}
 
+# Speaker Request Expressions - the culture
+SPEAKER_EXPRESSIONS = {
+    "got_next": {"text": "I got next", "emoji": "🏀"},
+    "mic_me": {"text": "Mic me", "emoji": "🎤"},
+    "lemme_speak": {"text": "Lemme speak", "emoji": "🗣️"},
+    "got_heat": {"text": "I got heat", "emoji": "🔥"},
+    "step_up": {"text": "Step up", "emoji": "✊"},
+    "real_quick": {"text": "Real quick", "emoji": "💯"},
+}
+
+@stoop_router.post("/{stoop_id}/request-mic")
+async def request_mic(
+    stoop_id: str, 
+    expression: str = "got_next",  # Default expression
+    user: UserBase = Depends(get_current_user)
+):
+    """Request to speak - pick your expression"""
+    stoop = await db.stoops.find_one({"stoop_id": stoop_id})
+    if not stoop or not stoop["is_live"]:
+        raise HTTPException(status_code=404, detail="Stoop not found or ended")
+    
+    # Validate expression
+    if expression not in SPEAKER_EXPRESSIONS:
+        expression = "got_next"
+    
+    expr_data = SPEAKER_EXPRESSIONS[expression]
+    
+    # Check if already a speaker
+    if user.user_id in stoop.get("speakers", []):
+        raise HTTPException(status_code=400, detail="You're already on the mic")
+    
+    # Check if already in queue
+    queue = stoop.get("speaker_queue", [])
+    if any(req["user_id"] == user.user_id for req in queue):
+        raise HTTPException(status_code=400, detail="You're already in line")
+    
+    # Get user info
+    user_data = await db.users.find_one({"user_id": user.user_id}, {"name": 1, "username": 1, "picture": 1})
+    
+    # Add to queue
+    request_entry = {
+        "user_id": user.user_id,
+        "name": user_data.get("name", "Someone"),
+        "username": user_data.get("username", ""),
+        "picture": user_data.get("picture", ""),
+        "expression": expression,
+        "expression_text": expr_data["text"],
+        "expression_emoji": expr_data["emoji"],
+        "requested_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.stoops.update_one(
+        {"stoop_id": stoop_id},
+        {"$push": {"speaker_queue": request_entry}}
+    )
+    
+    return {
+        "message": f"{expr_data['emoji']} {expr_data['text']}", 
+        "position": len(queue) + 1
+    }
+
+@stoop_router.delete("/{stoop_id}/request-mic")
+async def cancel_mic_request(
+    stoop_id: str,
+    user: UserBase = Depends(get_current_user)
+):
+    """Cancel your request to speak"""
+    await db.stoops.update_one(
+        {"stoop_id": stoop_id},
+        {"$pull": {"speaker_queue": {"user_id": user.user_id}}}
+    )
+    return {"message": "Request cancelled"}
+
+@stoop_router.get("/{stoop_id}/queue")
+async def get_speaker_queue(stoop_id: str):
+    """Get the speaker queue"""
+    stoop = await db.stoops.find_one({"stoop_id": stoop_id}, {"speaker_queue": 1, "max_speakers": 1, "speakers": 1})
+    if not stoop:
+        raise HTTPException(status_code=404, detail="Stoop not found")
+    
+    return {
+        "queue": stoop.get("speaker_queue", []),
+        "current_speakers": len(stoop.get("speakers", [])),
+        "max_speakers": stoop.get("max_speakers", 4)
+    }
+
+@stoop_router.post("/{stoop_id}/approve-speaker/{user_id}")
+async def approve_speaker(
+    stoop_id: str,
+    user_id: str,
+    user: UserBase = Depends(get_current_user)
+):
+    """Approve a speaker request - Host only"""
+    stoop = await db.stoops.find_one({"stoop_id": stoop_id})
+    if not stoop or stoop["host_id"] != user.user_id:
+        raise HTTPException(status_code=403, detail="Only host can approve speakers")
+    
+    # Check speaker limit
+    max_speakers = stoop.get("max_speakers", 4)
+    current_speakers = len(stoop.get("speakers", []))
+    
+    if current_speakers >= max_speakers:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Speaker limit reached ({max_speakers} max)"
+        )
+    
+    # Add to speakers and remove from queue
+    await db.stoops.update_one(
+        {"stoop_id": stoop_id},
+        {
+            "$addToSet": {"speakers": user_id},
+            "$pull": {"speaker_queue": {"user_id": user_id}}
+        }
+    )
+    
+    return {"message": "Speaker approved", "user_id": user_id}
+
+@stoop_router.post("/{stoop_id}/deny-speaker/{user_id}")
+async def deny_speaker(
+    stoop_id: str,
+    user_id: str,
+    user: UserBase = Depends(get_current_user)
+):
+    """Deny a speaker request - Host only"""
+    stoop = await db.stoops.find_one({"stoop_id": stoop_id})
+    if not stoop or stoop["host_id"] != user.user_id:
+        raise HTTPException(status_code=403, detail="Only host can deny speakers")
+    
+    # Remove from queue
+    await db.stoops.update_one(
+        {"stoop_id": stoop_id},
+        {"$pull": {"speaker_queue": {"user_id": user_id}}}
+    )
+    
+    return {"message": "Speaker request denied", "user_id": user_id}
+
 @stoop_router.post("/{stoop_id}/leave")
 async def leave_stoop(stoop_id: str, user: UserBase = Depends(get_current_user)):
     """Leave a Stoop"""

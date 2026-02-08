@@ -45,6 +45,19 @@ export default function StoopPage() {
   const [activeStoopData, setActiveStoopData] = useState(null);
   const [activeSpeakers, setActiveSpeakers] = useState([]);
   const [micError, setMicError] = useState(null);
+  const [speakerQueue, setSpeakerQueue] = useState([]);
+  const [showMicRequestMenu, setShowMicRequestMenu] = useState(false);
+  const [hasRequestedMic, setHasRequestedMic] = useState(false);
+
+  // Expression options for requesting the mic
+  const MIC_EXPRESSIONS = [
+    { id: "got_next", text: "I got next", emoji: "🏀" },
+    { id: "mic_me", text: "Mic me", emoji: "🎤" },
+    { id: "lemme_speak", text: "Lemme speak", emoji: "🗣️" },
+    { id: "got_heat", text: "I got heat", emoji: "🔥" },
+    { id: "step_up", text: "Step up", emoji: "✊" },
+    { id: "real_quick", text: "Real quick", emoji: "💯" },
+  ];
   
   // LiveKit hook
   const {
@@ -97,6 +110,17 @@ export default function StoopPage() {
     }
   }, [activeStoopId, user?.user_id]);
 
+  // Poll speaker queue when in active stoop
+  useEffect(() => {
+    if (!activeStoopId) return;
+    
+    const interval = setInterval(() => {
+      fetchSpeakerQueue(activeStoopId);
+    }, 3000); // Every 3 seconds
+    
+    return () => clearInterval(interval);
+  }, [activeStoopId]);
+
   const fetchStoops = async () => {
     try {
       const response = await axios.get(`${API}/api/stoop/live`, { withCredentials: true });
@@ -112,8 +136,85 @@ export default function StoopPage() {
     try {
       const response = await axios.get(`${API}/api/stoop/${stoopId}`, { withCredentials: true });
       setActiveStoopData(response.data);
+      
+      // Also fetch speaker queue
+      fetchSpeakerQueue(stoopId);
     } catch (error) {
       console.error('Error fetching stoop data:', error);
+    }
+  };
+
+  const fetchSpeakerQueue = async (stoopId) => {
+    try {
+      const response = await axios.get(`${API}/api/stoop/${stoopId}/queue`, { withCredentials: true });
+      setSpeakerQueue(response.data.queue || []);
+      // Check if current user is in queue
+      setHasRequestedMic(response.data.queue?.some(req => req.user_id === user?.user_id) || false);
+    } catch (error) {
+      console.error('Error fetching speaker queue:', error);
+    }
+  };
+
+  const requestMic = async (expression) => {
+    if (!activeStoopId) return;
+    
+    try {
+      const response = await axios.post(
+        `${API}/api/stoop/${activeStoopId}/request-mic?expression=${expression}`,
+        {},
+        { withCredentials: true }
+      );
+      toast.success(response.data.message);
+      setHasRequestedMic(true);
+      setShowMicRequestMenu(false);
+      fetchSpeakerQueue(activeStoopId);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to request mic');
+    }
+  };
+
+  const cancelMicRequest = async () => {
+    if (!activeStoopId) return;
+    
+    try {
+      await axios.delete(`${API}/api/stoop/${activeStoopId}/request-mic`, { withCredentials: true });
+      toast.success('Request cancelled');
+      setHasRequestedMic(false);
+      fetchSpeakerQueue(activeStoopId);
+    } catch (error) {
+      toast.error('Failed to cancel request');
+    }
+  };
+
+  const approveSpeaker = async (userId) => {
+    if (!activeStoopId) return;
+    
+    try {
+      await axios.post(
+        `${API}/api/stoop/${activeStoopId}/approve-speaker/${userId}`,
+        {},
+        { withCredentials: true }
+      );
+      toast.success('Speaker approved!');
+      fetchStoopData(activeStoopId);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to approve speaker');
+    }
+  };
+
+  const denySpeaker = async (userId) => {
+    if (!activeStoopId) return;
+    
+    try {
+      await axios.post(
+        `${API}/api/stoop/${activeStoopId}/deny-speaker/${userId}`,
+        {},
+        { withCredentials: true }
+      );
+      toast.success('Request denied');
+      fetchSpeakerQueue(activeStoopId);
+    } catch (error) {
+      toast.error('Failed to deny speaker');
     }
   };
 
@@ -352,6 +453,134 @@ export default function StoopPage() {
             </div>
           )}
           
+          {/* Speaker Queue - "Next Up" */}
+          {speakerQueue.length > 0 && (
+            <div className="mb-4">
+              <p className={cn("text-[10px] uppercase tracking-wider mb-2", isDark ? "text-white/40" : "text-gray-500")}>
+                Next Up ({speakerQueue.length})
+              </p>
+              <div className="space-y-2">
+                {speakerQueue.map((req) => (
+                  <div 
+                    key={req.user_id}
+                    className={cn(
+                      "flex items-center justify-between p-2 rounded-lg",
+                      isDark ? "bg-white/5" : "bg-gray-50"
+                    )}
+                  >
+                    <div className="flex items-center gap-2">
+                      <Avatar className="h-8 w-8 border border-white/20">
+                        <AvatarImage src={req.picture} />
+                        <AvatarFallback className="bg-white/10 text-xs">{req.name?.charAt(0)}</AvatarFallback>
+                      </Avatar>
+                      <div>
+                        <p className={cn("text-xs font-medium", textClass)}>{req.name}</p>
+                        <p className={cn("text-[10px]", textMutedClass)}>
+                          {req.expression_emoji} "{req.expression_text}"
+                        </p>
+                      </div>
+                    </div>
+                    
+                    {/* Host controls */}
+                    {activeStoopData.host_id === user.user_id && (
+                      <div className="flex gap-1">
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => approveSpeaker(req.user_id)}
+                          className="h-7 px-2 text-green-500 hover:text-green-400 hover:bg-green-500/10"
+                        >
+                          ✓
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => denySpeaker(req.user_id)}
+                          className="h-7 px-2 text-red-500 hover:text-red-400 hover:bg-red-500/10"
+                        >
+                          ✕
+                        </Button>
+                      </div>
+                    )}
+                    
+                    {/* Cancel own request */}
+                    {req.user_id === user.user_id && (
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={cancelMicRequest}
+                        className="h-7 px-2 text-red-500 hover:text-red-400"
+                      >
+                        Cancel
+                      </Button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Request Mic Button (for listeners) */}
+          {!isSpeaker && activeStoopData.host_id !== user.user_id && !hasRequestedMic && (
+            <div className="mb-4 relative">
+              <Button
+                onClick={() => setShowMicRequestMenu(!showMicRequestMenu)}
+                className={cn(
+                  "w-full text-sm font-medium",
+                  isDark ? "bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 border border-amber-500/30" 
+                         : "bg-amber-50 hover:bg-amber-100 text-amber-700 border border-amber-200"
+                )}
+              >
+                🎤 I wanna speak
+              </Button>
+              
+              {/* Expression Menu */}
+              {showMicRequestMenu && (
+                <div className={cn(
+                  "absolute bottom-full left-0 right-0 mb-2 p-2 rounded-lg border shadow-lg z-10",
+                  isDark ? "bg-zinc-900 border-white/10" : "bg-white border-gray-200"
+                )}>
+                  <p className={cn("text-[10px] uppercase tracking-wider mb-2 px-2", textMutedClass)}>
+                    How you wanna come in?
+                  </p>
+                  <div className="grid grid-cols-2 gap-1">
+                    {MIC_EXPRESSIONS.map((expr) => (
+                      <button
+                        key={expr.id}
+                        onClick={() => requestMic(expr.id)}
+                        className={cn(
+                          "flex items-center gap-2 px-3 py-2 rounded text-sm text-left transition-colors",
+                          isDark ? "hover:bg-white/10" : "hover:bg-gray-100"
+                        )}
+                      >
+                        <span>{expr.emoji}</span>
+                        <span className={textClass}>{expr.text}</span>
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Already requested - show status */}
+          {hasRequestedMic && !isSpeaker && (
+            <div className={cn(
+              "mb-4 p-3 rounded-lg text-center text-sm",
+              isDark ? "bg-amber-500/10 text-amber-400" : "bg-amber-50 text-amber-700"
+            )}>
+              🎤 You're in line — waiting for the host
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={cancelMicRequest}
+                className="ml-2 text-red-500 hover:text-red-400"
+              >
+                Cancel
+              </Button>
+            </div>
+          )}
+
           {/* Remote Participants (from LiveKit) */}
           {participants.length > 0 && (
             <div className="mb-4">
