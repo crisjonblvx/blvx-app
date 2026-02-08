@@ -209,6 +209,8 @@ class UserBase(BaseModel):
     posts_count: int = 0
     vouched_by: Optional[str] = None
     created_at: datetime
+    last_active: Optional[datetime] = None
+    activity_status: Optional[str] = None  # "online", "recently", "away"
 
 class UserUpdate(BaseModel):
     username: Optional[str] = None
@@ -389,7 +391,82 @@ async def get_current_user(request: Request) -> UserBase:
     if user.get("email") == "cj@blvx.social":
         user["is_vouched"] = True
     
+    # Update last_active in background (non-blocking)
+    asyncio.create_task(update_user_last_active(user["user_id"]))
+    
+    # Calculate activity status
+    user["last_active"] = user.get("last_active") or datetime.utcnow()
+    user["activity_status"] = get_activity_status(user.get("last_active"))
+    
     return UserBase(**user)
+
+
+async def update_user_last_active(user_id: str):
+    """Update user's last_active timestamp (background task)"""
+    try:
+        await db.users.update_one(
+            {"user_id": user_id},
+            {"$set": {"last_active": datetime.utcnow()}}
+        )
+    except Exception as e:
+        logger.error(f"Failed to update last_active for {user_id}: {e}")
+
+
+def get_activity_status(last_active: Optional[datetime]) -> str:
+    """
+    Calculate user's activity status based on last_active timestamp.
+    Returns: "online" (< 5 min), "recently" (< 30 min), "away" (> 30 min)
+    """
+    if not last_active:
+        return "away"
+    
+    if isinstance(last_active, str):
+        last_active = datetime.fromisoformat(last_active.replace('Z', '+00:00'))
+    
+    # Make sure we're comparing UTC times
+    now = datetime.utcnow()
+    if last_active.tzinfo:
+        last_active = last_active.replace(tzinfo=None)
+    
+    diff = now - last_active
+    minutes = diff.total_seconds() / 60
+    
+    if minutes < 5:
+        return "online"
+    elif minutes < 30:
+        return "recently"
+    else:
+        return "away"
+
+
+def format_last_seen(last_active: Optional[datetime]) -> str:
+    """Format last_active into human-readable string"""
+    if not last_active:
+        return "Unknown"
+    
+    if isinstance(last_active, str):
+        last_active = datetime.fromisoformat(last_active.replace('Z', '+00:00'))
+    
+    now = datetime.utcnow()
+    if last_active.tzinfo:
+        last_active = last_active.replace(tzinfo=None)
+    
+    diff = now - last_active
+    minutes = diff.total_seconds() / 60
+    hours = minutes / 60
+    days = hours / 24
+    
+    if minutes < 5:
+        return "Active now"
+    elif minutes < 60:
+        return f"Active {int(minutes)}m ago"
+    elif hours < 24:
+        return f"Active {int(hours)}h ago"
+    elif days < 7:
+        return f"Active {int(days)}d ago"
+    else:
+        return f"Active {last_active.strftime('%b %d')}"
+
 
 async def get_optional_user(request: Request) -> Optional[UserBase]:
     """Get current user if authenticated, else None"""
@@ -1541,28 +1618,472 @@ async def check_mutuals(user_id: str, current_user: UserBase = Depends(get_curre
     return {"is_mutual": follows_them is not None and they_follow is not None}
 
 @users_router.get("/search")
-async def search_users(q: str, limit: int = 20):
-    """Search users by username or name"""
+async def search_users(q: str, limit: int = 20, user: Optional[UserBase] = Depends(get_optional_user)):
+    """Search users by username, name, or bio"""
     users = await db.users.find(
         {"$or": [
             {"username": {"$regex": q, "$options": "i"}},
-            {"name": {"$regex": q, "$options": "i"}}
+            {"name": {"$regex": q, "$options": "i"}},
+            {"bio": {"$regex": q, "$options": "i"}}
         ]},
         {"_id": 0, "password_hash": 0}
     ).limit(limit).to_list(limit)
     
     result = []
-    for user in users:
-        if isinstance(user.get("created_at"), str):
-            user["created_at"] = datetime.fromisoformat(user["created_at"])
-        user.setdefault("email_verified", True)
-        user.setdefault("reputation_score", 100)
-        user.setdefault("plates_remaining", 10)
-        user.setdefault("is_day_one", False)
-        user.setdefault("vouched_by", None)
-        result.append(UserBase(**user))
+    for u in users:
+        if isinstance(u.get("created_at"), str):
+            u["created_at"] = datetime.fromisoformat(u["created_at"])
+        u.setdefault("email_verified", True)
+        u.setdefault("reputation_score", 100)
+        u.setdefault("plates_remaining", 10)
+        u.setdefault("is_day_one", False)
+        u.setdefault("vouched_by", None)
+        u.setdefault("last_active", None)
+        u["activity_status"] = get_activity_status(u.get("last_active"))
+        result.append(u)
     
     return result
+
+
+@users_router.get("/online")
+async def get_online_users(limit: int = 50, user: UserBase = Depends(get_current_user)):
+    """
+    Get users currently on The Block.
+    Returns users active in the last 30 minutes, sorted by most recent.
+    """
+    thirty_mins_ago = datetime.utcnow() - timedelta(minutes=30)
+    
+    # Get users active in last 30 mins (exclude current user)
+    online_users = await db.users.find(
+        {
+            "last_active": {"$gte": thirty_mins_ago},
+            "user_id": {"$ne": user.user_id}
+        },
+        {"_id": 0, "password_hash": 0, "email": 0}
+    ).sort("last_active", -1).limit(limit).to_list(limit)
+    
+    # Get count of all online users
+    total_online = await db.users.count_documents({
+        "last_active": {"$gte": thirty_mins_ago}
+    })
+    
+    result = []
+    for u in online_users:
+        if isinstance(u.get("created_at"), str):
+            u["created_at"] = datetime.fromisoformat(u["created_at"])
+        u["activity_status"] = get_activity_status(u.get("last_active"))
+        u["last_seen"] = format_last_seen(u.get("last_active"))
+        result.append(u)
+    
+    return {
+        "total_online": total_online,
+        "users": result
+    }
+
+
+@users_router.get("/discover")
+async def discover_users(limit: int = 20, user: UserBase = Depends(get_current_user)):
+    """
+    People You Might Know - Smart suggestions based on:
+    - Mutual follows (you both follow someone)
+    - Same voucher
+    - Recent joiners (welcome new members)
+    - Active users you don't follow yet
+    """
+    # Get users I already follow
+    following = await db.follows.find(
+        {"follower_id": user.user_id},
+        {"_id": 0, "following_id": 1}
+    ).to_list(1000)
+    following_ids = {f["following_id"] for f in following}
+    following_ids.add(user.user_id)  # Exclude self
+    
+    suggestions = []
+    seen_users = set()
+    
+    # 1. Users with mutual connections (you both follow someone)
+    # Get who my follows are following
+    if following_ids:
+        for follow_id in list(following_ids)[:20]:  # Check first 20 follows
+            their_follows = await db.follows.find(
+                {"follower_id": follow_id},
+                {"_id": 0, "following_id": 1}
+            ).limit(50).to_list(50)
+            
+            for tf in their_follows:
+                if tf["following_id"] not in following_ids and tf["following_id"] not in seen_users:
+                    seen_users.add(tf["following_id"])
+                    suggestions.append({
+                        "user_id": tf["following_id"],
+                        "reason": "mutual_connection",
+                        "connection": follow_id
+                    })
+                    if len(suggestions) >= limit * 2:
+                        break
+            if len(suggestions) >= limit * 2:
+                break
+    
+    # 2. Users vouched by the same person
+    if user.vouched_by:
+        same_voucher = await db.users.find(
+            {
+                "vouched_by": user.vouched_by,
+                "user_id": {"$nin": list(following_ids)}
+            },
+            {"_id": 0, "user_id": 1}
+        ).limit(10).to_list(10)
+        
+        for u in same_voucher:
+            if u["user_id"] not in seen_users:
+                seen_users.add(u["user_id"])
+                suggestions.append({
+                    "user_id": u["user_id"],
+                    "reason": "same_voucher",
+                    "connection": user.vouched_by
+                })
+    
+    # 3. New members (joined in last 7 days)
+    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    new_members = await db.users.find(
+        {
+            "created_at": {"$gte": seven_days_ago},
+            "user_id": {"$nin": list(following_ids)}
+        },
+        {"_id": 0, "user_id": 1}
+    ).limit(10).to_list(10)
+    
+    for u in new_members:
+        if u["user_id"] not in seen_users:
+            seen_users.add(u["user_id"])
+            suggestions.append({
+                "user_id": u["user_id"],
+                "reason": "new_member",
+                "connection": None
+            })
+    
+    # 4. Active users you don't follow (fallback)
+    if len(suggestions) < limit:
+        thirty_mins_ago = datetime.utcnow() - timedelta(minutes=30)
+        active_users = await db.users.find(
+            {
+                "last_active": {"$gte": thirty_mins_ago},
+                "user_id": {"$nin": list(following_ids | seen_users)}
+            },
+            {"_id": 0, "user_id": 1}
+        ).limit(limit).to_list(limit)
+        
+        for u in active_users:
+            suggestions.append({
+                "user_id": u["user_id"],
+                "reason": "active_now",
+                "connection": None
+            })
+    
+    # Fetch full user data for suggestions
+    suggestion_ids = [s["user_id"] for s in suggestions[:limit]]
+    users_data = await db.users.find(
+        {"user_id": {"$in": suggestion_ids}},
+        {"_id": 0, "password_hash": 0, "email": 0}
+    ).to_list(limit)
+    
+    # Create lookup for suggestion reasons
+    reason_lookup = {s["user_id"]: s for s in suggestions}
+    
+    result = []
+    for u in users_data:
+        if isinstance(u.get("created_at"), str):
+            u["created_at"] = datetime.fromisoformat(u["created_at"])
+        u["activity_status"] = get_activity_status(u.get("last_active"))
+        u["suggestion_reason"] = reason_lookup.get(u["user_id"], {}).get("reason", "suggested")
+        u["mutual_connection"] = reason_lookup.get(u["user_id"], {}).get("connection")
+        result.append(u)
+    
+    return result
+
+
+@users_router.get("/trending")
+async def get_trending_users(limit: int = 20, user: UserBase = Depends(get_current_user)):
+    """
+    Trending on The Block - Rising voices this week:
+    - Most new followers
+    - Most engagement (likes + replies on their posts)
+    - Most vouched
+    """
+    seven_days_ago = datetime.utcnow() - timedelta(days=7)
+    
+    # Get users with most new followers this week
+    follower_pipeline = [
+        {"$match": {"created_at": {"$gte": seven_days_ago.isoformat()}}},
+        {"$group": {"_id": "$following_id", "new_followers": {"$sum": 1}}},
+        {"$sort": {"new_followers": -1}},
+        {"$limit": limit * 2}
+    ]
+    
+    rising_by_followers = await db.follows.aggregate(follower_pipeline).to_list(limit * 2)
+    
+    # Get users with most engagement on their posts this week
+    engagement_pipeline = [
+        {"$match": {"created_at": {"$gte": seven_days_ago.isoformat()}}},
+        {"$group": {
+            "_id": "$user_id",
+            "total_engagement": {"$sum": {"$add": ["$like_count", "$reply_count"]}}
+        }},
+        {"$sort": {"total_engagement": -1}},
+        {"$limit": limit * 2}
+    ]
+    
+    rising_by_engagement = await db.posts.aggregate(engagement_pipeline).to_list(limit * 2)
+    
+    # Combine and score
+    user_scores = {}
+    
+    for item in rising_by_followers:
+        user_id = item["_id"]
+        if user_id and user_id != "bonita":
+            user_scores[user_id] = user_scores.get(user_id, 0) + item["new_followers"] * 2
+    
+    for item in rising_by_engagement:
+        user_id = item["_id"]
+        if user_id and user_id != "bonita":
+            user_scores[user_id] = user_scores.get(user_id, 0) + item["total_engagement"]
+    
+    # Sort by score and get top users
+    sorted_users = sorted(user_scores.items(), key=lambda x: x[1], reverse=True)[:limit]
+    trending_ids = [u[0] for u in sorted_users]
+    
+    # Fetch user data
+    trending_users = await db.users.find(
+        {"user_id": {"$in": trending_ids}},
+        {"_id": 0, "password_hash": 0, "email": 0}
+    ).to_list(limit)
+    
+    # Create score lookup
+    score_lookup = dict(sorted_users)
+    
+    result = []
+    for u in trending_users:
+        if isinstance(u.get("created_at"), str):
+            u["created_at"] = datetime.fromisoformat(u["created_at"])
+        u["activity_status"] = get_activity_status(u.get("last_active"))
+        u["trending_score"] = score_lookup.get(u["user_id"], 0)
+        result.append(u)
+    
+    # Sort by trending score
+    result.sort(key=lambda x: x.get("trending_score", 0), reverse=True)
+    
+    return result
+
+
+@users_router.get("/{user_id}/connections")
+async def get_user_connections(user_id: str, user: UserBase = Depends(get_current_user)):
+    """
+    Get connection info when viewing someone's profile:
+    - Mutual followers count
+    - Who vouched them
+    - When they joined
+    """
+    # Get target user
+    target = await db.users.find_one(
+        {"user_id": user_id},
+        {"_id": 0, "password_hash": 0, "email": 0}
+    )
+    
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Get mutual followers (people you both follow)
+    my_following = await db.follows.find(
+        {"follower_id": user.user_id},
+        {"_id": 0, "following_id": 1}
+    ).to_list(1000)
+    my_following_ids = {f["following_id"] for f in my_following}
+    
+    their_following = await db.follows.find(
+        {"follower_id": user_id},
+        {"_id": 0, "following_id": 1}
+    ).to_list(1000)
+    their_following_ids = {f["following_id"] for f in their_following}
+    
+    mutual_following = my_following_ids & their_following_ids
+    
+    # Get mutual followers (people who follow both of you)
+    my_followers = await db.follows.find(
+        {"following_id": user.user_id},
+        {"_id": 0, "follower_id": 1}
+    ).to_list(1000)
+    my_follower_ids = {f["follower_id"] for f in my_followers}
+    
+    their_followers = await db.follows.find(
+        {"following_id": user_id},
+        {"_id": 0, "follower_id": 1}
+    ).to_list(1000)
+    their_follower_ids = {f["follower_id"] for f in their_followers}
+    
+    mutual_followers = my_follower_ids & their_follower_ids
+    
+    # Get sample of mutuals (first 5 for display)
+    sample_mutual_ids = list(mutual_followers)[:5]
+    sample_mutuals = []
+    if sample_mutual_ids:
+        sample_mutuals = await db.users.find(
+            {"user_id": {"$in": sample_mutual_ids}},
+            {"_id": 0, "user_id": 1, "username": 1, "name": 1, "picture": 1}
+        ).to_list(5)
+    
+    # Get voucher info
+    voucher = None
+    if target.get("vouched_by"):
+        voucher = await db.users.find_one(
+            {"user_id": target["vouched_by"]},
+            {"_id": 0, "user_id": 1, "username": 1, "name": 1, "picture": 1}
+        )
+    
+    # Check if I follow them / they follow me
+    i_follow = await db.follows.find_one({
+        "follower_id": user.user_id,
+        "following_id": user_id
+    })
+    they_follow = await db.follows.find_one({
+        "follower_id": user_id,
+        "following_id": user.user_id
+    })
+    
+    return {
+        "mutual_followers_count": len(mutual_followers),
+        "mutual_following_count": len(mutual_following),
+        "sample_mutuals": sample_mutuals,
+        "vouched_by": voucher,
+        "joined": target.get("created_at"),
+        "is_day_one": target.get("is_day_one", False),
+        "i_follow_them": i_follow is not None,
+        "they_follow_me": they_follow is not None,
+        "is_mutual": i_follow is not None and they_follow is not None,
+        "activity_status": get_activity_status(target.get("last_active")),
+        "last_seen": format_last_seen(target.get("last_active"))
+    }
+
+
+@users_router.get("/activity/friends")
+async def get_friend_activity(limit: int = 30, user: UserBase = Depends(get_current_user)):
+    """
+    Friend Activity Feed - What your people are doing:
+    - Likes from people you follow
+    - New posts from people you follow
+    - Who they just followed
+    """
+    # Get people I follow
+    following = await db.follows.find(
+        {"follower_id": user.user_id},
+        {"_id": 0, "following_id": 1}
+    ).to_list(1000)
+    following_ids = [f["following_id"] for f in following]
+    
+    if not following_ids:
+        return []
+    
+    activities = []
+    one_day_ago = datetime.utcnow() - timedelta(hours=24)
+    one_day_ago_str = one_day_ago.isoformat()
+    
+    # 1. Recent likes from friends (what they're vibing with)
+    recent_likes = await db.likes.find(
+        {
+            "user_id": {"$in": following_ids},
+            "created_at": {"$gte": one_day_ago_str}
+        }
+    ).sort("created_at", -1).limit(limit).to_list(limit)
+    
+    for like in recent_likes:
+        activities.append({
+            "type": "like",
+            "user_id": like["user_id"],
+            "post_id": like["post_id"],
+            "created_at": like["created_at"]
+        })
+    
+    # 2. Recent posts from friends
+    recent_posts = await db.posts.find(
+        {
+            "user_id": {"$in": following_ids},
+            "created_at": {"$gte": one_day_ago_str},
+            "visibility": "block"
+        },
+        {"_id": 0}
+    ).sort("created_at", -1).limit(limit).to_list(limit)
+    
+    for post in recent_posts:
+        activities.append({
+            "type": "post",
+            "user_id": post["user_id"],
+            "post_id": post["post_id"],
+            "content_preview": post.get("content", "")[:100],
+            "created_at": post["created_at"]
+        })
+    
+    # 3. Recent follows (who your friends just followed)
+    recent_follows = await db.follows.find(
+        {
+            "follower_id": {"$in": following_ids},
+            "created_at": {"$gte": one_day_ago_str}
+        }
+    ).sort("created_at", -1).limit(limit).to_list(limit)
+    
+    for follow in recent_follows:
+        activities.append({
+            "type": "follow",
+            "user_id": follow["follower_id"],
+            "target_user_id": follow["following_id"],
+            "created_at": follow["created_at"]
+        })
+    
+    # Sort all activities by time
+    activities.sort(key=lambda x: x.get("created_at", ""), reverse=True)
+    activities = activities[:limit]
+    
+    # Enrich with user data
+    user_ids_needed = set()
+    post_ids_needed = set()
+    
+    for a in activities:
+        user_ids_needed.add(a.get("user_id"))
+        if a.get("target_user_id"):
+            user_ids_needed.add(a["target_user_id"])
+        if a.get("post_id"):
+            post_ids_needed.add(a["post_id"])
+    
+    # Fetch users
+    users_data = await db.users.find(
+        {"user_id": {"$in": list(user_ids_needed)}},
+        {"_id": 0, "user_id": 1, "username": 1, "name": 1, "picture": 1}
+    ).to_list(100)
+    users_lookup = {u["user_id"]: u for u in users_data}
+    
+    # Fetch posts
+    posts_data = await db.posts.find(
+        {"post_id": {"$in": list(post_ids_needed)}},
+        {"_id": 0, "post_id": 1, "content": 1, "user_id": 1}
+    ).to_list(100)
+    posts_lookup = {p["post_id"]: p for p in posts_data}
+    
+    # Enrich activities
+    result = []
+    for a in activities:
+        a["user"] = users_lookup.get(a.get("user_id"))
+        
+        if a.get("target_user_id"):
+            a["target_user"] = users_lookup.get(a["target_user_id"])
+        
+        if a.get("post_id"):
+            post = posts_lookup.get(a["post_id"])
+            if post:
+                a["post_preview"] = post.get("content", "")[:100]
+                post_author = users_lookup.get(post.get("user_id"))
+                a["post_author"] = post_author
+        
+        result.append(a)
+    
+    return result
+
 
 # ========================
 # POST ROUTES
