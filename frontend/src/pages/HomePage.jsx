@@ -14,6 +14,25 @@ const API = process.env.REACT_APP_BACKEND_URL;
 
 export default function HomePage() {
   const { user } = useAuth();
+  
+  // Theme detection
+  const [isDark, setIsDark] = useState(() => {
+    return document.documentElement.getAttribute('data-theme') === 'dark';
+  });
+  
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDark(document.documentElement.getAttribute('data-theme') === 'dark');
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => observer.disconnect();
+  }, []);
+  
+  // Theme-aware text classes
+  const textClass = isDark ? 'text-white' : 'text-gray-900';
+  const textMutedClass = isDark ? 'text-white/40' : 'text-gray-500';
+  const textHoverClass = isDark ? 'hover:text-white/70' : 'hover:text-gray-700';
+  const borderClass = isDark ? 'border-white/10' : 'border-gray-200';
   const { posts, loading, fetchFeed, fetchExploreFeed, setPosts } = usePosts();
   const [feedType, setFeedType] = useState('block');
   const [refreshing, setRefreshing] = useState(false);
@@ -146,13 +165,13 @@ export default function HomePage() {
       <WelcomeModal open={showWelcome} onOpenChange={setShowWelcome} />
 
       {/* Feed Type Tabs */}
-      <div className="sticky top-14 md:top-0 z-30 glass border-b border-white/10">
+      <div className={cn("sticky top-14 md:top-0 z-30 glass border-b", borderClass)}>
         <div className="flex">
           <button
             onClick={() => setFeedType('block')}
             className={cn(
               "flex-1 py-4 text-xs font-display tracking-widest uppercase transition-colors relative flex items-center justify-center gap-2",
-              feedType === 'block' ? "text-white" : "text-white/40 hover:text-white/70"
+              feedType === 'block' ? textClass : cn(textMutedClass, textHoverClass)
             )}
             data-testid="feed-block-tab"
           >
@@ -172,7 +191,7 @@ export default function HomePage() {
             }}
             className={cn(
               "flex-1 py-4 text-xs font-display tracking-widest uppercase transition-colors relative flex items-center justify-center gap-2",
-              feedType === 'cookout' ? "text-amber-500" : "text-white/40 hover:text-white/70"
+              feedType === 'cookout' ? "text-amber-500" : cn(textMutedClass, textHoverClass)
             )}
             data-testid="feed-cookout-tab"
           >
@@ -190,7 +209,7 @@ export default function HomePage() {
             onClick={() => setFeedType('explore')}
             className={cn(
               "flex-1 py-4 text-xs font-display tracking-widest uppercase transition-colors relative",
-              feedType === 'explore' ? "text-white" : "text-white/40 hover:text-white/70"
+              feedType === 'explore' ? textClass : cn(textMutedClass, textHoverClass)
             )}
             data-testid="feed-explore-tab"
           >
@@ -203,13 +222,13 @@ export default function HomePage() {
       </div>
 
       {/* Refresh button */}
-      <div className="flex justify-center py-2 border-b border-white/10">
+      <div className={cn("flex justify-center py-2 border-b", borderClass)}>
         <Button
           variant="ghost"
           size="sm"
           onClick={handleRefresh}
           disabled={loading || refreshing}
-          className="text-white/40 hover:text-white text-xs"
+          className={cn(textMutedClass, "hover:text-inherit text-xs")}
           data-testid="feed-refresh"
         >
           <RefreshCw className={cn("h-3.5 w-3.5 mr-2", (loading || refreshing) && "animate-spin")} />
@@ -236,23 +255,23 @@ export default function HomePage() {
           <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-amber-500/20 flex items-center justify-center">
             <Lock className="h-8 w-8 text-amber-500" />
           </div>
-          <p className="text-white text-lg mb-2 font-display tracking-wide">
+          <p className={cn(textClass, "text-lg mb-2 font-display tracking-wide")}>
             Invite Only
           </p>
-          <p className="text-white/50 text-sm">
+          <p className={cn(textMutedClass, "text-sm")}>
             Earn Plates on The Block to get a Vouch.
           </p>
         </div>
       ) : (feedType === 'cookout' ? cookoutPosts : posts).length === 0 ? (
         <div className="text-center py-16 px-6">
-          <p className="text-white/50 text-base mb-2 font-display tracking-wide">
+          <p className={cn(textMutedClass, "text-base mb-2 font-display tracking-wide")}>
             {feedType === 'block' 
               ? "The Block is quiet" 
               : feedType === 'cookout'
               ? "The Cookout is empty"
               : "Nothing to explore yet"}
           </p>
-          <p className="text-white/30 text-sm">
+          <p className={cn(isDark ? "text-white/30" : "text-gray-400", "text-sm")}>
             {feedType === 'block'
               ? "Follow some people or post something"
               : feedType === 'cookout'
