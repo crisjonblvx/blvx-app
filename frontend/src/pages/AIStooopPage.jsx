@@ -271,13 +271,13 @@ export default function AIStooopPage() {
                 "max-w-[80%] rounded-2xl px-4 py-3",
                 msg.role === 'visitor'
                   ? "bg-white text-black rounded-br-md"
-                  : "bg-amber-500/20 text-amber-100 rounded-bl-md border border-amber-500/30"
+                  : cn("bg-amber-500/20 rounded-bl-md border border-amber-500/30", isDark ? "text-amber-100" : "text-amber-900")
               )}
             >
               <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
               <p className={cn(
                 "text-[10px] mt-1 opacity-50",
-                msg.role === 'visitor' ? "text-gray-600" : "text-amber-300"
+                msg.role === 'visitor' ? "text-gray-600" : (isDark ? "text-amber-300" : "text-amber-700")
               )}>
                 {formatTime(msg.timestamp)}
               </p>
