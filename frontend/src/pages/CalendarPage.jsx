@@ -3,6 +3,7 @@ import { useThemeClasses } from '@/hooks/useTheme';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, Loader2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import axios from 'axios';
 
@@ -77,34 +78,34 @@ export default function CalendarPage() {
   return (
     <div className="mb-safe" data-testid="calendar-page">
       {/* Header */}
-      <div className="sticky top-14 md:top-0 z-30 glass border-b border-white/10 p-4">
+      <div className={cn("sticky top-14 md:top-0 z-30 glass border-b p-4", borderClass)}>
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate(-1)}
-            className="text-white/60 hover:text-white md:hidden"
+            className={cn("md:hidden", isDark ? "text-white/60 hover:text-white" : "text-gray-600 hover:text-gray-900")}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
           <div className="flex items-center gap-2">
             <Calendar className="h-5 w-5 text-amber-500" />
-            <h1 className="font-display text-lg tracking-wide uppercase">Culture Calendar</h1>
+            <h1 className={cn("font-display text-lg tracking-wide uppercase", textClass)}>Culture Calendar</h1>
           </div>
         </div>
       </div>
 
       {/* Today's Event Highlight */}
       {todayEvent && (
-        <div className="p-4 border-b border-white/10 bg-amber-500/10">
+        <div className={cn("p-4 border-b bg-amber-500/10", borderClass)}>
           <div className="flex items-start gap-3">
             <div className="w-12 h-12 bg-amber-500 rounded-lg flex items-center justify-center flex-shrink-0">
               <Sparkles className="h-6 w-6 text-black" />
             </div>
             <div className="flex-1">
               <p className="text-xs text-amber-500 uppercase tracking-wider mb-1">Today</p>
-              <h2 className="font-display text-lg text-white">{todayEvent.name}</h2>
-              <p className="text-sm text-white/60 mt-1">{todayEvent.description}</p>
+              <h2 className={cn("font-display text-lg", textClass)}>{todayEvent.name}</h2>
+              <p className={cn("text-sm mt-1", isDark ? "text-white/60" : "text-gray-600")}>{todayEvent.description}</p>
               <Button
                 onClick={handlePostTodayEvent}
                 disabled={posting}
@@ -124,24 +125,24 @@ export default function CalendarPage() {
       )}
 
       {/* Calendar List */}
-      <div className="divide-y divide-white/10">
+      <div className={cn("divide-y", borderClass)}>
         {Object.entries(eventsByMonth).map(([month, events]) => (
           <div key={month} className="p-4">
-            <h3 className="font-display text-sm uppercase tracking-wider text-white/40 mb-3">
+            <h3 className={cn("font-display text-sm uppercase tracking-wider mb-3", textVeryMutedClass)}>
               {month}
             </h3>
             <div className="space-y-3">
               {events.map((event, idx) => (
                 <div 
                   key={idx}
-                  className="flex items-start gap-3 p-3 bg-white/5 rounded-lg"
+                  className={cn("flex items-start gap-3 p-3 rounded-lg", isDark ? "bg-white/5" : "bg-gray-50")}
                 >
-                  <div className="w-10 h-10 bg-white/10 rounded flex items-center justify-center flex-shrink-0">
-                    <span className="text-sm font-bold">{event.day}</span>
+                  <div className={cn("w-10 h-10 rounded flex items-center justify-center flex-shrink-0", isDark ? "bg-white/10" : "bg-gray-200")}>
+                    <span className={cn("text-sm font-bold", textClass)}>{event.day}</span>
                   </div>
                   <div>
-                    <p className="font-medium text-white">{event.name}</p>
-                    <p className="text-xs text-white/50">{event.description}</p>
+                    <p className={cn("font-medium", textClass)}>{event.name}</p>
+                    <p className={cn("text-xs", textMutedClass)}>{event.description}</p>
                   </div>
                 </div>
               ))}
@@ -151,11 +152,11 @@ export default function CalendarPage() {
       </div>
 
       {/* Info */}
-      <div className="p-6 text-center border-t border-white/10">
-        <p className="text-sm text-white/40">
+      <div className={cn("p-6 text-center border-t", borderClass)}>
+        <p className={cn("text-sm", textVeryMutedClass)}>
           Bonita automatically posts culturally relevant content on these dates.
         </p>
-        <p className="text-xs text-white/30 mt-2">
+        <p className={cn("text-xs mt-2", isDark ? "text-white/30" : "text-gray-400")}>
           More dates coming soon...
         </p>
       </div>

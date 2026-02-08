@@ -7,6 +7,7 @@ import { useBonitaChat } from '@/hooks/useBonitaChat';
 import { PostCard } from '@/components/PostCard';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 
 export default function ThreadPage() {
@@ -93,29 +94,29 @@ export default function ThreadPage() {
   return (
     <div className="mb-safe" data-testid="thread-page">
       {/* Header */}
-      <div className="sticky top-14 md:top-0 z-30 glass border-b border-white/10 p-4">
+      <div className={cn("sticky top-14 md:top-0 z-30 glass border-b p-4", borderClass)}>
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate(-1)}
-            className="text-white/60 hover:text-white"
+            className={cn(isDark ? "text-white/60 hover:text-white" : "text-gray-600 hover:text-gray-900")}
             data-testid="back-btn"
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="font-display text-lg tracking-wide uppercase">Thread</h1>
+          <h1 className={cn("font-display text-lg tracking-wide uppercase", textClass)}>Thread</h1>
         </div>
       </div>
 
       {/* Bonita Decompress Button */}
       {thread.replies.length > 2 && (
-        <div className="p-4 border-b border-white/10">
+        <div className={cn("p-4 border-b", borderClass)}>
           <Button
             onClick={handleDecompress}
             disabled={bonitaLoading}
             variant="outline"
-            className="w-full border-white/20 text-white hover:bg-white/10"
+            className={cn("w-full", isDark ? "border-white/20 text-white hover:bg-white/10" : "border-gray-300 text-gray-900 hover:bg-gray-100")}
             data-testid="decompress-btn"
           >
             <Sparkles className="h-4 w-4 mr-2" />
@@ -126,18 +127,18 @@ export default function ThreadPage() {
 
       {/* Bonita Summary */}
       {bonitaSummary && (
-        <div className="p-4 border-b border-white/10 animate-fade-in">
-          <div className="bg-white/5 border border-white/10 rounded-sm p-4">
+        <div className={cn("p-4 border-b animate-fade-in", borderClass)}>
+          <div className={cn("border rounded-sm p-4", isDark ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-200")}>
             <div className="flex items-center gap-2 mb-3">
-              <Sparkles className="h-4 w-4 text-white" />
-              <span className="text-sm font-display tracking-wide uppercase text-white/80">Bonita's Take</span>
+              <Sparkles className={cn("h-4 w-4", textClass)} />
+              <span className={cn("text-sm font-display tracking-wide uppercase", isDark ? "text-white/80" : "text-gray-700")}>Bonita's Take</span>
             </div>
-            <p className="text-white/80 text-sm whitespace-pre-wrap">{bonitaSummary}</p>
+            <p className={cn("text-sm whitespace-pre-wrap", isDark ? "text-white/80" : "text-gray-700")}>{bonitaSummary}</p>
             <Button
               variant="ghost"
               size="sm"
               onClick={() => setBonitaSummary(null)}
-              className="mt-3 text-white/40 hover:text-white"
+              className={cn("mt-3", isDark ? "text-white/40 hover:text-white" : "text-gray-500 hover:text-gray-900")}
             >
               Dismiss
             </Button>
@@ -146,7 +147,7 @@ export default function ThreadPage() {
       )}
 
       {/* Main Post */}
-      <div className="border-b border-white/10">
+      <div className={cn("border-b", borderClass)}>
         <PostCard 
           post={thread.post} 
           showThread 
@@ -157,8 +158,8 @@ export default function ThreadPage() {
       {/* Replies */}
       {thread.replies.length > 0 && (
         <>
-          <div className="px-4 py-3 border-b border-white/10">
-            <p className="text-sm text-white/50">
+          <div className={cn("px-4 py-3 border-b", borderClass)}>
+            <p className={cn("text-sm", textMutedClass)}>
               {thread.replies.length} {thread.replies.length === 1 ? 'reply' : 'replies'}
             </p>
           </div>

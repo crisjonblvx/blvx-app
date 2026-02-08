@@ -94,26 +94,26 @@ export default function VouchPage() {
       {/* Header */}
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
-          <Ticket className="h-6 w-6 text-white" />
-          <h1 className="font-display text-2xl tracking-widest uppercase">The Vouch</h1>
+          <Ticket className={cn("h-6 w-6", textClass)} />
+          <h1 className={cn("font-display text-2xl tracking-widest uppercase", textClass)}>The Vouch</h1>
         </div>
-        <p className="text-white/50 text-sm">
+        <p className={cn("text-sm", textMutedClass)}>
           BLVX is invite-only. Use your plates to bring people into the culture.
         </p>
       </div>
 
       {/* Plates Balance */}
-      <Card className="bg-white/5 border-white/10 mb-6">
+      <Card className={cn("mb-6", isDark ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-200")}>
         <CardContent className="flex items-center justify-between p-6">
           <div>
-            <p className="text-white/40 text-xs uppercase tracking-wider mb-1">Your Plates</p>
-            <p className="text-4xl font-display text-white">{user?.plates_remaining || 0}</p>
-            <p className="text-white/50 text-xs mt-1">remaining to give</p>
+            <p className={cn("text-xs uppercase tracking-wider mb-1", textVeryMutedClass)}>Your Plates</p>
+            <p className={cn("text-4xl font-display", textClass)}>{user?.plates_remaining || 0}</p>
+            <p className={cn("text-xs mt-1", textMutedClass)}>remaining to give</p>
           </div>
           <Button
             onClick={createPlate}
             disabled={creating || (user?.plates_remaining || 0) <= 0}
-            className="bg-white text-black hover:bg-white/90 rounded-none font-display tracking-wider"
+            className={cn("rounded-none font-display tracking-wider", isDark ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90")}
             data-testid="create-plate-btn"
           >
             {creating ? (
@@ -135,7 +135,7 @@ export default function VouchPage() {
             <CheckCircle className="h-5 w-5 text-green-500" />
             <div>
               <p className="text-green-400 text-sm">You've been vouched for</p>
-              <p className="text-white/50 text-xs">Welcomed by the community</p>
+              <p className={cn("text-xs", textMutedClass)}>Welcomed by the community</p>
             </div>
           </CardContent>
         </Card>
@@ -143,9 +143,9 @@ export default function VouchPage() {
 
       {/* Redeem Section */}
       {!user?.vouched_by && (
-        <Card className="bg-white/5 border-white/10 mb-6">
+        <Card className={cn("mb-6", isDark ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-200")}>
           <CardHeader>
-            <CardTitle className="text-sm font-display tracking-widest uppercase">Got a Plate Code?</CardTitle>
+            <CardTitle className={cn("text-sm font-display tracking-widest uppercase", textClass)}>Got a Plate Code?</CardTitle>
             <CardDescription>Enter a code from someone who vouched for you</CardDescription>
           </CardHeader>
           <CardContent>
@@ -154,14 +154,14 @@ export default function VouchPage() {
                 value={redeemCode}
                 onChange={(e) => setRedeemCode(e.target.value.toUpperCase())}
                 placeholder="XXXX-XXXX"
-                className="bg-transparent border-white/20 focus:border-white rounded-none uppercase tracking-widest"
+                className={cn("bg-transparent rounded-none uppercase tracking-widest", isDark ? "border-white/20 focus:border-white" : "border-gray-300 focus:border-gray-900")}
                 maxLength={9}
                 data-testid="redeem-code-input"
               />
               <Button
                 type="submit"
                 disabled={redeeming || !redeemCode.trim()}
-                className="bg-white text-black hover:bg-white/90 rounded-none"
+                className={cn("rounded-none", isDark ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90")}
                 data-testid="redeem-btn"
               >
                 {redeeming ? <Loader2 className="h-4 w-4 animate-spin" /> : 'Redeem'}
@@ -174,20 +174,20 @@ export default function VouchPage() {
       {/* Active Plates */}
       {activePlates.length > 0 && (
         <div className="mb-6">
-          <h2 className="font-display text-xs tracking-widest uppercase text-white/40 mb-3">
+          <h2 className={cn("font-display text-xs tracking-widest uppercase mb-3", textVeryMutedClass)}>
             Active Plates ({activePlates.length})
           </h2>
           <div className="space-y-2">
             {activePlates.map((plate) => (
-              <Card key={plate.code} className="bg-white/5 border-white/10">
+              <Card key={plate.code} className={cn(isDark ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-200")}>
                 <CardContent className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded bg-white/10 flex items-center justify-center">
-                      <Ticket className="h-5 w-5 text-white/60" />
+                    <div className={cn("w-10 h-10 rounded flex items-center justify-center", isDark ? "bg-white/10" : "bg-gray-200")}>
+                      <Ticket className={cn("h-5 w-5", isDark ? "text-white/60" : "text-gray-600")} />
                     </div>
                     <div>
-                      <p className="font-mono text-lg tracking-widest text-white">{plate.code}</p>
-                      <p className="text-white/40 text-xs">
+                      <p className={cn("font-mono text-lg tracking-widest", textClass)}>{plate.code}</p>
+                      <p className={cn("text-xs", textVeryMutedClass)}>
                         Created {new Date(plate.created_at).toLocaleDateString()}
                       </p>
                     </div>
@@ -196,7 +196,7 @@ export default function VouchPage() {
                     variant="ghost"
                     size="sm"
                     onClick={() => copyCode(plate.code)}
-                    className="text-white/60 hover:text-white"
+                    className={cn(isDark ? "text-white/60 hover:text-white" : "text-gray-600 hover:text-gray-900")}
                     data-testid={`copy-${plate.code}`}
                   >
                     {copiedCode === plate.code ? (
@@ -215,22 +215,22 @@ export default function VouchPage() {
       {/* Used Plates */}
       {usedPlates.length > 0 && (
         <div>
-          <h2 className="font-display text-xs tracking-widest uppercase text-white/40 mb-3">
+          <h2 className={cn("font-display text-xs tracking-widest uppercase mb-3", textVeryMutedClass)}>
             Redeemed Plates ({usedPlates.length})
           </h2>
           <div className="space-y-2">
             {usedPlates.map((plate) => (
-              <Card key={plate.code} className="bg-white/5 border-white/10 opacity-60">
+              <Card key={plate.code} className={cn("opacity-60", isDark ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-200")}>
                 <CardContent className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-3">
-                    <Avatar className="h-10 w-10 border border-white/20">
-                      <AvatarFallback className="bg-white/10 text-xs">
+                    <Avatar className={cn("h-10 w-10 border", isDark ? "border-white/20" : "border-gray-300")}>
+                      <AvatarFallback className={cn("text-xs", isDark ? "bg-white/10" : "bg-gray-200")}>
                         {plate.redeemed_by?.charAt(0) || '?'}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className="text-white/60 text-sm line-through">{plate.code}</p>
-                      <p className="text-white/40 text-xs">
+                      <p className={cn("text-sm line-through", isDark ? "text-white/60" : "text-gray-500")}>{plate.code}</p>
+                      <p className={cn("text-xs", textVeryMutedClass)}>
                         Redeemed {plate.redeemed_at ? new Date(plate.redeemed_at).toLocaleDateString() : 'recently'}
                       </p>
                     </div>
@@ -246,22 +246,22 @@ export default function VouchPage() {
       {/* Empty State */}
       {!loading && plates.length === 0 && (
         <div className="text-center py-8">
-          <Users className="h-12 w-12 text-white/20 mx-auto mb-4" />
-          <p className="text-white/50 text-sm mb-2">No plates created yet</p>
-          <p className="text-white/30 text-xs">Create a plate to invite someone to BLVX</p>
+          <Users className={cn("h-12 w-12 mx-auto mb-4", isDark ? "text-white/20" : "text-gray-300")} />
+          <p className={cn("text-sm mb-2", textMutedClass)}>No plates created yet</p>
+          <p className={cn("text-xs", isDark ? "text-white/30" : "text-gray-400")}>Create a plate to invite someone to BLVX</p>
         </div>
       )}
 
       {/* How It Works */}
-      <Card className="bg-white/5 border-white/10 mt-8">
+      <Card className={cn("mt-8", isDark ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-200")}>
         <CardHeader>
-          <CardTitle className="text-xs font-display tracking-widest uppercase flex items-center gap-2">
+          <CardTitle className={cn("text-xs font-display tracking-widest uppercase flex items-center gap-2", textClass)}>
             <AlertCircle className="h-4 w-4" />
             How The Vouch Works
           </CardTitle>
         </CardHeader>
-        <CardContent className="text-white/50 text-xs space-y-2">
-          <p>• You start with <strong className="text-white">3 Plates</strong> to share</p>
+        <CardContent className={cn("text-xs space-y-2", textMutedClass)}>
+          <p>• You start with <strong className={textClass}>3 Plates</strong> to share</p>
           <p>• Create a plate and share the code with someone you trust</p>
           <p>• They redeem it to join BLVX with your vouch</p>
           <p>• Your reputation is tied to who you vouch for</p>
