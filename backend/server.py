@@ -4518,7 +4518,11 @@ ADMIN_USERS = ["user_d940ef29bbb5", "user_832307c0fe15"]  # CJ Nurse's user IDs
 
 async def get_admin_user(user: UserBase = Depends(get_current_user)):
     """Dependency to check if user is admin"""
-    if user.user_id not in ADMIN_USERS:
+    # Check hardcoded list OR is_admin flag in database
+    db_user = await db.users.find_one({"user_id": user.user_id})
+    is_db_admin = db_user.get("is_admin", False) if db_user else False
+    
+    if user.user_id not in ADMIN_USERS and not is_db_admin:
         raise HTTPException(status_code=403, detail="Admin access required")
     return user
 
@@ -4684,11 +4688,15 @@ async def fix_founder_account(secret: str):
     if secret != "blvx_founder_fix_2026":
         raise HTTPException(status_code=403, detail="Invalid secret")
     
-    # Fix CJ's accounts
+    # Fix CJ's accounts - by user ID AND by email
     founder_ids = ["user_d940ef29bbb5", "user_832307c0fe15"]
+    founder_emails = ["cj@blvx.social", "cjaze.av@gmail.com"]
     
+    fixed_users = []
+    
+    # Fix by user ID
     for user_id in founder_ids:
-        await db.users.update_one(
+        result = await db.users.update_one(
             {"user_id": user_id},
             {"$set": {
                 "created_at": datetime.now(timezone.utc).isoformat(),
@@ -4697,8 +4705,26 @@ async def fix_founder_account(secret: str):
                 "is_admin": True
             }}
         )
+        if result.modified_count > 0:
+            fixed_users.append(user_id)
     
-    return {"message": "Founder accounts fixed", "user_ids": founder_ids}
+    # Fix by email (catches any accounts we missed)
+    for email in founder_emails:
+        result = await db.users.update_one(
+            {"email": email.lower()},
+            {"$set": {
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "plates_remaining": 999999,
+                "is_day_one": True,
+                "is_admin": True
+            }}
+        )
+        if result.modified_count > 0:
+            user = await db.users.find_one({"email": email.lower()})
+            if user:
+                fixed_users.append(f"{email} ({user.get('user_id', 'unknown')})")
+    
+    return {"message": "Founder accounts fixed", "fixed": fixed_users}
 
 @admin_router.patch("/users/{user_id}/fix")
 async def fix_user_data(
