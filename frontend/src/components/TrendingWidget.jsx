@@ -7,10 +7,34 @@ import axios from 'axios';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
+// Theme hook for components
+const useTheme = () => {
+  const [isDark, setIsDark] = useState(() => {
+    return document.documentElement.getAttribute('data-theme') === 'dark';
+  });
+  
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDark(document.documentElement.getAttribute('data-theme') === 'dark');
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => observer.disconnect();
+  }, []);
+  
+  return isDark;
+};
+
 // "The Word" - Trending Topics Widget
 export const TrendingWidget = ({ className }) => {
   const [trending, setTrending] = useState([]);
   const [loading, setLoading] = useState(true);
+  const isDark = useTheme();
+  
+  // Theme-aware classes
+  const textClass = isDark ? 'text-white' : 'text-gray-900';
+  const textMutedClass = isDark ? 'text-white/40' : 'text-gray-500';
+  const borderClass = isDark ? 'border-white/10' : 'border-gray-200';
+  const hoverBgClass = isDark ? 'hover:bg-white/5' : 'hover:bg-gray-100';
 
   useEffect(() => {
     fetchTrending();
@@ -63,11 +87,11 @@ export const TrendingWidget = ({ className }) => {
     <div className={className} data-testid="trending-widget">
       {/* Header */}
       <div className="flex items-center gap-2 mb-4">
-        <TrendingUp className="h-5 w-5 text-white" />
-        <h3 className="font-display text-sm tracking-widest uppercase">The Word</h3>
+        <TrendingUp className={cn("h-5 w-5", textClass)} />
+        <h3 className={cn("font-display text-sm tracking-widest uppercase", textClass)}>The Word</h3>
       </div>
       
-      <p className="text-[10px] text-white/40 mb-4 uppercase tracking-wider">What's poppin'</p>
+      <p className={cn("text-[10px] mb-4 uppercase tracking-wider", textMutedClass)}>What's poppin'</p>
       
       {/* Trending List */}
       <div className="space-y-1">
@@ -75,28 +99,28 @@ export const TrendingWidget = ({ className }) => {
           <Link
             key={topic.hashtag}
             to={`/search?q=${encodeURIComponent(topic.hashtag)}`}
-            className="block py-3 px-2 -mx-2 hover:bg-white/5 transition-colors group"
+            className={cn("block py-3 px-2 -mx-2 transition-colors group", hoverBgClass)}
             data-testid={`trending-${index}`}
           >
             <div className="flex items-start justify-between">
               <div>
                 <div className="flex items-center gap-1.5">
-                  <Hash className="h-3 w-3 text-white/40" />
-                  <span className="font-medium text-white text-sm group-hover:underline">
+                  <Hash className={cn("h-3 w-3", textMutedClass)} />
+                  <span className={cn("font-medium text-sm group-hover:underline", textClass)}>
                     {topic.hashtag.replace('#', '')}
                   </span>
                 </div>
-                <p className="text-xs text-white/40 mt-0.5">
+                <p className={cn("text-xs mt-0.5", textMutedClass)}>
                   {formatCount(topic.post_count)} Plates served
                 </p>
               </div>
-              <span className={`text-[10px] font-mono ${
+              <span className={cn("text-[10px] font-mono", 
                 topic.change === 'new' 
                   ? 'text-green-400' 
                   : topic.change.startsWith('+') 
-                    ? 'text-white/60' 
-                    : 'text-white/40'
-              }`}>
+                    ? (isDark ? 'text-white/60' : 'text-gray-600')
+                    : textMutedClass
+              )}>
                 {topic.change}
               </span>
             </div>
@@ -105,10 +129,10 @@ export const TrendingWidget = ({ className }) => {
       </div>
       
       {/* Footer */}
-      <div className="mt-4 pt-4 border-t border-white/10">
+      <div className={cn("mt-4 pt-4 border-t", borderClass)}>
         <Link 
           to="/search"
-          className="text-xs text-white/40 hover:text-white transition-colors flex items-center gap-1"
+          className={cn("text-xs transition-colors flex items-center gap-1", textMutedClass, isDark ? "hover:text-white" : "hover:text-gray-900")}
         >
           See more
           <ExternalLink className="h-3 w-3" />
@@ -123,6 +147,15 @@ export const LinkPreviewCard = ({ url, className }) => {
   const [preview, setPreview] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(false);
+  const isDark = useTheme();
+  
+  // Theme-aware classes
+  const textClass = isDark ? 'text-white' : 'text-gray-900';
+  const textMutedClass = isDark ? 'text-white/50' : 'text-gray-600';
+  const textVeryMutedClass = isDark ? 'text-white/40' : 'text-gray-500';
+  const borderClass = isDark ? 'border-white/20' : 'border-gray-200';
+  const borderHoverClass = isDark ? 'hover:border-white/40' : 'hover:border-gray-400';
+  const bgClass = isDark ? 'bg-white/5' : 'bg-gray-50';
 
   useEffect(() => {
     if (url) {
@@ -162,7 +195,7 @@ export const LinkPreviewCard = ({ url, className }) => {
 
   if (loading) {
     return (
-      <div className={`border border-white/20 overflow-hidden ${className}`}>
+      <div className={cn("border overflow-hidden", borderClass, className)}>
         <Skeleton className="h-32 w-full" />
         <div className="p-3">
           <Skeleton className="h-4 w-3/4 mb-2" />
@@ -180,13 +213,14 @@ export const LinkPreviewCard = ({ url, className }) => {
       href={url}
       target="_blank"
       rel="noopener noreferrer"
-      className={`block border border-white/20 overflow-hidden hover:border-white/40 transition-colors ${className}`}
+      className={cn("block border overflow-hidden transition-colors", borderClass, borderHoverClass, className)}
       data-testid="link-preview"
     >
       {/* Image */}
       {preview?.image && (
         <div className={cn(
-          "overflow-hidden bg-white/5",
+          "overflow-hidden",
+          bgClass,
           isGoogleSearch ? "h-16 flex items-center justify-center" : "h-32"
         )}>
           <img
@@ -202,16 +236,16 @@ export const LinkPreviewCard = ({ url, className }) => {
       )}
       
       {/* Content */}
-      <div className="p-3 bg-white/5">
-        <p className="text-sm text-white font-medium line-clamp-2 mb-1">
+      <div className={cn("p-3", bgClass)}>
+        <p className={cn("text-sm font-medium line-clamp-2 mb-1", textClass)}>
           {preview?.title || 'Link'}
         </p>
         {preview?.description && (
-          <p className="text-xs text-white/50 line-clamp-2 mb-2">
+          <p className={cn("text-xs line-clamp-2 mb-2", textMutedClass)}>
             {preview.description}
           </p>
         )}
-        <div className="flex items-center gap-1.5 text-[10px] text-white/40">
+        <div className={cn("flex items-center gap-1.5 text-[10px]", textVeryMutedClass)}>
           <ExternalLink className="h-3 w-3" />
           <span>{preview?.domain || new URL(url).hostname}</span>
         </div>
