@@ -1364,6 +1364,73 @@ async def upload_avatar(file: UploadFile = File(...), user: UserBase = Depends(g
         logger.error(f"Avatar upload failed: {e}")
         raise HTTPException(status_code=500, detail="Failed to upload avatar")
 
+@users_router.delete("/account")
+async def delete_account(user: UserBase = Depends(get_current_user)):
+    """
+    Permanently delete user account and all associated data.
+    This action cannot be undone.
+    """
+    user_id = user.user_id
+    logger.info(f"Account deletion requested for user {user_id}")
+    
+    try:
+        # Delete user's posts
+        await db.posts.delete_many({"user_id": user_id})
+        
+        # Delete user's likes
+        await db.likes.delete_many({"user_id": user_id})
+        
+        # Delete user's follows (both directions)
+        await db.follows.delete_many({"follower_id": user_id})
+        await db.follows.delete_many({"following_id": user_id})
+        
+        # Delete user's notifications (both sent and received)
+        await db.notifications.delete_many({"user_id": user_id})
+        await db.notifications.delete_many({"from_user_id": user_id})
+        
+        # Delete user's blocks and mutes
+        await db.blocks.delete_many({"blocker_id": user_id})
+        await db.blocks.delete_many({"blocked_id": user_id})
+        await db.mutes.delete_many({"muter_id": user_id})
+        await db.mutes.delete_many({"muted_id": user_id})
+        
+        # Delete user's reports (as reporter)
+        await db.reports.delete_many({"reporter_id": user_id})
+        
+        # Delete user's GC memberships
+        await db.gcs.update_many(
+            {"member_ids": user_id},
+            {"$pull": {"member_ids": user_id}}
+        )
+        
+        # Delete user's GC messages
+        await db.gc_messages.delete_many({"user_id": user_id})
+        
+        # Delete user's sidebar conversations
+        await db.sidebars.delete_many({"$or": [{"user1_id": user_id}, {"user2_id": user_id}]})
+        await db.sidebar_messages.delete_many({"user_id": user_id})
+        
+        # Delete user's vouch plates
+        await db.plates.delete_many({"creator_id": user_id})
+        
+        # Delete user's AI stoop sessions and config
+        await db.ai_stoop_sessions.delete_many({"$or": [{"visitor_id": user_id}, {"owner_id": user_id}]})
+        await db.ai_stoop_configs.delete_many({"user_id": user_id})
+        
+        # Delete user's push subscriptions
+        await db.push_subscriptions.delete_many({"user_id": user_id})
+        
+        # Finally, delete the user account
+        await db.users.delete_one({"user_id": user_id})
+        
+        logger.info(f"Account deleted successfully for user {user_id}")
+        
+        return {"message": "Account deleted successfully. We're sorry to see you go."}
+        
+    except Exception as e:
+        logger.error(f"Account deletion failed for user {user_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to delete account. Please contact support.")
+
 @users_router.post("/follow/{user_id}")
 async def follow_user(user_id: str, current_user: UserBase = Depends(get_current_user)):
     """Follow a user"""

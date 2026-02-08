@@ -1,11 +1,19 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, LogOut, User, Bell, Shield, HelpCircle, Sparkles, Zap, Moon, Sun, Loader2, Settings2, DoorOpen, Ban, VolumeX } from 'lucide-react';
+import { ArrowLeft, LogOut, User, Bell, Shield, HelpCircle, Sparkles, Zap, Moon, Sun, Loader2, Settings2, DoorOpen, Ban, VolumeX, Trash2, AlertTriangle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
+import { Input } from '@/components/ui/input';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 import {
   Select,
   SelectContent,
@@ -36,9 +44,31 @@ export default function SettingsPage() {
   } = usePushNotifications();
   const [droppingSpark, setDroppingSpark] = useState(false);
   const [sparkCategory, setSparkCategory] = useState('random');
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [deleteConfirmText, setDeleteConfirmText] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
   const handleLogout = async () => {
     await logout();
+  };
+
+  const handleDeleteAccount = async () => {
+    if (deleteConfirmText !== 'DELETE') {
+      toast.error('Please type DELETE to confirm');
+      return;
+    }
+    
+    setDeleting(true);
+    try {
+      await axios.delete(`${API}/users/account`, { withCredentials: true });
+      toast.success('Account deleted. We\'re sorry to see you go.');
+      setDeleteModalOpen(false);
+      await logout();
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to delete account');
+    } finally {
+      setDeleting(false);
+    }
   };
 
   const handlePushToggle = async () => {
@@ -303,7 +333,93 @@ export default function SettingsPage() {
             Log out
           </Button>
         </div>
+
+        {/* Danger Zone */}
+        <div className="p-4 border-t border-red-500/20">
+          <h2 className="text-xs font-display uppercase tracking-wider text-red-500/60 mb-4">
+            Danger Zone
+          </h2>
+          <Button
+            variant="ghost"
+            onClick={() => setDeleteModalOpen(true)}
+            className="w-full justify-start text-red-500 hover:text-red-400 hover:bg-red-500/10 border border-red-500/30"
+            data-testid="delete-account-btn"
+          >
+            <Trash2 className="h-5 w-5 mr-3" />
+            Delete Account
+          </Button>
+          <p className="text-xs text-white/30 mt-2">
+            Permanently delete your account and all associated data. This cannot be undone.
+          </p>
+        </div>
       </div>
+
+      {/* Delete Account Modal */}
+      <Dialog open={deleteModalOpen} onOpenChange={setDeleteModalOpen}>
+        <DialogContent className="bg-card border border-red-500/30 sm:max-w-[400px]">
+          <DialogHeader>
+            <DialogTitle className="font-display text-sm tracking-widest uppercase text-red-500 flex items-center gap-2">
+              <AlertTriangle className="h-5 w-5" />
+              Delete Account
+            </DialogTitle>
+            <DialogDescription className="text-white/60">
+              This action cannot be undone. All your data will be permanently deleted.
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="space-y-4 pt-4">
+            <div className="p-3 bg-red-500/10 border border-red-500/30 text-sm text-red-400">
+              <p className="font-medium mb-2">This will permanently delete:</p>
+              <ul className="text-xs space-y-1 text-red-400/80">
+                <li>• All your posts and replies</li>
+                <li>• Your profile and settings</li>
+                <li>• Your followers and following lists</li>
+                <li>• Your messages and conversations</li>
+                <li>• Your vouch plates</li>
+              </ul>
+            </div>
+            
+            <div>
+              <p className="text-xs text-white/50 mb-2">
+                Type <span className="font-mono text-red-400">DELETE</span> to confirm:
+              </p>
+              <Input
+                value={deleteConfirmText}
+                onChange={(e) => setDeleteConfirmText(e.target.value.toUpperCase())}
+                placeholder="DELETE"
+                className="bg-transparent border-red-500/30 focus:border-red-500 font-mono uppercase"
+                data-testid="delete-confirm-input"
+              />
+            </div>
+            
+            <div className="flex gap-2">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setDeleteModalOpen(false);
+                  setDeleteConfirmText('');
+                }}
+                className="flex-1"
+                disabled={deleting}
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleDeleteAccount}
+                disabled={deleteConfirmText !== 'DELETE' || deleting}
+                className="flex-1 bg-red-500 hover:bg-red-600 text-white"
+                data-testid="delete-confirm-btn"
+              >
+                {deleting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : (
+                  'Delete Forever'
+                )}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* App Info */}
       <div className="p-4 text-center text-xs text-white/30">
