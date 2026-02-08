@@ -180,7 +180,13 @@ export default function AIStooopPage() {
   };
 
   const deleteSession = async () => {
-    if (!confirm('Delete this session? This cannot be undone.')) return;
+    // Visitors hide, owners delete
+    const isOwner = session?.owner_id === user?.user_id;
+    const message = isOwner 
+      ? 'Delete this session? This cannot be undone.'
+      : 'Hide this session from your history?';
+    
+    if (!confirm(message)) return;
     
     setDeleting(true);
     try {
@@ -188,11 +194,11 @@ export default function AIStooopPage() {
         `${API}/ai-stoop/session/${session.session_id}`,
         { withCredentials: true }
       );
-      toast.success('Session deleted');
+      toast.success(isOwner ? 'Session deleted' : 'Session hidden from your history');
       navigate(-1);
     } catch (error) {
-      console.error('Error deleting session:', error);
-      toast.error('Failed to delete session');
+      console.error('Error:', error);
+      toast.error('Something went wrong');
     } finally {
       setDeleting(false);
     }

@@ -276,6 +276,7 @@ class GCCreate(BaseModel):
 class StoopCreate(BaseModel):
     title: str
     pinned_post_id: Optional[str] = None
+    max_speakers: int = 4  # Default max speakers (including host)
 
 class BonitaRequest(BaseModel):
     mode: str
@@ -2362,6 +2363,7 @@ async def create_stoop(stoop: StoopCreate, user: UserBase = Depends(get_current_
         "pinned_post_id": stoop.pinned_post_id,
         "speakers": [user.user_id],
         "listeners": [],
+        "max_speakers": stoop.max_speakers,  # Limit speakers to prevent chaos
         "is_live": True,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
@@ -2476,17 +2478,50 @@ async def leave_stoop(stoop_id: str, user: UserBase = Depends(get_current_user))
 
 @stoop_router.post("/{stoop_id}/pass-aux")
 async def pass_aux(stoop_id: str, user_id: str, user: UserBase = Depends(get_current_user)):
-    """Pass the Aux - Host only"""
+    """Pass the Aux - Host only, respects max_speakers limit"""
     stoop = await db.stoops.find_one({"stoop_id": stoop_id})
     if not stoop or stoop["host_id"] != user.user_id:
         raise HTTPException(status_code=403, detail="Only host can pass the aux")
+    
+    # Check speaker limit
+    max_speakers = stoop.get("max_speakers", 4)
+    current_speakers = len(stoop.get("speakers", []))
+    
+    # Don't count if user is already a speaker
+    if user_id not in stoop.get("speakers", []):
+        if current_speakers >= max_speakers:
+            raise HTTPException(
+                status_code=400, 
+                detail=f"Speaker limit reached ({max_speakers} max). Someone needs to step down first."
+            )
     
     await db.stoops.update_one(
         {"stoop_id": stoop_id},
         {"$addToSet": {"speakers": user_id}}
     )
     
-    return {"message": "Aux passed"}
+    return {"message": "Aux passed", "speakers_count": current_speakers + 1, "max_speakers": max_speakers}
+
+@stoop_router.put("/{stoop_id}/settings")
+async def update_stoop_settings(
+    stoop_id: str, 
+    max_speakers: int = 4,
+    user: UserBase = Depends(get_current_user)
+):
+    """Update Stoop settings - Host only"""
+    stoop = await db.stoops.find_one({"stoop_id": stoop_id})
+    if not stoop or stoop["host_id"] != user.user_id:
+        raise HTTPException(status_code=403, detail="Only host can update settings")
+    
+    # Validate max_speakers (between 1 and 10)
+    max_speakers = max(1, min(10, max_speakers))
+    
+    await db.stoops.update_one(
+        {"stoop_id": stoop_id},
+        {"$set": {"max_speakers": max_speakers}}
+    )
+    
+    return {"message": "Settings updated", "max_speakers": max_speakers}
 
 @stoop_router.post("/{stoop_id}/end")
 async def end_stoop(stoop_id: str, user: UserBase = Depends(get_current_user)):
@@ -5017,17 +5052,21 @@ async def get_my_stoop_sessions(
 ):
     """Get your stoop sessions (as owner or visitor)"""
     if role == "owner":
+        # Owner sees all sessions on their stoop
         sessions = await db.ai_stoop_sessions.find(
             {"owner_id": user.user_id}
         ).sort("started_at", -1).limit(50).to_list(50)
     else:
-        sessions = await db.ai_stoop_sessions.find(
-            {"visitor_id": user.user_id}
-        ).sort("started_at", -1).limit(50).to_list(50)
+        # Visitor sees only sessions they haven't hidden
+        sessions = await db.ai_stoop_sessions.find({
+            "visitor_id": user.user_id,
+            "hidden_by_visitors": {"$ne": user.user_id}
+        }).sort("started_at", -1).limit(50).to_list(50)
     
     # Clean up for response
     for s in sessions:
         s.pop("_id", None)
+        s.pop("hidden_by_visitors", None)  # Don't expose this to client
     
     return sessions
 
@@ -5073,22 +5112,32 @@ async def delete_stoop_session(
     session_id: str,
     user: UserBase = Depends(get_current_user)
 ):
-    """Delete a stoop session (owner or visitor can delete)"""
+    """Delete or hide a stoop session
+    - Owner: fully deletes the session
+    - Visitor: hides from their view only (owner still has it)
+    """
     session = await db.ai_stoop_sessions.find_one({"session_id": session_id})
     if not session:
         raise HTTPException(status_code=404, detail="Session not found")
     
-    # Only owner or visitor can delete
-    if session["visitor_id"] != user.user_id and session["owner_id"] != user.user_id:
-        raise HTTPException(status_code=403, detail="Not authorized to delete this session")
+    is_owner = session["owner_id"] == user.user_id
+    is_visitor = session["visitor_id"] == user.user_id
     
-    # Delete any associated share requests
-    await db.ai_stoop_share_requests.delete_many({"session_id": session_id})
+    if not is_owner and not is_visitor:
+        raise HTTPException(status_code=403, detail="Not authorized")
     
-    # Delete the session
-    await db.ai_stoop_sessions.delete_one({"session_id": session_id})
-    
-    return {"message": "Session deleted", "session_id": session_id}
+    if is_owner:
+        # Owner can fully delete
+        await db.ai_stoop_share_requests.delete_many({"session_id": session_id})
+        await db.ai_stoop_sessions.delete_one({"session_id": session_id})
+        return {"message": "Session deleted", "session_id": session_id}
+    else:
+        # Visitor can only hide from their view
+        await db.ai_stoop_sessions.update_one(
+            {"session_id": session_id},
+            {"$addToSet": {"hidden_by_visitors": user.user_id}}
+        )
+        return {"message": "Session hidden from your history", "session_id": session_id}
 
 # ========================
 # ADMIN DASHBOARD API

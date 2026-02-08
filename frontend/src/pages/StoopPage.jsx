@@ -21,8 +21,16 @@ import {
   AlertCircle,
   Wifi,
   WifiOff,
-  Loader2
+  Loader2,
+  Settings
 } from 'lucide-react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '../components/ui/select';
 
 const API = process.env.REACT_APP_BACKEND_URL;
 
@@ -292,7 +300,9 @@ export default function StoopPage() {
           
           {/* Speakers */}
           <div className="mb-4">
-            <p className={cn("text-[10px] uppercase tracking-wider mb-2", isDark ? "text-white/40" : "text-gray-500")}>Speakers</p>
+            <p className={cn("text-[10px] uppercase tracking-wider mb-2", isDark ? "text-white/40" : "text-gray-500")}>
+              Speakers ({activeStoopData.speaker_details?.length || 1}/{activeStoopData.max_speakers || 4})
+            </p>
             <div className="flex flex-wrap gap-3">
               {activeStoopData.speaker_details?.map((speaker) => (
                 <div key={speaker.user_id} className="flex flex-col items-center">
@@ -414,15 +424,45 @@ export default function StoopPage() {
               Leave
             </Button>
             {activeStoopData.host_id === user.user_id && (
-              <Button
-                onClick={endStoop}
-                variant="ghost"
-                size="sm"
-                className="text-red-500 hover:text-red-400 text-xs"
-                data-testid="stoop-end-btn"
-              >
-                End Stoop
-              </Button>
+              <>
+                {/* Speaker Limit Control */}
+                <div className="flex items-center gap-2">
+                  <Settings className="h-3 w-3 text-white/40" />
+                  <Select
+                    value={String(activeStoopData.max_speakers || 4)}
+                    onValueChange={async (value) => {
+                      try {
+                        await axios.put(
+                          `${API}/api/stoop/${activeStoopId}/settings?max_speakers=${value}`,
+                          {},
+                          { withCredentials: true }
+                        );
+                        toast.success(`Max speakers set to ${value}`);
+                      } catch (error) {
+                        toast.error('Failed to update settings');
+                      }
+                    }}
+                  >
+                    <SelectTrigger className="h-7 w-20 text-[10px] bg-transparent border-white/20">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent className="bg-card border-border">
+                      {[2, 3, 4, 5, 6, 8, 10].map(n => (
+                        <SelectItem key={n} value={String(n)}>{n} max</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <Button
+                  onClick={endStoop}
+                  variant="ghost"
+                  size="sm"
+                  className="text-red-500 hover:text-red-400 text-xs"
+                  data-testid="stoop-end-btn"
+                >
+                  End Stoop
+                </Button>
+              </>
             )}
           </div>
           
