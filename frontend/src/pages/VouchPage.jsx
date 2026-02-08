@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useThemeClasses } from '@/hooks/useTheme';
 import { Ticket, Copy, CheckCircle, Users, Gift, AlertCircle, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';

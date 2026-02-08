@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useThemeClasses } from '@/hooks/useTheme';
 import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { Heart, MessageCircle, Repeat2, UserPlus, Check } from 'lucide-react';

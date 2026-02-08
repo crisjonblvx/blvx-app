@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useThemeClasses } from '@/hooks/useTheme';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, Sparkles } from 'lucide-react';
 import { usePosts } from '@/hooks/usePosts';

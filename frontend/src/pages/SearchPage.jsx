@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useThemeClasses } from '@/hooks/useTheme';
 import { useSearchParams } from 'react-router-dom';
 import { Search as SearchIcon, X } from 'lucide-react';
 import { Input } from '@/components/ui/input';
@@ -22,6 +23,7 @@ export default function SearchPage() {
   const [showFounder, setShowFounder] = useState(false);
   const { searchUsers, loading: usersLoading } = useUsers();
   const { searchPosts, loading: postsLoading } = usePosts();
+  const { isDark, textClass, textMutedClass, textVeryMutedClass, borderClass, hoverBgClass } = useThemeClasses();
 
   // Check for founder easter egg
   useEffect(() => {
@@ -74,9 +76,9 @@ export default function SearchPage() {
   return (
     <div className="mb-safe" data-testid="search-page">
       {/* Search Header */}
-      <div className="sticky top-14 md:top-0 z-30 glass border-b border-white/10 p-4">
+      <div className={cn("sticky top-14 md:top-0 z-30 glass border-b p-4", borderClass)}>
         <div className="relative">
-          <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-white/40" />
+          <SearchIcon className={cn("absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5", textVeryMutedClass)} />
           <Input
             value={query}
             onChange={(e) => {
@@ -86,14 +88,14 @@ export default function SearchPage() {
               }
             }}
             placeholder="Search BLVX..."
-            className="pl-10 pr-10 bg-white/5 border-white/20 focus:border-white rounded-sm"
+            className={cn("pl-10 pr-10 rounded-sm", isDark ? "bg-white/5 border-white/20 focus:border-white" : "bg-gray-50 border-gray-300 focus:border-gray-900")}
             data-testid="search-input"
           />
           {query && (
             <Button
               variant="ghost"
               size="icon"
-              className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8 text-white/40 hover:text-white"
+              className={cn("absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8", textVeryMutedClass, isDark ? "hover:text-white" : "hover:text-gray-900")}
               onClick={() => {
                 setQuery('');
                 setSearchType('trending');
@@ -107,7 +109,7 @@ export default function SearchPage() {
 
       {/* Search Type Tabs */}
       <Tabs value={searchType} onValueChange={setSearchType} className="w-full">
-        <TabsList className="w-full bg-transparent border-b border-white/10 rounded-none h-auto p-0">
+        <TabsList className={cn("w-full bg-transparent border-b rounded-none h-auto p-0", borderClass)}>
           <TabsTrigger 
             value="trending" 
             className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-white data-[state=active]:bg-transparent py-3"

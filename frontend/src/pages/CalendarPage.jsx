@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useThemeClasses } from '@/hooks/useTheme';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Calendar, Loader2, Sparkles } from 'lucide-react';
 import { Button } from '@/components/ui/button';
