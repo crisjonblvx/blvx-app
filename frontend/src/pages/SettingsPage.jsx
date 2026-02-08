@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, LogOut, User, Bell, Shield, HelpCircle, Sparkles, Zap, Moon, Sun, Loader2, Settings2, DoorOpen, Ban, VolumeX, Trash2, AlertTriangle, MessageSquareOff } from 'lucide-react';
+import { ArrowLeft, LogOut, User, Bell, Shield, HelpCircle, Sparkles, Zap, Moon, Sun, Loader2, Settings2, DoorOpen, Ban, VolumeX, Trash2, AlertTriangle, MessageSquareOff, Mail } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useThemeClasses } from '@/hooks/useTheme';
@@ -50,6 +50,35 @@ export default function SettingsPage() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [deleting, setDeleting] = useState(false);
+  const [marketingConsent, setMarketingConsent] = useState(false);
+  const [marketingLoading, setMarketingLoading] = useState(false);
+
+  // Fetch marketing consent on mount
+  useEffect(() => {
+    const fetchMarketingConsent = async () => {
+      try {
+        const response = await axios.get(`${API}/users/marketing-consent`, { withCredentials: true });
+        setMarketingConsent(response.data.marketing_consent);
+      } catch (error) {
+        console.error('Failed to fetch marketing consent:', error);
+      }
+    };
+    fetchMarketingConsent();
+  }, []);
+
+  const handleMarketingToggle = async () => {
+    setMarketingLoading(true);
+    try {
+      const newValue = !marketingConsent;
+      await axios.put(`${API}/users/marketing-consent?consent=${newValue}`, {}, { withCredentials: true });
+      setMarketingConsent(newValue);
+      toast.success(newValue ? 'Subscribed to updates!' : 'Unsubscribed from updates');
+    } catch (error) {
+      toast.error('Failed to update preferences');
+    } finally {
+      setMarketingLoading(false);
+    }
+  };
 
   const handleLogout = async () => {
     await logout();
@@ -157,6 +186,15 @@ export default function SettingsPage() {
           toggle: true,
           value: !isDark,
           onChange: toggleTheme,
+        },
+        {
+          icon: Mail,
+          label: 'Marketing Updates',
+          description: 'Get updates on new features & ContentCreators.life projects',
+          toggle: true,
+          value: marketingConsent,
+          onChange: handleMarketingToggle,
+          disabled: marketingLoading,
         },
       ],
     },

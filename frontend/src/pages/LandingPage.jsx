@@ -32,7 +32,8 @@ export default function LandingPage() {
     email: '',
     password: '',
     name: '',
-    rememberMe: false
+    rememberMe: false,
+    marketingConsent: false
   });
 
   // Check for invite code in URL
@@ -89,7 +90,8 @@ export default function LandingPage() {
       const response = await axios.post(`${API}/auth/signup`, {
         email: formData.email,
         password: formData.password,
-        name: formData.name
+        name: formData.name,
+        marketing_consent: formData.marketingConsent
       }, { withCredentials: true });
       
       setVerificationEmail(formData.email);
@@ -387,6 +389,20 @@ export default function LandingPage() {
                   {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                 </button>
               </div>
+            </div>
+            
+            <div className="flex items-start gap-2">
+              <input
+                type="checkbox"
+                id="marketing-consent"
+                checked={formData.marketingConsent}
+                onChange={(e) => setFormData({...formData, marketingConsent: e.target.checked})}
+                className="w-4 h-4 mt-0.5 bg-transparent border-gray-300 rounded accent-amber-500"
+                data-testid="marketing-consent-checkbox"
+              />
+              <label htmlFor="marketing-consent" className={`${textVeryMutedClass} text-xs cursor-pointer leading-snug`}>
+                Keep me updated on new features and ContentCreators.life projects
+              </label>
             </div>
             
             <Button

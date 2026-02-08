@@ -220,6 +220,7 @@ class EmailSignup(BaseModel):
     email: EmailStr
     password: str
     name: str
+    marketing_consent: bool = False
 
 class EmailLogin(BaseModel):
     email: EmailStr
@@ -474,6 +475,8 @@ async def email_signup(data: EmailSignup, response: Response):
         "following_count": 0,
         "posts_count": 0,
         "vouched_by": None,
+        "marketing_consent": data.marketing_consent,
+        "marketing_consent_at": datetime.now(timezone.utc).isoformat() if data.marketing_consent else None,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     
@@ -813,6 +816,8 @@ async def google_callback(code: str, state: str, request: Request, response: Res
             "following_count": 0,
             "posts_count": 0,
             "vouched_by": None,
+            "marketing_consent": False,
+            "marketing_consent_at": None,
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.users.insert_one(new_user)
@@ -1071,6 +1076,8 @@ async def apple_callback(request: Request, response: Response):
                 "following_count": 0,
                 "posts_count": 0,
                 "vouched_by": None,
+                "marketing_consent": False,
+                "marketing_consent_at": None,
                 "created_at": datetime.now(timezone.utc).isoformat()
             }
             await db.users.insert_one(new_user)
@@ -2190,6 +2197,33 @@ async def remove_muted_word(word: str, user: UserBase = Depends(get_current_user
     )
     
     return {"message": f"No longer muting '{cleaned}'"}
+
+@users_router.get("/marketing-consent")
+async def get_marketing_consent(user: UserBase = Depends(get_current_user)):
+    """Get user's marketing consent status"""
+    user_data = await db.users.find_one({"user_id": user.user_id}, {"marketing_consent": 1, "marketing_consent_at": 1})
+    return {
+        "marketing_consent": user_data.get("marketing_consent", False) if user_data else False,
+        "marketing_consent_at": user_data.get("marketing_consent_at") if user_data else None
+    }
+
+@users_router.put("/marketing-consent")
+async def update_marketing_consent(consent: bool, user: UserBase = Depends(get_current_user)):
+    """Update user's marketing consent"""
+    update_data = {
+        "marketing_consent": consent,
+        "marketing_consent_at": datetime.now(timezone.utc).isoformat() if consent else None
+    }
+    
+    await db.users.update_one(
+        {"user_id": user.user_id},
+        {"$set": update_data}
+    )
+    
+    return {
+        "message": "Marketing preferences updated",
+        "marketing_consent": consent
+    }
 
 # Helper function to get user's muted words
 async def get_muted_words(user_id: str) -> list:
