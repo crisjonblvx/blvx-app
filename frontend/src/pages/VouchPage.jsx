@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { useThemeClasses } from '@/hooks/useTheme';
-import { Ticket, Copy, CheckCircle, Users, Gift, AlertCircle, Loader2, Share2, Link } from 'lucide-react';
+import { Ticket, Copy, CheckCircle, Users, Gift, AlertCircle, Loader2, Share2, Link, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,6 +12,7 @@ import axios from 'axios';
 import { cn } from '@/lib/utils';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+const VISIBLE_PLATES_DEFAULT = 3;
 
 export default function VouchPage() {
   const { user, checkAuth } = useAuth();
@@ -22,6 +23,8 @@ export default function VouchPage() {
   const [redeemCode, setRedeemCode] = useState('');
   const [redeeming, setRedeeming] = useState(false);
   const [copiedCode, setCopiedCode] = useState(null);
+  const [showAllActive, setShowAllActive] = useState(false);
+  const [revokingCode, setRevokingCode] = useState(null);
   const { isDark, textClass, textMutedClass, textVeryMutedClass, borderClass, hoverBgClass } = useThemeClasses();
 
   useEffect(() => {
@@ -132,8 +135,23 @@ export default function VouchPage() {
     }
   };
 
+  const revokePlate = async (code) => {
+    setRevokingCode(code);
+    try {
+      await axios.delete(`${API}/vouch/plate/${code}`, { withCredentials: true });
+      setPlates(plates.filter(p => p.code !== code));
+      toast.success('Invite revoked');
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to revoke invite');
+    } finally {
+      setRevokingCode(null);
+    }
+  };
+
   const activePlates = plates.filter(p => !p.used);
   const usedPlates = plates.filter(p => p.used);
+  const visibleActivePlates = showAllActive ? activePlates : activePlates.slice(0, VISIBLE_PLATES_DEFAULT);
+  const hasMoreActive = activePlates.length > VISIBLE_PLATES_DEFAULT;
 
   return (
     <div className="pb-safe px-4 py-6 max-w-2xl mx-auto" data-testid="vouch-page">
@@ -235,11 +253,27 @@ export default function VouchPage() {
       {/* Active Plates */}
       {activePlates.length > 0 && (
         <div className="mb-6">
-          <h2 className={cn("font-display text-xs tracking-widest uppercase mb-3", isFounder ? "text-amber-500" : textVeryMutedClass)}>
-            {isFounder ? `Active Founder Invites (${activePlates.length})` : `Active Plates (${activePlates.length})`}
-          </h2>
+          <div className="flex items-center justify-between mb-3">
+            <h2 className={cn("font-display text-xs tracking-widest uppercase", isFounder ? "text-amber-500" : textVeryMutedClass)}>
+              {isFounder ? `Active Founder Invites (${activePlates.length})` : `Active Plates (${activePlates.length})`}
+            </h2>
+            {hasMoreActive && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowAllActive(!showAllActive)}
+                className={cn("text-xs h-6 px-2", textMutedClass)}
+              >
+                {showAllActive ? (
+                  <>Show Less <ChevronUp className="h-3 w-3 ml-1" /></>
+                ) : (
+                  <>View All ({activePlates.length}) <ChevronDown className="h-3 w-3 ml-1" /></>
+                )}
+              </Button>
+            )}
+          </div>
           <div className="space-y-3">
-            {activePlates.map((plate) => (
+            {visibleActivePlates.map((plate) => (
               <Card key={plate.code} className={cn(isFounder ? "bg-amber-500/5 border-amber-500/20" : isDark ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-200")}>
                 <CardContent className="p-4">
                   <div className="flex items-center justify-between mb-3">
@@ -281,7 +315,7 @@ export default function VouchPage() {
                       ) : (
                         <Copy className="h-3 w-3 mr-2" />
                       )}
-                      Copy Link
+                      Copy
                     </Button>
                     <Button
                       size="sm"
@@ -292,11 +326,32 @@ export default function VouchPage() {
                       <Share2 className="h-3 w-3 mr-2" />
                       Share
                     </Button>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => revokePlate(plate.code)}
+                      disabled={revokingCode === plate.code}
+                      className="rounded-none text-xs text-red-500 hover:text-red-400 hover:bg-red-500/10 px-2"
+                      title="Revoke invite"
+                    >
+                      {revokingCode === plate.code ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        <Trash2 className="h-3 w-3" />
+                      )}
+                    </Button>
                   </div>
                 </CardContent>
               </Card>
             ))}
           </div>
+          
+          {/* Show more hint when collapsed */}
+          {!showAllActive && hasMoreActive && (
+            <p className={cn("text-xs text-center mt-3", textVeryMutedClass)}>
+              +{activePlates.length - VISIBLE_PLATES_DEFAULT} more invites
+            </p>
+          )}
         </div>
       )}
 

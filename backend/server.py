@@ -1259,6 +1259,24 @@ async def redeem_plate(code: str, user: UserBase = Depends(get_current_user)):
         "is_founder_invite": is_founder_invite
     }
 
+@vouch_router.delete("/plate/{code}")
+async def revoke_plate(code: str, user: UserBase = Depends(get_current_user)):
+    """Revoke/delete an unused plate"""
+    plate = await db.plates.find_one({"code": code.upper()}, {"_id": 0})
+    
+    if not plate:
+        raise HTTPException(status_code=404, detail="Plate not found")
+    
+    if plate["created_by"] != user.user_id:
+        raise HTTPException(status_code=403, detail="You can only revoke your own plates")
+    
+    if plate.get("used_by"):
+        raise HTTPException(status_code=400, detail="Cannot revoke a plate that has been redeemed")
+    
+    await db.plates.delete_one({"code": code.upper()})
+    
+    return {"message": "Plate revoked successfully", "code": code.upper()}
+
 # ========================
 # USER ROUTES
 # ========================
