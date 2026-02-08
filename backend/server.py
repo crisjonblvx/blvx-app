@@ -4677,6 +4677,29 @@ async def clear_spark_posts(admin: UserBase = Depends(get_admin_user)):
         "deleted_count": result.deleted_count
     }
 
+@api_router.get("/admin/fix-founder")
+async def fix_founder_account(secret: str):
+    """One-time fix for founder account - uses secret key instead of session"""
+    # Simple secret check (delete this endpoint after use)
+    if secret != "blvx_founder_fix_2026":
+        raise HTTPException(status_code=403, detail="Invalid secret")
+    
+    # Fix CJ's accounts
+    founder_ids = ["user_d940ef29bbb5", "user_832307c0fe15"]
+    
+    for user_id in founder_ids:
+        await db.users.update_one(
+            {"user_id": user_id},
+            {"$set": {
+                "created_at": datetime.now(timezone.utc).isoformat(),
+                "plates_remaining": 999999,
+                "is_day_one": True,
+                "is_admin": True
+            }}
+        )
+    
+    return {"message": "Founder accounts fixed", "user_ids": founder_ids}
+
 @admin_router.patch("/users/{user_id}/fix")
 async def fix_user_data(
     user_id: str,
