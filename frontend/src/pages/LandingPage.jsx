@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { Button } from '@/components/ui/button';
@@ -13,6 +13,7 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export default function LandingPage() {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { login, loginWithApple, isAuthenticated, loading: authLoading, setAuthenticatedUser } = useAuth();
   const { isDark, assets } = useTheme();
   const [authMode, setAuthMode] = useState('landing'); // landing, login, signup, verify, forgot
@@ -23,12 +24,27 @@ export default function LandingPage() {
   const [forgotEmail, setForgotEmail] = useState('');
   const [resetSent, setResetSent] = useState(false);
   
+  // Invite code handling
+  const [inviteCode, setInviteCode] = useState('');
+  const [isFounderInvite, setIsFounderInvite] = useState(false);
+  
   const [formData, setFormData] = useState({
     email: '',
     password: '',
     name: '',
     rememberMe: false
   });
+
+  // Check for invite code in URL
+  useEffect(() => {
+    const invite = searchParams.get('invite');
+    const founder = searchParams.get('founder');
+    if (invite) {
+      setInviteCode(invite);
+      setIsFounderInvite(founder === 'true');
+      setAuthMode('signup'); // Go straight to signup if they have an invite
+    }
+  }, [searchParams]);
 
   // Theme-aware classes
   const bgClass = isDark ? 'bg-black' : 'bg-white';

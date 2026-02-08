@@ -1203,17 +1203,33 @@ async def redeem_plate(code: str, user: UserBase = Depends(get_current_user)):
     if plate["created_by"] == user.user_id:
         raise HTTPException(status_code=400, detail="Cannot use your own plate")
     
+    # Check if plate was created by a founder/admin
+    creator = await db.users.find_one({"user_id": plate["created_by"]})
+    is_founder_invite = (
+        plate["created_by"] in ADMIN_USERS or 
+        (creator and creator.get("is_admin", False))
+    )
+    
     await db.plates.update_one(
         {"code": code.upper()},
         {"$set": {
             "used_by": user.user_id,
-            "used_at": datetime.now(timezone.utc).isoformat()
+            "used_at": datetime.now(timezone.utc).isoformat(),
+            "is_founder_invite": is_founder_invite
         }}
     )
     
+    # Update user with vouch info and founder invite status
+    user_update = {
+        "vouched_by": plate["created_by"], 
+        "is_day_one": True
+    }
+    if is_founder_invite:
+        user_update["invited_by_founder"] = True
+    
     await db.users.update_one(
         {"user_id": user.user_id},
-        {"$set": {"vouched_by": plate["created_by"], "is_day_one": True}}
+        {"$set": user_update}
     )
     
     await db.users.update_one(
@@ -1221,7 +1237,11 @@ async def redeem_plate(code: str, user: UserBase = Depends(get_current_user)):
         {"$inc": {"reputation_score": 5}}
     )
     
-    return {"message": "Plate redeemed successfully", "vouched_by": plate["created_by"]}
+    return {
+        "message": "Plate redeemed successfully", 
+        "vouched_by": plate["created_by"],
+        "is_founder_invite": is_founder_invite
+    }
 
 # ========================
 # USER ROUTES

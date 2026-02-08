@@ -19,6 +19,7 @@ import AdminPage from "@/pages/AdminPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import CalendarPage from "@/pages/CalendarPage";
 import AuthCallbackPage from "@/pages/AuthCallbackPage";
+import InvitePage from "@/pages/InvitePage";
 
 // Components
 import { NoiseOverlay } from "@/components/NoiseOverlay";
@@ -147,6 +148,8 @@ function AppRouter() {
     <AuthCallbackHandler>
       <Routes>
         <Route path="/" element={<LandingPage />} />
+        <Route path="/invite/:code" element={<InvitePage />} />
+        <Route path="/founder/:code" element={<InvitePage />} />
         <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/home" element={<AppShell><HomePage /></AppShell>} />
         <Route path="/stoop" element={<AppShell><StoopPage /></AppShell>} />

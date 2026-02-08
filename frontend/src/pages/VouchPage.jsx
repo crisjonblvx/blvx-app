@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useThemeClasses } from '@/hooks/useTheme';
-import { Ticket, Copy, CheckCircle, Users, Gift, AlertCircle, Loader2 } from 'lucide-react';
+import { Ticket, Copy, CheckCircle, Users, Gift, AlertCircle, Loader2, Share2, Link } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -14,6 +15,7 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export default function VouchPage() {
   const { user, checkAuth } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
   const [plates, setPlates] = useState([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
@@ -25,6 +27,16 @@ export default function VouchPage() {
   useEffect(() => {
     fetchPlates();
   }, []);
+
+  // Check for redeem code in URL
+  useEffect(() => {
+    const redeemParam = searchParams.get('redeem');
+    if (redeemParam) {
+      setRedeemCode(redeemParam.toUpperCase());
+      // Clear the URL param
+      setSearchParams({});
+    }
+  }, [searchParams, setSearchParams]);
 
   const fetchPlates = async () => {
     try {
@@ -79,11 +91,45 @@ export default function VouchPage() {
     }
   };
 
-  const copyCode = (code) => {
-    navigator.clipboard.writeText(code);
+  const isFounder = user?.is_admin || false;
+  
+  const getInviteLink = (code) => {
+    // Founder gets special invite link
+    if (isFounder) {
+      return `https://blvx.social/founder/${code}`;
+    }
+    return `https://blvx.social/invite/${code}`;
+  };
+
+  const copyLink = (code) => {
+    const link = getInviteLink(code);
+    navigator.clipboard.writeText(link);
     setCopiedCode(code);
-    toast.success('Code copied to clipboard!');
+    toast.success(isFounder ? 'Founder invite link copied!' : 'Invite link copied!');
     setTimeout(() => setCopiedCode(null), 2000);
+  };
+
+  const shareLink = async (code) => {
+    const link = getInviteLink(code);
+    const shareText = isFounder 
+      ? `You've been personally invited to BLVX by the founder. Join the culture: ${link}`
+      : `You're invited to BLVX — a high-context social network built for the culture. Join with my invite: ${link}`;
+    
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title: isFounder ? 'Founder Invite to BLVX' : 'Join BLVX',
+          text: shareText,
+          url: link
+        });
+      } catch (err) {
+        // User cancelled or error - fall back to copy
+        copyLink(code);
+      }
+    } else {
+      // No native share - just copy
+      copyLink(code);
+    }
   };
 
   const activePlates = plates.filter(p => !p.used);
@@ -95,25 +141,40 @@ export default function VouchPage() {
       <div className="mb-8">
         <div className="flex items-center gap-3 mb-2">
           <Ticket className={cn("h-6 w-6", textClass)} />
-          <h1 className={cn("font-display text-2xl tracking-widest uppercase", textClass)}>The Vouch</h1>
+          <h1 className={cn("font-display text-2xl tracking-widest uppercase", textClass)}>
+            {isFounder ? 'Founder Invites' : 'The Vouch'}
+          </h1>
+          {isFounder && (
+            <span className="bg-amber-500 text-black text-[10px] px-2 py-0.5 font-display tracking-wider">
+              FOUNDER
+            </span>
+          )}
         </div>
         <p className={cn("text-sm", textMutedClass)}>
-          BLVX is invite-only. Use your plates to bring people into the culture.
+          {isFounder 
+            ? "Your personal invites carry the founder's stamp. Those you invite become Day Ones."
+            : "BLVX is invite-only. Use your plates to bring people into the culture."}
         </p>
       </div>
 
       {/* Plates Balance */}
-      <Card className={cn("mb-6", isDark ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-200")}>
+      <Card className={cn("mb-6", isFounder ? "bg-amber-500/10 border-amber-500/30" : isDark ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-200")}>
         <CardContent className="flex items-center justify-between p-6">
           <div>
-            <p className={cn("text-xs uppercase tracking-wider mb-1", textVeryMutedClass)}>Your Plates</p>
-            <p className={cn("text-4xl font-display", textClass)}>{user?.plates_remaining || 0}</p>
-            <p className={cn("text-xs mt-1", textMutedClass)}>remaining to give</p>
+            <p className={cn("text-xs uppercase tracking-wider mb-1", isFounder ? "text-amber-500" : textVeryMutedClass)}>
+              {isFounder ? 'Founder Invites' : 'Your Plates'}
+            </p>
+            <p className={cn("text-4xl font-display", isFounder ? "text-amber-500" : textClass)}>
+              {isFounder ? '∞' : (user?.plates_remaining || 0)}
+            </p>
+            <p className={cn("text-xs mt-1", textMutedClass)}>
+              {isFounder ? 'unlimited invites' : 'remaining to give'}
+            </p>
           </div>
           <Button
             onClick={createPlate}
-            disabled={creating || (user?.plates_remaining || 0) <= 0}
-            className={cn("rounded-none font-display tracking-wider", isDark ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90")}
+            disabled={creating || (!isFounder && (user?.plates_remaining || 0) <= 0)}
+            className={cn("rounded-none font-display tracking-wider", isFounder ? "bg-amber-500 text-black hover:bg-amber-400" : isDark ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90")}
             data-testid="create-plate-btn"
           >
             {creating ? (
@@ -121,7 +182,7 @@ export default function VouchPage() {
             ) : (
               <>
                 <Gift className="h-4 w-4 mr-2" />
-                Create Plate
+                {isFounder ? 'Create Founder Invite' : 'Create Plate'}
               </>
             )}
           </Button>
@@ -174,37 +235,64 @@ export default function VouchPage() {
       {/* Active Plates */}
       {activePlates.length > 0 && (
         <div className="mb-6">
-          <h2 className={cn("font-display text-xs tracking-widest uppercase mb-3", textVeryMutedClass)}>
-            Active Plates ({activePlates.length})
+          <h2 className={cn("font-display text-xs tracking-widest uppercase mb-3", isFounder ? "text-amber-500" : textVeryMutedClass)}>
+            {isFounder ? `Active Founder Invites (${activePlates.length})` : `Active Plates (${activePlates.length})`}
           </h2>
-          <div className="space-y-2">
+          <div className="space-y-3">
             {activePlates.map((plate) => (
-              <Card key={plate.code} className={cn(isDark ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-200")}>
-                <CardContent className="flex items-center justify-between p-4">
-                  <div className="flex items-center gap-3">
-                    <div className={cn("w-10 h-10 rounded flex items-center justify-center", isDark ? "bg-white/10" : "bg-gray-200")}>
-                      <Ticket className={cn("h-5 w-5", isDark ? "text-white/60" : "text-gray-600")} />
+              <Card key={plate.code} className={cn(isFounder ? "bg-amber-500/5 border-amber-500/20" : isDark ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-200")}>
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className={cn("w-10 h-10 rounded flex items-center justify-center", isFounder ? "bg-amber-500/20" : isDark ? "bg-white/10" : "bg-gray-200")}>
+                        <Ticket className={cn("h-5 w-5", isFounder ? "text-amber-500" : isDark ? "text-white/60" : "text-gray-600")} />
+                      </div>
+                      <div>
+                        <p className={cn("font-mono text-lg tracking-widest", textClass)}>{plate.code}</p>
+                        <p className={cn("text-xs", textVeryMutedClass)}>
+                          Created {new Date(plate.created_at).toLocaleDateString()}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className={cn("font-mono text-lg tracking-widest", textClass)}>{plate.code}</p>
-                      <p className={cn("text-xs", textVeryMutedClass)}>
-                        Created {new Date(plate.created_at).toLocaleDateString()}
-                      </p>
-                    </div>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => copyCode(plate.code)}
-                    className={cn(isDark ? "text-white/60 hover:text-white" : "text-gray-600 hover:text-gray-900")}
-                    data-testid={`copy-${plate.code}`}
-                  >
-                    {copiedCode === plate.code ? (
-                      <CheckCircle className="h-4 w-4 text-green-500" />
-                    ) : (
-                      <Copy className="h-4 w-4" />
+                    {isFounder && (
+                      <span className="bg-amber-500 text-black text-[9px] px-2 py-0.5 font-display tracking-wider">
+                        FOUNDER
+                      </span>
                     )}
-                  </Button>
+                  </div>
+                  
+                  {/* Invite Link */}
+                  <div className={cn("flex items-center gap-2 p-2 rounded text-xs font-mono mb-3", isDark ? "bg-black/50" : "bg-gray-100")}>
+                    <Link className={cn("h-3 w-3 flex-shrink-0", textMutedClass)} />
+                    <span className={cn("truncate", textMutedClass)}>{getInviteLink(plate.code)}</span>
+                  </div>
+                  
+                  {/* Action Buttons */}
+                  <div className="flex gap-2">
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => copyLink(plate.code)}
+                      className={cn("flex-1 rounded-none text-xs", isFounder ? "border-amber-500/50 text-amber-500 hover:bg-amber-500/10" : "")}
+                      data-testid={`copy-${plate.code}`}
+                    >
+                      {copiedCode === plate.code ? (
+                        <CheckCircle className="h-3 w-3 mr-2 text-green-500" />
+                      ) : (
+                        <Copy className="h-3 w-3 mr-2" />
+                      )}
+                      Copy Link
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => shareLink(plate.code)}
+                      className={cn("flex-1 rounded-none text-xs", isFounder ? "bg-amber-500 text-black hover:bg-amber-400" : isDark ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90")}
+                      data-testid={`share-${plate.code}`}
+                    >
+                      <Share2 className="h-3 w-3 mr-2" />
+                      Share
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             ))}
