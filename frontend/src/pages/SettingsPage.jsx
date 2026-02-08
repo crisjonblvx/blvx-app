@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, LogOut, User, Bell, Shield, HelpCircle, Sparkles, Zap, Moon, Sun, Loader2, Settings2, DoorOpen, Ban, VolumeX, Trash2, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, LogOut, User, Bell, Shield, HelpCircle, Sparkles, Zap, Moon, Sun, Loader2, Settings2, DoorOpen, Ban, VolumeX, Trash2, AlertTriangle, MessageSquareOff } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
@@ -171,6 +171,12 @@ export default function SettingsPage() {
           label: 'Muted Users',
           description: 'Manage users you\'ve muted',
           onClick: () => navigate('/settings/muted'),
+        },
+        {
+          icon: MessageSquareOff,
+          label: 'Muted Words',
+          description: 'Hide posts containing specific words',
+          onClick: () => navigate('/settings/muted-words'),
         },
       ],
     },

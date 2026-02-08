@@ -1630,6 +1630,7 @@ async def get_feed(limit: int = 20, before: Optional[str] = None, user: UserBase
     """Get chronological feed (The Block)"""
     # Get blocked/muted users to filter out
     hidden_users = await get_hidden_user_ids(user.user_id)
+    muted_words = await get_muted_words(user.user_id)
     
     following = await db.follows.find(
         {"follower_id": user.user_id},
@@ -1668,6 +1669,10 @@ async def get_feed(limit: int = 20, before: Optional[str] = None, user: UserBase
         if post["visibility"] == "cookout" and post["user_id"] != user.user_id:
             if not await can_view_cookout(user.user_id, post["user_id"]):
                 continue
+        
+        # Filter out posts with muted words
+        if post_contains_muted_words(post.get("content", ""), muted_words):
+            continue
         
         enriched = await get_post_with_user(post)
         result.append(enriched)
@@ -2136,6 +2141,68 @@ async def get_muted_users(user: UserBase = Depends(get_current_user)):
             muted_users.append(muted_user)
     
     return muted_users
+
+# ========================
+# MUTED WORDS
+# ========================
+
+@users_router.get("/muted-words")
+async def get_muted_words(user: UserBase = Depends(get_current_user)):
+    """Get list of words/phrases user has muted"""
+    user_data = await db.users.find_one({"user_id": user.user_id}, {"muted_words": 1})
+    return {"muted_words": user_data.get("muted_words", [])}
+
+@users_router.put("/muted-words")
+async def update_muted_words(words: List[str], user: UserBase = Depends(get_current_user)):
+    """Update muted words list"""
+    # Clean and normalize words (lowercase, strip whitespace, limit to 50 words)
+    cleaned = [w.strip().lower() for w in words if w.strip()][:50]
+    
+    await db.users.update_one(
+        {"user_id": user.user_id},
+        {"$set": {"muted_words": cleaned}}
+    )
+    
+    return {"muted_words": cleaned, "message": f"Muting {len(cleaned)} words/phrases"}
+
+@users_router.post("/muted-words/add")
+async def add_muted_word(word: str, user: UserBase = Depends(get_current_user)):
+    """Add a single word to muted list"""
+    cleaned = word.strip().lower()
+    if not cleaned:
+        raise HTTPException(status_code=400, detail="Word cannot be empty")
+    
+    await db.users.update_one(
+        {"user_id": user.user_id},
+        {"$addToSet": {"muted_words": cleaned}}
+    )
+    
+    return {"message": f"Now muting '{cleaned}'"}
+
+@users_router.delete("/muted-words/{word}")
+async def remove_muted_word(word: str, user: UserBase = Depends(get_current_user)):
+    """Remove a word from muted list"""
+    cleaned = word.strip().lower()
+    
+    await db.users.update_one(
+        {"user_id": user.user_id},
+        {"$pull": {"muted_words": cleaned}}
+    )
+    
+    return {"message": f"No longer muting '{cleaned}'"}
+
+# Helper function to get user's muted words
+async def get_muted_words(user_id: str) -> list:
+    """Get list of words user has muted"""
+    user_data = await db.users.find_one({"user_id": user_id}, {"muted_words": 1})
+    return user_data.get("muted_words", []) if user_data else []
+
+def post_contains_muted_words(post_content: str, muted_words: list) -> bool:
+    """Check if post contains any muted words"""
+    if not muted_words or not post_content:
+        return False
+    content_lower = post_content.lower()
+    return any(word in content_lower for word in muted_words)
 
 # Helper function to get blocked/muted user IDs for filtering
 async def get_hidden_user_ids(user_id: str) -> set:
