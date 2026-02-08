@@ -190,19 +190,21 @@ export default function SettingsPage() {
       title: 'About',
       items: [
         {
+          icon: HelpCircle,
+          label: 'Learn BLVX',
+          description: 'Understand how everything works',
+          onClick: () => navigate('/learn'),
+        },
+        {
           icon: Sparkles,
           label: 'About Bonita',
           description: 'Learn about our AI companion',
+          onClick: () => navigate('/bonita'),
         },
         {
           icon: Shield,
           label: 'Privacy & Safety',
           description: 'How we protect your data',
-        },
-        {
-          icon: HelpCircle,
-          label: 'Help & Support',
-          description: 'Get help using BLVX',
         },
       ],
     },
