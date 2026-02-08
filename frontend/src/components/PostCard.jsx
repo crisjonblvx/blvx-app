@@ -17,6 +17,23 @@ import { LinkPreviewCard } from '@/components/TrendingWidget';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 
+// Theme hook
+const useTheme = () => {
+  const [isDark, setIsDark] = useState(() => {
+    return document.documentElement.getAttribute('data-theme') === 'dark';
+  });
+  
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      setIsDark(document.documentElement.getAttribute('data-theme') === 'dark');
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => observer.disconnect();
+  }, []);
+  
+  return isDark;
+};
+
 export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop }) => {
   // Safety check FIRST - before any hooks
   // If post is invalid, render a placeholder instead of crashing
@@ -34,6 +51,16 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
   const [isPlaying, setIsPlaying] = useState(false);
   const videoRef = useRef(null);
   const containerRef = useRef(null);
+  const isDark = useTheme();
+
+  // Theme-aware classes
+  const textClass = isDark ? 'text-white' : 'text-gray-900';
+  const textMutedClass = isDark ? 'text-white/50' : 'text-gray-500';
+  const textVeryMutedClass = isDark ? 'text-white/30' : 'text-gray-400';
+  const borderClass = isDark ? 'border-white/10' : 'border-gray-200';
+  const borderLightClass = isDark ? 'border-white/20' : 'border-gray-300';
+  const hoverBgClass = isDark ? 'hover:bg-white/5' : 'hover:bg-gray-100';
+  const avatarFallbackClass = isDark ? 'bg-white/10' : 'bg-gray-100';
 
   // Ensure post.user has default values (computed, not a hook)
   const postUser = isValidPost ? {
@@ -161,7 +188,7 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
   return (
     <>
       <article 
-        className="post-card border-b border-white/10 p-4 cursor-pointer"
+        className={cn("post-card border-b p-4 cursor-pointer", borderClass)}
         onClick={() => navigate(`/post/${post.post_id}`)}
         data-testid={`post-${post.post_id}`}
       >
@@ -172,9 +199,9 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
             onClick={(e) => e.stopPropagation()}
             className="flex-shrink-0"
           >
-            <Avatar className="h-11 w-11 border border-white/20 hover:border-white/40 transition-colors">
+            <Avatar className={cn("h-11 w-11 border transition-colors", borderLightClass, isDark ? "hover:border-white/40" : "hover:border-gray-400")}>
               <AvatarImage src={postUser.picture} alt={postUser.name} />
-              <AvatarFallback className="bg-white/10 text-base font-medium">
+              <AvatarFallback className={cn(avatarFallbackClass, "text-base font-medium")}>
                 {postUser.name?.charAt(0)?.toUpperCase() || 'U'}
               </AvatarFallback>
             </Avatar>
@@ -188,23 +215,23 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
                 <Link 
                   to={`/profile/${postUser.username}`}
                   onClick={(e) => e.stopPropagation()}
-                  className="font-bold text-[15px] hover:underline truncate"
+                  className={cn("font-bold text-[15px] hover:underline truncate", textClass)}
                 >
                   {postUser.name}
                 </Link>
                 <Link 
                   to={`/profile/${postUser.username}`}
                   onClick={(e) => e.stopPropagation()}
-                  className="text-white/50 text-[15px] truncate"
+                  className={cn("text-[15px] truncate", textMutedClass)}
                 >
                   @{postUser.username}
                 </Link>
-                <span className="text-white/30">·</span>
-                <span className="text-white/50 text-[14px] whitespace-nowrap">
+                <span className={textVeryMutedClass}>·</span>
+                <span className={cn("text-[14px] whitespace-nowrap", textMutedClass)}>
                   {formatTime(post.created_at)}
                 </span>
                 {isCookout && (
-                  <Lock className="h-3.5 w-3.5 text-white/50" />
+                  <Lock className={cn("h-3.5 w-3.5", textMutedClass)} />
                 )}
               </div>
 
@@ -213,7 +240,7 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
                   <Button 
                     variant="ghost" 
                     size="icon" 
-                    className="h-8 w-8 text-white/30 hover:text-white"
+                    className={cn("h-8 w-8", textVeryMutedClass, isDark ? "hover:text-white" : "hover:text-gray-900")}
                     onClick={(e) => e.stopPropagation()}
                   >
                     <MoreHorizontal className="h-4 w-4" />
@@ -226,7 +253,7 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
                         e.stopPropagation();
                         onBonitaContext(post.content);
                       }}
-                      className="text-white/70 hover:text-white focus:text-white cursor-pointer text-xs"
+                      className={cn("cursor-pointer text-xs", isDark ? "text-white/70 hover:text-white focus:text-white" : "text-gray-600 hover:text-gray-900 focus:text-gray-900")}
                     >
                       <Sparkles className="h-3.5 w-3.5 mr-2" />
                       Ask Bonita
@@ -238,7 +265,7 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
                         e.stopPropagation();
                         handleLiveDrop();
                       }}
-                      className="text-white/70 hover:text-white focus:text-white cursor-pointer text-xs"
+                      className={cn("cursor-pointer text-xs", isDark ? "text-white/70 hover:text-white focus:text-white" : "text-gray-600 hover:text-gray-900 focus:text-gray-900")}
                     >
                       <Send className="h-3.5 w-3.5 mr-2" />
                       Drop to GC
@@ -262,19 +289,19 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
 
             {/* Reply indicator */}
             {post.post_type === 'reply' && post.parent_post && (
-              <p className="text-white/50 text-sm mb-2">
+              <p className={cn("text-sm mb-2", textMutedClass)}>
                 Replying to <span className="text-amber-500">@{post.parent_post.user?.username}</span>
               </p>
             )}
 
             {/* Post content */}
-            <p className="whitespace-pre-wrap break-words mb-3 text-[15px] leading-[1.5]">
+            <p className={cn("whitespace-pre-wrap break-words mb-3 text-[15px] leading-[1.5]", textClass)}>
               {post.content}
             </p>
 
             {/* Media */}
             {post.media_url && (
-              <div ref={containerRef} className="mb-3 rounded-lg overflow-hidden border border-white/10 relative">
+              <div ref={containerRef} className={cn("mb-3 rounded-lg overflow-hidden border relative", borderClass)}>
                 {post.media_type === 'video' ? (
                   <div className="relative">
                     <video 
@@ -331,7 +358,7 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
             {/* Quoted post */}
             {post.quote_post && (
               <div 
-                className="border border-white/20 p-3 mb-3 hover:bg-white/5 transition-colors"
+                className={cn("border p-3 mb-3 transition-colors", borderLightClass, hoverBgClass)}
                 onClick={(e) => {
                   e.stopPropagation();
                   navigate(`/post/${post.quote_post.post_id}`);
@@ -344,10 +371,10 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
                       {post.quote_post.user?.name?.charAt(0)}
                     </AvatarFallback>
                   </Avatar>
-                  <span className="text-xs font-medium text-white/70">{post.quote_post.user?.name}</span>
-                  <span className="text-[10px] text-white/40">@{post.quote_post.user?.username}</span>
+                  <span className={cn("text-xs font-medium", isDark ? "text-white/70" : "text-gray-700")}>{post.quote_post.user?.name}</span>
+                  <span className={cn("text-[10px]", textVeryMutedClass)}>@{post.quote_post.user?.username}</span>
                 </div>
-                <p className="text-sm text-white/60 line-clamp-3">{post.quote_post.content}</p>
+                <p className={cn("text-sm line-clamp-3", isDark ? "text-white/60" : "text-gray-600")}>{post.quote_post.content}</p>
               </div>
             )}
 
@@ -357,7 +384,7 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-white/40 hover:text-white hover:bg-white/5 gap-2 h-8 px-2"
+                className={cn("gap-2 h-8 px-2", textMutedClass, isDark ? "hover:text-white hover:bg-white/5" : "hover:text-gray-900 hover:bg-gray-100")}
                 onClick={(e) => {
                   e.stopPropagation();
                   setReplyOpen(true);
@@ -390,7 +417,7 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-white/40 hover:text-white hover:bg-white/5 gap-2 h-8 px-2"
+                className={cn("gap-2 h-8 px-2", textMutedClass, isDark ? "hover:text-white hover:bg-white/5" : "hover:text-gray-900 hover:bg-gray-100")}
                 onClick={(e) => {
                   e.stopPropagation();
                   setQuoteOpen(true);
@@ -408,8 +435,9 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
                 variant="ghost"
                 size="sm"
                 className={cn(
-                  "gap-2 hover:bg-white/5 h-8 px-2",
-                  isPlated ? "text-amber-500 hover:text-amber-400" : "text-white/40 hover:text-white"
+                  "gap-2 h-8 px-2",
+                  isDark ? "hover:bg-white/5" : "hover:bg-gray-100",
+                  isPlated ? "text-amber-500 hover:text-amber-400" : cn(textMutedClass, isDark ? "hover:text-white" : "hover:text-gray-900")
                 )}
                 onClick={handlePlate}
                 title="Serve a Plate"
@@ -425,7 +453,7 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
               <Button
                 variant="ghost"
                 size="sm"
-                className="text-white/40 hover:text-white hover:bg-white/5 h-8 px-2"
+                className={cn("h-8 px-2", textMutedClass, isDark ? "hover:text-white hover:bg-white/5" : "hover:text-gray-900 hover:bg-gray-100")}
                 onClick={(e) => {
                   e.stopPropagation();
                   handleShare();
