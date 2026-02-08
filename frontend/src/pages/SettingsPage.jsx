@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, LogOut, User, Bell, Shield, HelpCircle, Sparkles, Zap, Moon, Sun, Loader2, Settings2 } from 'lucide-react';
+import { ArrowLeft, LogOut, User, Bell, Shield, HelpCircle, Sparkles, Zap, Moon, Sun, Loader2, Settings2, DoorOpen } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
@@ -93,6 +93,13 @@ export default function SettingsPage() {
           label: 'Edit Profile',
           description: 'Update your name, bio, and photo',
           onClick: () => navigate(`/profile/${user?.username}`),
+        },
+        {
+          icon: DoorOpen,
+          label: 'Your Stoop',
+          description: 'Configure your AI stoop for visitors',
+          onClick: () => navigate('/ai-stoop-settings'),
+          highlight: true,
         },
       ],
     },
@@ -252,13 +259,13 @@ export default function SettingsPage() {
                 <button
                   key={item.label}
                   onClick={item.onClick}
-                  className="w-full flex items-center gap-3 px-4 py-3 hover:bg-white/5 transition-colors text-left"
+                  className={`w-full flex items-center gap-3 px-4 py-3 transition-colors text-left ${item.highlight ? 'hover:bg-amber-500/10 bg-amber-500/5' : 'hover:bg-white/5'}`}
                 >
-                  <Icon className="h-5 w-5 text-white/60" />
+                  <Icon className={`h-5 w-5 ${item.highlight ? 'text-amber-400' : 'text-white/60'}`} />
                   <div>
-                    <p className="text-white">{item.label}</p>
+                    <p className={item.highlight ? 'text-amber-300' : 'text-white'}>{item.label}</p>
                     {item.description && (
-                      <p className="text-sm text-white/40">{item.description}</p>
+                      <p className={`text-sm ${item.highlight ? 'text-amber-400/60' : 'text-white/40'}`}>{item.description}</p>
                     )}
                   </div>
                 </button>

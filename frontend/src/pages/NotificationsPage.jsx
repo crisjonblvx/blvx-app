@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useThemeClasses } from '@/hooks/useTheme';
 import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
-import { Heart, MessageCircle, Repeat2, UserPlus, Check } from 'lucide-react';
+import { Heart, MessageCircle, Repeat2, UserPlus, Check, DoorOpen, Share2 } from 'lucide-react';
 import { useNotifications } from '@/hooks/useNotifications';
 import { useNotificationCount } from '@/hooks/useNotificationCount';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -40,6 +40,10 @@ export default function NotificationsPage() {
         return <Repeat2 className="h-4 w-4 text-green-400" />;
       case 'follow':
         return <UserPlus className="h-4 w-4 text-purple-400" />;
+      case 'stoop_visit':
+        return <DoorOpen className="h-4 w-4 text-amber-400" />;
+      case 'stoop_share_request':
+        return <Share2 className="h-4 w-4 text-amber-400" />;
       default:
         return null;
     }
@@ -57,8 +61,22 @@ export default function NotificationsPage() {
         return 'followed you';
       case 'mention':
         return 'mentioned you';
+      case 'stoop_visit':
+        return 'stopped by your stoop';
+      case 'stoop_share_request':
+        return 'wants to share a stoop conversation';
       default:
         return 'interacted with your post';
+    }
+  };
+
+  const getNotificationLink = (notif) => {
+    switch (notif.type) {
+      case 'stoop_visit':
+      case 'stoop_share_request':
+        return '/ai-stoop-settings';
+      default:
+        return notif.post_id ? `/post/${notif.post_id}` : `/profile/${notif.from_user?.username}`;
     }
   };
 
@@ -117,7 +135,7 @@ export default function NotificationsPage() {
           {notifications.map((notif, index) => (
             <Link
               key={notif.notification_id}
-              to={notif.post_id ? `/post/${notif.post_id}` : `/profile/${notif.from_user?.username}`}
+              to={getNotificationLink(notif)}
               className={cn(
                 "flex items-start gap-3 p-4 transition-colors animate-fade-in",
                 hoverBgClass,

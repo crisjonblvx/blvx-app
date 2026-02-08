@@ -20,6 +20,8 @@ import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import CalendarPage from "@/pages/CalendarPage";
 import AuthCallbackPage from "@/pages/AuthCallbackPage";
 import InvitePage from "@/pages/InvitePage";
+import AIStooopPage from "@/pages/AIStooopPage";
+import AIStooopSettingsPage from "@/pages/AIStooopSettingsPage";
 
 // Components
 import { NoiseOverlay } from "@/components/NoiseOverlay";
@@ -164,6 +166,9 @@ function AppRouter() {
         <Route path="/settings" element={<AppShell><SettingsPage /></AppShell>} />
         <Route path="/calendar" element={<AppShell><CalendarPage /></AppShell>} />
         <Route path="/admin" element={<AppShell><AdminPage /></AppShell>} />
+        <Route path="/ai-stoop/:username" element={<AppShell><AIStooopPage /></AppShell>} />
+        <Route path="/ai-stoop/session/:sessionId" element={<AppShell><AIStooopPage /></AppShell>} />
+        <Route path="/ai-stoop-settings" element={<AppShell><AIStooopSettingsPage /></AppShell>} />
         <Route path="/auth/callback" element={<AuthCallbackPage />} />
       </Routes>
     </AuthCallbackHandler>

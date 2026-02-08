@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useThemeClasses } from '@/hooks/useTheme';
 import { useParams, useNavigate } from 'react-router-dom';
 import { formatDistanceToNow, format } from 'date-fns';
-import { Calendar, MapPin, Link as LinkIcon, Edit2, MessageSquare, Loader2 } from 'lucide-react';
+import { Calendar, MapPin, Link as LinkIcon, Edit2, MessageSquare, Loader2, DoorOpen } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useUsers } from '@/hooks/useUsers';
 import { usePosts } from '@/hooks/usePosts';
@@ -164,6 +164,16 @@ export default function ProfilePage() {
               </Button>
             ) : (
               <div className="flex items-center gap-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => navigate(`/ai-stoop/${profile.username}`)}
+                  className={cn("border rounded-sm", isDark ? "border-amber-500/50 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300" : "border-amber-500/50 text-amber-600 hover:bg-amber-50 hover:text-amber-700")}
+                  data-testid="stoop-btn"
+                  title="Visit their AI stoop"
+                >
+                  <DoorOpen className="h-4 w-4" />
+                </Button>
                 <Button
                   variant="ghost"
                   size="icon"
