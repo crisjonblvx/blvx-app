@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, LogOut, User, Bell, Shield, HelpCircle, Sparkles, Zap, Moon, Sun, Loader2, Settings2, DoorOpen, Ban, VolumeX, Trash2, AlertTriangle, MessageSquareOff } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
+import { useThemeClasses } from '@/hooks/useTheme';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
@@ -22,6 +23,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { toast } from 'sonner';
+import { cn } from '@/lib/utils';
 import axios from 'axios';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -33,6 +35,7 @@ export default function SettingsPage() {
   const navigate = useNavigate();
   const { user, logout } = useAuth();
   const { toggleTheme, isDark } = useTheme();
+  const { textClass, textMutedClass, textVeryMutedClass, textVeryVeryMutedClass, borderClass, borderLightClass, hoverBgClass } = useThemeClasses();
   const { 
     isSupported: pushSupported, 
     isSubscribed: pushSubscribed, 
@@ -219,33 +222,33 @@ export default function SettingsPage() {
   return (
     <div className="mb-safe" data-testid="settings-page">
       {/* Header */}
-      <div className="sticky top-14 md:top-0 z-30 glass border-b border-white/10 p-4">
+      <div className={cn("sticky top-14 md:top-0 z-30 glass border-b p-4", borderClass)}>
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate(-1)}
-            className="text-white/60 hover:text-white md:hidden"
+            className={cn("md:hidden", textMutedClass, isDark ? "hover:text-white" : "hover:text-gray-900")}
           >
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="font-display text-lg tracking-wide uppercase">Settings</h1>
+          <h1 className={cn("font-display text-lg tracking-wide uppercase", textClass)}>Settings</h1>
         </div>
       </div>
 
       {/* The Spark - Admin Tool */}
-      <div className="p-4 border-b border-white/10">
+      <div className={cn("p-4 border-b", borderClass)}>
         <div className="flex items-center gap-2 mb-4">
           <Zap className="h-5 w-5 text-yellow-500" />
-          <h2 className="font-display text-sm tracking-widest uppercase">The Spark</h2>
+          <h2 className={cn("font-display text-sm tracking-widest uppercase", textClass)}>The Spark</h2>
         </div>
-        <p className="text-xs text-white/40 mb-4">
+        <p className={cn("text-xs mb-4", textVeryMutedClass)}>
           Drop a Bonita-generated conversation starter to The Block
         </p>
         
         <div className="flex gap-2">
           <Select value={sparkCategory} onValueChange={setSparkCategory}>
-            <SelectTrigger className="flex-1 bg-transparent border-white/20 focus:border-white rounded-none">
+            <SelectTrigger className={cn("flex-1 bg-transparent rounded-none", borderLightClass, isDark ? "focus:border-white" : "focus:border-gray-900")}>
               <SelectValue placeholder="Select topic" />
             </SelectTrigger>
             <SelectContent className="bg-card border-border">
@@ -261,7 +264,7 @@ export default function SettingsPage() {
           <Button
             onClick={handleDropSpark}
             disabled={droppingSpark}
-            className="bg-white text-black hover:bg-white/90 rounded-none font-display tracking-wider"
+            className={cn("rounded-none font-display tracking-wider", isDark ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-gray-800")}
             data-testid="drop-spark-btn"
           >
             {droppingSpark ? (
@@ -277,10 +280,10 @@ export default function SettingsPage() {
       </div>
 
       {/* Settings List */}
-      <div className="divide-y divide-white/10">
+      <div className={cn("divide-y", isDark ? "divide-white/10" : "divide-gray-200")}>
         {settingSections.map((section) => (
           <div key={section.title} className="py-4">
-            <h2 className="px-4 text-xs font-display uppercase tracking-wider text-white/40 mb-2">
+            <h2 className={cn("px-4 text-xs font-display uppercase tracking-wider mb-2", textVeryMutedClass)}>
               {section.title}
             </h2>
             
@@ -294,11 +297,11 @@ export default function SettingsPage() {
                     className="flex items-center justify-between px-4 py-3"
                   >
                     <div className="flex items-center gap-3">
-                      <Icon className="h-5 w-5 text-white/60" />
+                      <Icon className={cn("h-5 w-5", textMutedClass)} />
                       <div>
-                        <span className="text-white">{item.label}</span>
+                        <span className={textClass}>{item.label}</span>
                         {item.description && (
-                          <p className="text-xs text-white/40">{item.description}</p>
+                          <p className={cn("text-xs", textVeryMutedClass)}>{item.description}</p>
                         )}
                       </div>
                     </div>
@@ -314,13 +317,18 @@ export default function SettingsPage() {
                 <button
                   key={item.label}
                   onClick={item.onClick}
-                  className={`w-full flex items-center gap-3 px-4 py-3 transition-colors text-left ${item.highlight ? 'hover:bg-amber-500/10 bg-amber-500/5' : 'hover:bg-white/5'}`}
+                  className={cn(
+                    "w-full flex items-center gap-3 px-4 py-3 transition-colors text-left",
+                    item.highlight 
+                      ? 'hover:bg-amber-500/10 bg-amber-500/5' 
+                      : hoverBgClass
+                  )}
                 >
-                  <Icon className={`h-5 w-5 ${item.highlight ? 'text-amber-400' : 'text-white/60'}`} />
+                  <Icon className={cn("h-5 w-5", item.highlight ? 'text-amber-400' : textMutedClass)} />
                   <div>
-                    <p className={item.highlight ? 'text-amber-300' : 'text-white'}>{item.label}</p>
+                    <p className={cn(item.highlight ? 'text-amber-300' : textClass)}>{item.label}</p>
                     {item.description && (
-                      <p className={`text-sm ${item.highlight ? 'text-amber-400/60' : 'text-white/40'}`}>{item.description}</p>
+                      <p className={cn("text-sm", item.highlight ? 'text-amber-400/60' : textVeryMutedClass)}>{item.description}</p>
                     )}
                   </div>
                 </button>
@@ -356,7 +364,7 @@ export default function SettingsPage() {
             <Trash2 className="h-5 w-5 mr-3" />
             Delete Account
           </Button>
-          <p className="text-xs text-white/30 mt-2">
+          <p className={cn("text-xs mt-2", textVeryVeryMutedClass)}>
             Permanently delete your account and all associated data. This cannot be undone.
           </p>
         </div>
@@ -370,7 +378,7 @@ export default function SettingsPage() {
               <AlertTriangle className="h-5 w-5" />
               Delete Account
             </DialogTitle>
-            <DialogDescription className="text-white/60">
+            <DialogDescription className={textMutedClass}>
               This action cannot be undone. All your data will be permanently deleted.
             </DialogDescription>
           </DialogHeader>
@@ -388,7 +396,7 @@ export default function SettingsPage() {
             </div>
             
             <div>
-              <p className="text-xs text-white/50 mb-2">
+              <p className={cn("text-xs mb-2", textMutedClass)}>
                 Type <span className="font-mono text-red-400">DELETE</span> to confirm:
               </p>
               <Input
@@ -430,7 +438,7 @@ export default function SettingsPage() {
       </Dialog>
 
       {/* App Info */}
-      <div className="p-4 text-center text-xs text-white/30">
+      <div className={cn("p-4 text-center text-xs", textVeryVeryMutedClass)}>
         <p className="font-display tracking-wider">BLVX</p>
         <p>Version 1.0.0</p>
         <p className="mt-2">Culture first. Scale second.</p>

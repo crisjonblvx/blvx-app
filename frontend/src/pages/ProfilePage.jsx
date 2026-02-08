@@ -353,9 +353,9 @@ export default function ProfilePage() {
       {/* Posts Tab */}
       <div className={cn("border-b", borderClass)}>
         <div className="flex">
-          <button className="flex-1 py-4 text-sm font-medium text-white relative">
+          <button className={cn("flex-1 py-4 text-sm font-medium relative", textClass)}>
             Posts
-            <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-0.5 bg-white" />
+            <span className={cn("absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-0.5", isDark ? "bg-white" : "bg-black")} />
           </button>
         </div>
       </div>
@@ -375,8 +375,8 @@ export default function ProfilePage() {
         </div>
       ) : posts.length === 0 ? (
         <div className="text-center py-16 px-6">
-          <p className="text-white/50 text-lg mb-2">No posts yet</p>
-          <p className="text-white/30 text-sm">
+          <p className={cn("text-lg mb-2", textMutedClass)}>No posts yet</p>
+          <p className={cn("text-sm", textVeryMutedClass)}>
             {isOwnProfile ? "You haven't posted anything yet" : `@${profile.username} hasn't posted yet`}
           </p>
         </div>
