@@ -292,7 +292,7 @@ export default function StoopPage() {
           
           {/* Speakers */}
           <div className="mb-4">
-            <p className="text-[10px] text-white/40 uppercase tracking-wider mb-2">Speakers</p>
+            <p className={cn("text-[10px] uppercase tracking-wider mb-2", isDark ? "text-white/40" : "text-gray-500")}>Speakers</p>
             <div className="flex flex-wrap gap-3">
               {activeStoopData.speaker_details?.map((speaker) => (
                 <div key={speaker.user_id} className="flex flex-col items-center">
@@ -312,7 +312,7 @@ export default function StoopPage() {
                       </div>
                     )}
                   </div>
-                  <span className="text-[10px] text-white/60 mt-1">{speaker.name?.split(' ')[0]}</span>
+                  <span className={cn("text-[10px] mt-1", isDark ? "text-white/60" : "text-gray-600")}>{speaker.name?.split(' ')[0]}</span>
                   {isSpeakerLive(speaker.user_id) && (
                     <span className="text-[8px] text-green-500 mt-0.5 animate-pulse">LIVE</span>
                   )}
@@ -324,7 +324,7 @@ export default function StoopPage() {
           {/* Listeners */}
           {activeStoopData.listeners?.length > 0 && (
             <div className="mb-4">
-              <p className="text-[10px] text-white/40 uppercase tracking-wider mb-2">
+              <p className={cn("text-[10px] uppercase tracking-wider mb-2", isDark ? "text-white/40" : "text-gray-500")}>
                 Listening ({activeStoopData.listeners?.length || 0})
               </p>
               <div className="flex -space-x-2">
@@ -345,7 +345,7 @@ export default function StoopPage() {
           {/* Remote Participants (from LiveKit) */}
           {participants.length > 0 && (
             <div className="mb-4">
-              <p className="text-[10px] text-white/40 uppercase tracking-wider mb-2">
+              <p className={cn("text-[10px] uppercase tracking-wider mb-2", isDark ? "text-white/40" : "text-gray-500")}>
                 Connected ({participants.length})
               </p>
               <div className="flex flex-wrap gap-2">
@@ -356,7 +356,7 @@ export default function StoopPage() {
                       "px-2 py-1 text-[10px] rounded-full border",
                       p.isSpeaking 
                         ? "bg-green-500/20 border-green-500/50 text-green-400" 
-                        : "bg-white/5 border-white/20 text-white/60"
+                        : isDark ? "bg-white/5 border-white/20 text-white/60" : "bg-gray-100 border-gray-300 text-gray-600"
                     )}
                   >
                     {p.name} {p.audioEnabled ? '🎤' : ''}
@@ -386,8 +386,8 @@ export default function StoopPage() {
                 isLocalMicActive
                   ? "bg-green-500/20 text-green-400 border border-green-500/30" 
                   : isSpeaker 
-                    ? "bg-white/10 text-white hover:bg-white/20" 
-                    : "text-white/50"
+                    ? isDark ? "bg-white/10 text-white hover:bg-white/20" : "bg-gray-100 text-gray-900 hover:bg-gray-200"
+                    : isDark ? "text-white/50" : "text-gray-400"
               )}
               data-testid="stoop-mic-btn"
             >
@@ -427,7 +427,7 @@ export default function StoopPage() {
           </div>
           
           {/* LiveKit Status Debug */}
-          <div className="mt-3 p-2 bg-muted rounded text-[10px] text-white/50 space-y-1">
+          <div className={cn("mt-3 p-2 bg-muted rounded text-[10px] space-y-1", isDark ? "text-white/50" : "text-gray-600")}>
             <div className="flex items-center justify-between">
               <span>
                 LiveKit: {connectionState} • 
