@@ -52,18 +52,27 @@ const AuthCallbackHandler = ({ children }) => {
   const [processing, setProcessing] = useState(false);
 
   useEffect(() => {
-    // Check for session_id or session_token in URL hash on ANY page (could be /home#session_id=...)
+    // Check for session tokens in URL hash OR query params
     const hash = window.location.hash;
+    const search = window.location.search;
+    const queryParams = new URLSearchParams(search);
+    const hashParams = hash ? new URLSearchParams(hash.replace('#', '')) : null;
     
-    if (hash && (hash.includes('session_id=') || hash.includes('session_token=')) && !hasProcessed.current) {
+    // Check hash first (Apple), then query params (Google)
+    const sessionIdFromHash = hashParams?.get('session_id');
+    const sessionTokenFromHash = hashParams?.get('session_token');
+    const tokenFromQuery = queryParams.get('token'); // Google OAuth uses ?token=
+    
+    const hasAuthParams = sessionIdFromHash || sessionTokenFromHash || tokenFromQuery;
+    
+    if (hasAuthParams && !hasProcessed.current) {
       hasProcessed.current = true;
       setProcessing(true);
 
       const processAuth = async () => {
         try {
-          const params = new URLSearchParams(hash.replace('#', ''));
-          const sessionId = params.get('session_id');
-          const sessionToken = params.get('session_token');
+          const sessionId = sessionIdFromHash;
+          const sessionToken = sessionTokenFromHash || tokenFromQuery;
 
           console.log('Processing OAuth callback');
 
@@ -97,8 +106,8 @@ const AuthCallbackHandler = ({ children }) => {
             // Navigate to home
             navigate('/home', { replace: true });
           } else if (sessionToken) {
-            // Apple Sign-In flow - token already created, just validate it
-            console.log('Processing Apple Sign-In callback');
+            // Direct token flow (Google OAuth or Apple Sign-In)
+            console.log('Processing OAuth callback with direct token');
             
             // Store the token first
             localStorage.setItem('blvx-session-token', sessionToken);
@@ -109,12 +118,12 @@ const AuthCallbackHandler = ({ children }) => {
               withCredentials: true
             });
 
-            console.log('Apple Sign-In successful, user:', response.data.email);
+            console.log('OAuth successful, user:', response.data.email);
 
-            // Clear hash from URL
+            // Clear hash AND query params from URL
             window.history.replaceState(null, '', window.location.pathname);
             
-            // Set authenticated user in context (include the token)
+            // Set authenticated user in context
             setAuthenticatedUser({ ...response.data, session_token: sessionToken });
             
             // Navigate to home
