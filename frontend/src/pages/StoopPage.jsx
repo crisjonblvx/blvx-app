@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useLiveKit } from '../hooks/useLiveKit';
+import { useThemeClasses } from '../hooks/useTheme';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../components/ui/dialog';
@@ -27,6 +28,7 @@ const API = process.env.REACT_APP_BACKEND_URL;
 
 export default function StoopPage() {
   const { user } = useAuth();
+  const { isDark, textClass, textMutedClass, textVeryMutedClass, borderClass, hoverBgClass, bgActiveClass, hoverTextClass } = useThemeClasses();
   const [stoops, setStoops] = useState([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
