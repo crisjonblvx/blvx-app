@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { MessageCircle, Plus, Send, Users, Sparkles, Wifi, WifiOff, Search, Check, X } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { useThemeClasses } from '@/hooks/useTheme';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -23,6 +24,7 @@ const WS_URL = process.env.REACT_APP_BACKEND_URL?.replace('https://', 'wss://').
 
 export default function GCPage() {
   const { user, sessionToken } = useAuth();
+  const { isDark, textClass, textMutedClass, textVeryMutedClass, borderClass, hoverBgClass, bgActiveClass } = useThemeClasses();
   const [gcs, setGcs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [createOpen, setCreateOpen] = useState(false);
@@ -328,18 +330,18 @@ export default function GCPage() {
   return (
     <div className="mb-safe h-[calc(100vh-8rem)] md:h-screen flex flex-col" data-testid="gc-page">
       {/* Header */}
-      <div className="sticky top-14 md:top-0 z-30 glass border-b border-white/10 p-4 flex-shrink-0">
+      <div className={cn("sticky top-14 md:top-0 z-30 glass border-b p-4 flex-shrink-0", borderClass)}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <MessageCircle className="h-5 w-5 text-white" />
-            <h1 className="font-display text-sm tracking-widest uppercase">The GC</h1>
+            <MessageCircle className={cn("h-5 w-5", textClass)} />
+            <h1 className={cn("font-display text-sm tracking-widest uppercase", textClass)}>The GC</h1>
             {wsConnected ? (
               <span className="flex items-center gap-1 text-[10px] text-green-400">
                 <Wifi className="h-3 w-3" />
                 Live
               </span>
             ) : (
-              <span className="flex items-center gap-1 text-[10px] text-white/30">
+              <span className={cn("flex items-center gap-1 text-[10px]", isDark ? "text-white/30" : "text-gray-400")}>
                 <WifiOff className="h-3 w-3" />
               </span>
             )}
@@ -347,20 +349,21 @@ export default function GCPage() {
           <Button
             onClick={() => setCreateOpen(true)}
             size="sm"
-            className="bg-white text-black hover:bg-white/90 rounded-none text-xs font-display tracking-wider"
+            className={cn("rounded-none text-xs font-display tracking-wider", isDark ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90")}
             data-testid="create-gc-btn"
           >
             <Plus className="h-3.5 w-3.5 mr-2" />
             Start Chat
           </Button>
         </div>
-        <p className="text-[10px] text-white/40 mt-2">"The Chat Said..."</p>
+        <p className={cn("text-[10px] mt-2", textVeryMutedClass)}>"The Chat Said..."</p>
       </div>
 
       <div className="flex-1 flex overflow-hidden">
         {/* GC List */}
         <div className={cn(
-          "border-r border-white/10 flex-shrink-0",
+          "border-r flex-shrink-0",
+          borderClass,
           activeGC ? "hidden md:block w-64" : "w-full md:w-64"
         )}>
           {loading ? (
@@ -371,25 +374,25 @@ export default function GCPage() {
             </div>
           ) : gcs.length === 0 ? (
             <div className="text-center py-16 px-4">
-              <MessageCircle className="h-10 w-10 text-white/20 mx-auto mb-4" />
-              <p className="text-white/50 text-sm mb-2">No chats yet</p>
-              <p className="text-white/30 text-xs">Start a chat to connect with someone</p>
+              <MessageCircle className={cn("h-10 w-10 mx-auto mb-4", isDark ? "text-white/20" : "text-gray-300")} />
+              <p className={cn("text-sm mb-2", textMutedClass)}>No chats yet</p>
+              <p className={cn("text-xs", isDark ? "text-white/30" : "text-gray-400")}>Start a chat to connect with someone</p>
             </div>
           ) : (
             <ScrollArea className="h-full">
-              <div className="divide-y divide-white/10">
+              <div className={cn("divide-y", borderClass)}>
                 {gcs.map((gc) => (
                   <div
                     key={gc.gc_id}
                     onClick={() => selectGC(gc)}
                     className={cn(
                       "p-4 cursor-pointer transition-colors",
-                      activeGC?.gc_id === gc.gc_id ? "bg-white/10" : "hover:bg-white/5"
+                      activeGC?.gc_id === gc.gc_id ? bgActiveClass : hoverBgClass
                     )}
                     data-testid={`gc-${gc.gc_id}`}
                   >
-                    <p className="font-medium text-white text-sm truncate">{gc.name}</p>
-                    <p className="text-xs text-white/40 flex items-center gap-1 mt-1">
+                    <p className={cn("font-medium text-sm truncate", textClass)}>{gc.name}</p>
+                    <p className={cn("text-xs flex items-center gap-1 mt-1", textVeryMutedClass)}>
                       <Users className="h-3 w-3" />
                       {gc.members?.length || 1} members
                     </p>
@@ -404,15 +407,15 @@ export default function GCPage() {
         {activeGC ? (
           <div className="flex-1 flex flex-col min-w-0">
             {/* Chat Header */}
-            <div className="p-4 border-b border-white/10 flex items-center justify-between flex-shrink-0">
+            <div className={cn("p-4 border-b flex items-center justify-between flex-shrink-0", borderClass)}>
               <div>
-                <h2 className="font-medium text-white text-sm">{activeGC.name}</h2>
-                <p className="text-[10px] text-white/40">{activeGC.members?.length} members</p>
+                <h2 className={cn("font-medium text-sm", textClass)}>{activeGC.name}</h2>
+                <p className={cn("text-[10px]", textVeryMutedClass)}>{activeGC.members?.length} members</p>
               </div>
               <Button
                 variant="ghost"
                 size="sm"
-                className="md:hidden text-white/50"
+                className={cn("md:hidden", textMutedClass)}
                 onClick={() => setActiveGC(null)}
               >
                 Back
@@ -423,8 +426,8 @@ export default function GCPage() {
             <ScrollArea className="flex-1 p-4">
               {messages.length === 0 ? (
                 <div className="text-center py-8">
-                  <p className="text-white/40 text-sm">No messages yet</p>
-                  <p className="text-white/30 text-xs">Start the conversation</p>
+                  <p className={cn("text-sm", textVeryMutedClass)}>No messages yet</p>
+                  <p className={cn("text-xs", isDark ? "text-white/30" : "text-gray-400")}>Start the conversation</p>
                 </div>
               ) : (
                 <div className="space-y-4">
