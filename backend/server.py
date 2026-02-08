@@ -2781,11 +2781,22 @@ async def generate_culture_calendar_post() -> Optional[dict]:
     search_query = f"{event['event_name']} {datetime.now().year}"
     news_result = await search_real_news(search_query)
     
+    # Generate visual for the cultural event
+    visual_data = None
+    try:
+        visual_data = await get_visual_for_post(event['event_name'], use_ai=True)
+        if visual_data:
+            logger.info(f"Generated visual for culture calendar: {event['event_name']}")
+    except Exception as e:
+        logger.error(f"Culture calendar visual error (non-fatal): {e}")
+    
     return {
         "content": event["message"],
         "reference_url": news_result.get("url") if news_result else None,
         "event_name": event["event_name"],
-        "is_culture_calendar": True
+        "is_culture_calendar": True,
+        "media_url": visual_data.get("media_url") if visual_data else None,
+        "media_type": visual_data.get("media_type") if visual_data else None
     }
 
 def get_time_anchored_query(base_query: str) -> str:
@@ -2885,6 +2896,168 @@ async def search_real_news(query: str) -> Optional[Dict]:
         logger.error(f"DuckDuckGo search error: {e}")
         return None
 
+# ========================
+# VISUAL CONTENT GENERATION
+# ========================
+
+async def fetch_unsplash_image(query: str, orientation: str = "squarish") -> Optional[dict]:
+    """Fetch a relevant image from Unsplash based on query"""
+    try:
+        # Use Unsplash source (free, no API key needed) with fallback to Pexels-style
+        # Format: https://source.unsplash.com/featured/?{query}
+        
+        # Clean and optimize query for image search
+        clean_query = query.lower()
+        # Add cultural context keywords for better results
+        culture_keywords = {
+            "black-history": "african american culture history",
+            "hip-hop": "hip hop music culture street art",
+            "lgbtq": "pride rainbow diversity",
+            "indigenous": "native american indigenous culture",
+            "aapi": "asian american culture",
+            "latino": "latin culture hispanic",
+            "caribbean": "caribbean culture",
+            "women": "women empowerment",
+            "mental-health": "mental health wellness calm",
+            "disability": "accessibility inclusion",
+        }
+        
+        # Enhance query with cultural context
+        for key, enhancement in culture_keywords.items():
+            if key in clean_query:
+                clean_query = f"{clean_query} {enhancement}"
+                break
+        
+        # URL encode the query
+        encoded_query = clean_query.replace(" ", ",")
+        
+        # Use Unsplash Source API (no key needed, returns random image)
+        unsplash_url = f"https://source.unsplash.com/800x800/?{encoded_query}"
+        
+        async with httpx.AsyncClient(timeout=10.0, follow_redirects=True) as client:
+            response = await client.get(unsplash_url)
+            if response.status_code == 200:
+                # The final URL after redirects is the actual image
+                return {
+                    "url": str(response.url),
+                    "source": "unsplash",
+                    "query": query
+                }
+    except Exception as e:
+        logger.error(f"Unsplash fetch error: {e}")
+    
+    return None
+
+async def generate_dalle_image(prompt: str) -> Optional[dict]:
+    """Generate an image using DALL-E (if OpenAI key configured)"""
+    openai_key = os.environ.get("OPENAI_API_KEY")
+    if not openai_key:
+        return None
+    
+    try:
+        async with httpx.AsyncClient(timeout=60.0) as client:
+            response = await client.post(
+                "https://api.openai.com/v1/images/generations",
+                headers={
+                    "Authorization": f"Bearer {openai_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "dall-e-3",
+                    "prompt": f"Create a visually striking, culturally rich image for social media. Style: modern, bold, high contrast. Theme: {prompt}. No text in image. Safe for all audiences.",
+                    "n": 1,
+                    "size": "1024x1024",
+                    "quality": "standard"
+                }
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                if data.get("data") and len(data["data"]) > 0:
+                    return {
+                        "url": data["data"][0]["url"],
+                        "source": "dalle",
+                        "prompt": prompt
+                    }
+    except Exception as e:
+        logger.error(f"DALL-E generation error: {e}")
+    
+    return None
+
+async def upload_image_to_cloudinary(image_url: str) -> Optional[str]:
+    """Upload an external image URL to Cloudinary for permanent storage"""
+    cloudinary_url = os.environ.get("CLOUDINARY_URL")
+    if not cloudinary_url:
+        return image_url  # Return original URL if no Cloudinary
+    
+    try:
+        import cloudinary
+        import cloudinary.uploader
+        
+        # Parse Cloudinary URL and configure
+        # Format: cloudinary://API_KEY:API_SECRET@CLOUD_NAME
+        cloudinary.config(cloudinary_url=cloudinary_url)
+        
+        # Upload from URL
+        result = cloudinary.uploader.upload(
+            image_url,
+            folder="blvx/spark",
+            resource_type="image",
+            transformation=[
+                {"quality": "auto", "fetch_format": "auto"}
+            ]
+        )
+        
+        return result.get("secure_url", image_url)
+    except Exception as e:
+        logger.error(f"Cloudinary upload error: {e}")
+        return image_url  # Fallback to original URL
+
+async def get_visual_for_post(topic: str, category: str = None, use_ai: bool = False) -> Optional[dict]:
+    """
+    Get a visual (image) for a post based on topic and category.
+    
+    Priority:
+    1. DALL-E (if use_ai=True and OpenAI key available)
+    2. Unsplash stock photo
+    
+    Returns dict with media_url and media_type, or None
+    """
+    image_result = None
+    
+    # Build search query from topic and category
+    search_terms = topic
+    if category:
+        search_terms = f"{category} {topic}"
+    
+    # Try DALL-E first if requested
+    if use_ai and os.environ.get("OPENAI_API_KEY"):
+        logger.info(f"Generating DALL-E image for: {search_terms[:50]}...")
+        image_result = await generate_dalle_image(search_terms)
+    
+    # Fall back to Unsplash
+    if not image_result:
+        logger.info(f"Fetching Unsplash image for: {search_terms[:50]}...")
+        image_result = await fetch_unsplash_image(search_terms)
+    
+    if image_result:
+        # Upload to Cloudinary for permanent storage
+        permanent_url = await upload_image_to_cloudinary(image_result["url"])
+        
+        return {
+            "media_url": permanent_url,
+            "media_type": "image",
+            "source": image_result.get("source", "unknown")
+        }
+    
+    return None
+
+# Visual-enabled categories (topics that benefit from images)
+VISUAL_CATEGORIES = [
+    "culture", "music", "art", "fashion", "food", "sports", 
+    "entertainment", "history", "social", "health"
+]
+
 async def generate_spark_post(topic_category: str = None) -> dict:
     """Generate a BLVX-style post with REAL FRESH reference URL using DuckDuckGo search"""
     import random
@@ -2967,10 +3140,28 @@ Generate a single BLVX-style post. Output ONLY the post text, nothing else. Do N
         ]
         content = random.choice(fallback_posts)
     
+    # Generate visual content for the post (20% chance for AI image, otherwise stock)
+    visual_data = None
+    try:
+        # Determine if we should use AI-generated image
+        use_ai = random.random() < 0.2  # 20% chance for DALL-E
+        
+        # Use headline or category for image search
+        visual_topic = headline if search_result else topic_category
+        visual_data = await get_visual_for_post(visual_topic, topic_category, use_ai=use_ai)
+        
+        if visual_data:
+            logger.info(f"Generated {visual_data.get('source', 'unknown')} visual for Spark post")
+    except Exception as e:
+        logger.error(f"Visual generation error (non-fatal): {e}")
+        visual_data = None
+    
     return {
         "content": content,
         "reference_url": reference_url,
-        "category": topic_category
+        "category": topic_category,
+        "media_url": visual_data.get("media_url") if visual_data else None,
+        "media_type": visual_data.get("media_type") if visual_data else None
     }
 
 @spark_router.post("/drop")
@@ -3008,16 +3199,16 @@ async def drop_spark(
             "created_at": datetime.now(timezone.utc).isoformat()
         })
     
-    # Create the post as Bonita with reference URL
+    # Create the post as Bonita with reference URL and visual
     post_id = f"post_{uuid.uuid4().hex[:12]}"
     spark_post = {
         "post_id": post_id,
         "user_id": "bonita",
         "content": content,
-        "media_url": None,
-        "media_type": None,
+        "media_url": spark_data.get("media_url"),
+        "media_type": spark_data.get("media_type"),
         "gif_metadata": None,
-        "reference_url": reference_url,  # NEW: Reference URL for rich link preview
+        "reference_url": reference_url,  # Reference URL for rich link preview
         "post_type": "original",
         "parent_post_id": None,
         "quote_post_id": None,
@@ -3109,6 +3300,8 @@ async def post_culture_calendar(user: UserBase = Depends(get_current_user)):
         "user_id": "bonita",
         "content": calendar_post["content"],
         "reference_url": calendar_post.get("reference_url"),
+        "media_url": calendar_post.get("media_url"),
+        "media_type": calendar_post.get("media_type"),
         "post_type": "original",
         "visibility": "block",
         "is_spark": True,
