@@ -1010,10 +1010,20 @@ async def apple_callback(request: Request, response: Response):
                 logger.warning(f"Creating user without email, using placeholder: {user_email}")
             
             # Generate username from email or Apple ID
-            if email:
+            # Detect private relay emails (random strings from Apple)
+            is_private_relay = (
+                is_private_email or 
+                (email and "@privaterelay.appleid.com" in email.lower()) or
+                (email and len(email.split("@")[0]) < 12 and not any(c.isupper() for c in email.split("@")[0]))
+            )
+            
+            if email and not is_private_relay:
+                # Real email - use the prefix
                 username = email.split("@")[0].lower()
             else:
-                username = f"apple_{apple_user_id[:8]}"
+                # Private relay or no email - generate a friendly username
+                random_num = uuid.uuid4().hex[:6]
+                username = f"member_{random_num}"
             
             username = re.sub(r'[^a-z0-9_]', '', username)[:15]
             base_username = username
@@ -1024,10 +1034,13 @@ async def apple_callback(request: Request, response: Response):
             
             # Determine display name
             display_name = name
-            if not display_name and email:
-                display_name = email.split("@")[0]
             if not display_name:
-                display_name = f"Apple User"
+                if email and not is_private_relay:
+                    # Real email - use the prefix, capitalize nicely
+                    display_name = email.split("@")[0].replace(".", " ").replace("_", " ").title()
+                else:
+                    # Private relay - friendly default they can change later
+                    display_name = "New Member"
             
             new_user = {
                 "user_id": user_id,
@@ -1065,9 +1078,9 @@ async def apple_callback(request: Request, response: Response):
         user.setdefault("is_vouched", False)
         user.setdefault("plates_remaining", 10)
         user.setdefault("has_seen_welcome", False)
-        user.setdefault("username", user.get("email", "user").split("@")[0] if user.get("email") else f"apple_{apple_user_id[:8]}")
-        user.setdefault("picture", f"https://api.dicebear.com/7.x/initials/svg?seed={user.get('name', 'U')}&backgroundColor=1a1a1a&textColor=ffffff")
-        user.setdefault("name", "Apple User")
+        user.setdefault("username", f"member_{uuid.uuid4().hex[:6]}")
+        user.setdefault("picture", f"https://api.dicebear.com/7.x/initials/svg?seed={user.get('name', 'N')}&backgroundColor=1a1a1a&textColor=ffffff")
+        user.setdefault("name", "New Member")
         
         logger.info(f"Apple user authenticated: {user_id}")
         
