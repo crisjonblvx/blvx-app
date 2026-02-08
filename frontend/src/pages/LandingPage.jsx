@@ -119,7 +119,12 @@ export default function LandingPage() {
       
       // Set authenticated user and navigate
       setAuthenticatedUser(response.data);
-      navigate('/home', { replace: true });
+      // If they came from an invite, take them to redeem it
+      if (inviteCode) {
+        navigate(`/vouch?redeem=${inviteCode}`, { replace: true });
+      } else {
+        navigate('/home', { replace: true });
+      }
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Login failed');
     } finally {
@@ -144,7 +149,12 @@ export default function LandingPage() {
       toast.success('Email verified!');
       // Set authenticated user and navigate
       setAuthenticatedUser(response.data.user);
-      navigate('/home', { replace: true });
+      // If they came from an invite, take them to redeem it
+      if (inviteCode) {
+        navigate(`/vouch?redeem=${inviteCode}`, { replace: true });
+      } else {
+        navigate('/home', { replace: true });
+      }
     } catch (error) {
       toast.error(error.response?.data?.detail || 'Verification failed');
     } finally {
@@ -213,7 +223,11 @@ export default function LandingPage() {
             <div className="space-y-3 animate-fade-in stagger-3">
               {/* Apple Sign-In - Primary */}
               <Button
-                onClick={loginWithApple}
+                onClick={() => {
+                  // Save invite code before OAuth redirect
+                  if (inviteCode) localStorage.setItem('blvx-pending-invite', inviteCode);
+                  loginWithApple();
+                }}
                 size="lg"
                 className={`w-full ${primaryBtnClass} rounded-none px-8 py-6 text-sm`}
                 data-testid="apple-signin-landing"
@@ -226,7 +240,11 @@ export default function LandingPage() {
               
               {/* Google Sign-In */}
               <Button
-                onClick={login}
+                onClick={() => {
+                  // Save invite code before OAuth redirect
+                  if (inviteCode) localStorage.setItem('blvx-pending-invite', inviteCode);
+                  login();
+                }}
                 variant="outline"
                 size="lg"
                 className={`w-full ${outlineBtnClass} rounded-none px-8 py-6 text-sm`}

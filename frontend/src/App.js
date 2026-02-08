@@ -126,8 +126,14 @@ const AuthCallbackHandler = ({ children }) => {
             // Set authenticated user in context
             setAuthenticatedUser({ ...response.data, session_token: sessionToken });
             
-            // Navigate to home
-            navigate('/home', { replace: true });
+            // Check for pending invite code
+            const pendingInvite = localStorage.getItem('blvx-pending-invite');
+            if (pendingInvite) {
+              localStorage.removeItem('blvx-pending-invite');
+              navigate(`/vouch?redeem=${pendingInvite}`, { replace: true });
+            } else {
+              navigate('/home', { replace: true });
+            }
           }
         } catch (error) {
           console.error('Auth callback error:', error);
