@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
@@ -7,7 +7,6 @@ import { Sidebar } from '@/components/Sidebar';
 import { Header } from '@/components/Header';
 import { FAB } from '@/components/FAB';
 import { TrendingWidget } from '@/components/TrendingWidget';
-import { LookoutTicker, LookoutPanel } from '@/components/LookoutPanel';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export const AppShell = ({ children }) => {
@@ -15,7 +14,6 @@ export const AppShell = ({ children }) => {
   const { isDark } = useTheme();
   const navigate = useNavigate();
   const checkedRef = useRef(false);
-  const [lookoutOpen, setLookoutOpen] = useState(false);
 
   const bgClass = isDark ? 'bg-black' : 'bg-white';
   const borderClass = isDark ? 'border-white/10' : 'border-black/10';
@@ -71,9 +69,6 @@ export const AppShell = ({ children }) => {
         <div className="flex">
           {/* Feed Container */}
           <div className="feed-container flex-1 px-0 md:px-4 max-w-2xl">
-            {/* The Lookout Ticker */}
-            <LookoutTicker onOpenLookout={() => setLookoutOpen(true)} />
-            
             {children}
           </div>
           
@@ -99,9 +94,6 @@ export const AppShell = ({ children }) => {
       
       {/* Floating Action Button for New Post */}
       <FAB />
-      
-      {/* The Lookout Panel */}
-      <LookoutPanel open={lookoutOpen} onOpenChange={setLookoutOpen} />
     </div>
   );
 };
