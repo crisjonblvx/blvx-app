@@ -4486,7 +4486,7 @@ async def test_push_notification(user: UserBase = Depends(get_current_user)):
 # ========================
 
 # List of admin user IDs (hardcoded for now, could be stored in DB)
-ADMIN_USERS = ["user_d940ef29bbb5"]  # CJ Nurse's user ID
+ADMIN_USERS = ["user_d940ef29bbb5", "user_832307c0fe15"]  # CJ Nurse's user IDs
 
 async def get_admin_user(user: UserBase = Depends(get_current_user)):
     """Dependency to check if user is admin"""
@@ -4629,6 +4629,25 @@ async def delete_post_admin(post_id: str, reason: str = "Content violation", adm
     await db.posts.delete_many({"reply_to": post_id})
     
     return {"message": f"Post {post_id} has been deleted", "reason": reason}
+
+@admin_router.delete("/spark/clear")
+async def clear_spark_posts(admin: UserBase = Depends(get_admin_user)):
+    """Clear all Bonita Spark posts (refresh the feed)"""
+    result = await db.posts.delete_many({
+        "user_id": "bonita",
+        "is_spark": True
+    })
+    
+    # Reset Bonita's post count
+    await db.users.update_one(
+        {"user_id": "bonita"},
+        {"$set": {"posts_count": 0}}
+    )
+    
+    return {
+        "message": f"Cleared {result.deleted_count} Spark posts",
+        "deleted_count": result.deleted_count
+    }
 
 @admin_router.get("/alerts")
 async def get_admin_alerts(
