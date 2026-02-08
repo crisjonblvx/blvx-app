@@ -157,7 +157,7 @@ export const AuthProvider = ({ children }) => {
       window.location.href = `https://appleid.apple.com/auth/authorize?${params.toString()}`;
     } catch (error) {
       console.error('Apple login error:', error);
-      throw error;
+      alert('Apple Sign-In is temporarily unavailable. Please try Google or Email.');
     }
   };
 
