@@ -126,8 +126,8 @@ export default function SettingsPage() {
         },
         {
           icon: DoorOpen,
-          label: 'Your Stoop',
-          description: 'Configure your AI stoop for visitors',
+          label: 'Leave a Message',
+          description: 'Configure your AI to chat with visitors when you\'re away',
           onClick: () => navigate('/ai-stoop-settings'),
           highlight: true,
         },

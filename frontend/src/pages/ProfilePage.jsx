@@ -225,7 +225,7 @@ export default function ProfilePage() {
                   onClick={() => navigate(`/ai-stoop/${profile.username}`)}
                   className={cn("border rounded-sm", isDark ? "border-amber-500/50 text-amber-400 hover:bg-amber-500/10 hover:text-amber-300" : "border-amber-500/50 text-amber-600 hover:bg-amber-50 hover:text-amber-700")}
                   data-testid="stoop-btn"
-                  title="Visit their AI stoop"
+                  title="Leave them a message"
                 >
                   <DoorOpen className="h-4 w-4" />
                 </Button>

@@ -258,11 +258,11 @@ export default function AIStooopPage() {
             </Avatar>
             <div className="min-w-0">
               <h2 className={cn("font-semibold truncate", textClass)}>
-                {ownerInfo?.name || ownerInfo?.username}'s Stoop
+                Message for {ownerInfo?.name || ownerInfo?.username}
               </h2>
               <p className={cn("text-xs", textMutedClass)}>
                 <DoorOpen className="h-3 w-3 inline mr-1" />
-                AI Stoop Session
+                Leave a Message
               </p>
             </div>
           </Link>

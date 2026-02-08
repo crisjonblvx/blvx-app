@@ -190,7 +190,7 @@ export default function AIStooopSettingsPage() {
           <div className="flex-1">
             <h1 className={cn("font-display text-xl font-semibold tracking-wide", textClass)}>
               <DoorOpen className="h-5 w-5 inline mr-2" />
-              Your Stoop
+              Leave a Message
             </h1>
           </div>
           <Button
@@ -209,8 +209,8 @@ export default function AIStooopSettingsPage() {
         <div className={cn("p-4 rounded-xl border", borderClass, isDark ? "bg-white/5" : "bg-gray-50")}>
           <div className="flex items-center justify-between">
             <div>
-              <h3 className={cn("font-semibold", textClass)}>Stoop Open</h3>
-              <p className={cn("text-sm", textMutedClass)}>Allow people to visit your stoop</p>
+              <h3 className={cn("font-semibold", textClass)}>Messages Open</h3>
+              <p className={cn("text-sm", textMutedClass)}>Allow people to leave you messages</p>
             </div>
             <Switch
               checked={config.enabled}
@@ -228,7 +228,7 @@ export default function AIStooopSettingsPage() {
           <Textarea
             value={config.greeting}
             onChange={(e) => setConfig(prev => ({ ...prev, greeting: e.target.value }))}
-            placeholder="Hey! Welcome to my stoop..."
+            placeholder="Hey! Thanks for stopping by. What's on your mind?"
             className={cn(
               "min-h-[100px] bg-transparent border-white/10",
               isDark ? "text-white" : "text-black"
@@ -427,7 +427,7 @@ export default function AIStooopSettingsPage() {
 
         {/* Preview Link */}
         <div className={cn("p-4 rounded-xl border text-center space-y-3", borderClass, isDark ? "bg-white/5" : "bg-gray-50")}>
-          <p className={cn("text-sm", textMutedClass)}>Your stoop link:</p>
+          <p className={cn("text-sm", textMutedClass)}>Share your message link:</p>
           <code className={cn("text-sm font-mono", textClass)}>
             blvx.social/ai-stoop/{user?.username}
           </code>
