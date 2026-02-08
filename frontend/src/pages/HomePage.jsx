@@ -3,6 +3,7 @@ import { useAuth } from '@/context/AuthContext';
 import { usePosts } from '@/hooks/usePosts';
 import { PostCard } from '@/components/PostCard';
 import { WelcomeModal } from '@/components/WelcomeModal';
+import { TodayInCulture } from '@/components/TodayInCulture';
 import { Skeleton } from '@/components/ui/skeleton';
 import { RefreshCw, Lock, Globe, UtensilsCrossed } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -171,6 +172,9 @@ export default function HomePage() {
     <div className="mb-safe" data-testid="home-page">
       {/* Welcome Modal */}
       <WelcomeModal open={showWelcome} onOpenChange={setShowWelcome} />
+
+      {/* Today in Culture - shows notable cultural dates */}
+      <TodayInCulture />
 
       {/* Feed Type Tabs */}
       <div className={cn("sticky top-14 md:top-0 z-30 glass border-b", borderClass)}>
