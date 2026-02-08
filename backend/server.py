@@ -4531,6 +4531,544 @@ async def test_push_notification(user: UserBase = Depends(get_current_user)):
     return {"message": "Test notification sent"}
 
 # ========================
+# AI STOOP - VISITOR SESSIONS
+# ========================
+
+ai_stoop_router = APIRouter(prefix="/ai-stoop", tags=["AI Stoop"])
+
+class AIStoop(BaseModel):
+    """Configuration for a user's AI Stoop"""
+    enabled: bool = True
+    greeting: str = "Hey! Welcome to my stoop. What brings you by?"
+    personality: str = "warm"  # warm, professional, playful, chill
+    topics_encouraged: List[str] = []
+    topics_deflected: List[str] = []
+    allow_sharing: bool = True  # Can visitors share convos to block?
+    max_session_minutes: int = 60
+
+class AIStooopSession(BaseModel):
+    """A visitor session on someone's AI stoop"""
+    session_id: str
+    owner_id: str
+    owner_username: str
+    visitor_id: str
+    visitor_username: str
+    started_at: str
+    ended_at: Optional[str] = None
+    status: str = "active"  # active, ended
+    messages: List[dict] = []
+    summary: Optional[str] = None
+    shared_to_block: bool = False
+
+class AIStooopMessage(BaseModel):
+    """A message in a stoop session"""
+    content: str
+
+@ai_stoop_router.get("/config/{username}")
+async def get_ai_stoop_config(username: str):
+    """Get a user's AI stoop configuration (public info only)"""
+    user = await db.users.find_one({"username": username})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Get or create default stoop config
+    stoop_config = await db.ai_stoops.find_one({"user_id": user["user_id"]})
+    if not stoop_config:
+        stoop_config = {
+            "user_id": user["user_id"],
+            "enabled": True,
+            "greeting": f"Hey! Welcome to {user.get('name', username)}'s stoop. What brings you by?",
+            "personality": "warm",
+            "topics_encouraged": [],
+            "topics_deflected": [],
+            "allow_sharing": True,
+            "max_session_minutes": 60
+        }
+    
+    return {
+        "username": username,
+        "name": user.get("name", username),
+        "picture": user.get("picture"),
+        "enabled": stoop_config.get("enabled", True),
+        "greeting": stoop_config.get("greeting"),
+        "personality": stoop_config.get("personality", "warm")
+    }
+
+@ai_stoop_router.put("/config")
+async def update_ai_stoop_config(
+    config: AIStoop,
+    user: UserBase = Depends(get_current_user)
+):
+    """Update your AI stoop configuration"""
+    await db.ai_stoops.update_one(
+        {"user_id": user.user_id},
+        {"$set": {
+            "user_id": user.user_id,
+            "enabled": config.enabled,
+            "greeting": config.greeting,
+            "personality": config.personality,
+            "topics_encouraged": config.topics_encouraged,
+            "topics_deflected": config.topics_deflected,
+            "allow_sharing": config.allow_sharing,
+            "max_session_minutes": config.max_session_minutes,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }},
+        upsert=True
+    )
+    return {"message": "Stoop config updated"}
+
+@ai_stoop_router.post("/visit/{username}")
+async def start_stoop_visit(
+    username: str,
+    user: UserBase = Depends(get_current_user)
+):
+    """Start a visit to someone's AI stoop"""
+    # Find the owner
+    owner = await db.users.find_one({"username": username})
+    if not owner:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    if owner["user_id"] == user.user_id:
+        raise HTTPException(status_code=400, detail="Can't visit your own stoop")
+    
+    # Check if stoop is enabled
+    stoop_config = await db.ai_stoops.find_one({"user_id": owner["user_id"]})
+    if stoop_config and not stoop_config.get("enabled", True):
+        raise HTTPException(status_code=403, detail="This stoop is currently closed")
+    
+    # Get visitor info
+    visitor = await db.users.find_one({"user_id": user.user_id})
+    visitor_name = visitor.get("name", visitor.get("username", "Someone"))
+    
+    # Create session
+    session_id = f"stoop_{uuid.uuid4().hex[:12]}"
+    session = {
+        "session_id": session_id,
+        "owner_id": owner["user_id"],
+        "owner_username": owner["username"],
+        "visitor_id": user.user_id,
+        "visitor_username": visitor.get("username", "unknown"),
+        "visitor_name": visitor_name,
+        "started_at": datetime.now(timezone.utc).isoformat(),
+        "ended_at": None,
+        "status": "active",
+        "messages": [],
+        "summary": None,
+        "shared_to_block": False
+    }
+    
+    await db.ai_stoop_sessions.insert_one(session)
+    
+    # Create notification for owner
+    await create_notification(
+        owner["user_id"], 
+        "stoop_visit", 
+        user.user_id, 
+        None
+    )
+    
+    # Send push notification to owner
+    await send_push_notification(
+        owner["user_id"],
+        "🚪 Stoop Visit",
+        f"{visitor_name} just stopped by your stoop!",
+        {"type": "stoop_visit", "session_id": session_id, "visitor": visitor_name}
+    )
+    
+    # Get greeting
+    greeting = stoop_config.get("greeting") if stoop_config else None
+    if not greeting:
+        owner_name = owner.get("name", username)
+        greeting = f"Hey! Welcome to {owner_name}'s stoop. What brings you by?"
+    
+    return {
+        "session_id": session_id,
+        "owner_username": username,
+        "owner_name": owner.get("name", username),
+        "greeting": greeting,
+        "personality": stoop_config.get("personality", "warm") if stoop_config else "warm",
+        "allow_sharing": stoop_config.get("allow_sharing", True) if stoop_config else True
+    }
+
+@ai_stoop_router.post("/session/{session_id}/message")
+async def send_stoop_message(
+    session_id: str,
+    message: AIStooopMessage,
+    user: UserBase = Depends(get_current_user)
+):
+    """Send a message in a stoop session (visitor side)"""
+    session = await db.ai_stoop_sessions.find_one({"session_id": session_id})
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    if session["visitor_id"] != user.user_id:
+        raise HTTPException(status_code=403, detail="Not your session")
+    
+    if session["status"] != "active":
+        raise HTTPException(status_code=400, detail="Session has ended")
+    
+    # Add visitor message
+    visitor_msg = {
+        "role": "visitor",
+        "content": message.content,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+    
+    # Get AI response (using Bonita with stoop context)
+    owner = await db.users.find_one({"user_id": session["owner_id"]})
+    stoop_config = await db.ai_stoops.find_one({"user_id": session["owner_id"]})
+    
+    owner_name = owner.get("name", owner.get("username", "the owner"))
+    personality = stoop_config.get("personality", "warm") if stoop_config else "warm"
+    topics_encouraged = stoop_config.get("topics_encouraged", []) if stoop_config else []
+    topics_deflected = stoop_config.get("topics_deflected", []) if stoop_config else []
+    
+    # Build system prompt for AI
+    system_prompt = f"""You are the AI assistant on {owner_name}'s stoop on BLVX.
+    
+Your personality is: {personality}
+You represent {owner_name} to visitors, but you are NOT {owner_name}.
+
+Guidelines:
+- Be welcoming and friendly
+- You can discuss general topics and {owner_name}'s public interests
+- Topics to encourage: {', '.join(topics_encouraged) if topics_encouraged else 'general conversation'}
+- Topics to deflect: {', '.join(topics_deflected) if topics_deflected else 'private/personal matters'}
+- Don't share private information about {owner_name}
+- Keep responses concise (2-3 sentences usually)
+- If asked to do something on behalf of {owner_name}, politely decline
+
+The visitor is: {session.get('visitor_name', 'someone')}
+"""
+    
+    # Get conversation history
+    history = session.get("messages", [])
+    messages_for_ai = [{"role": "system", "content": system_prompt}]
+    for msg in history[-10:]:  # Last 10 messages for context
+        role = "user" if msg["role"] == "visitor" else "assistant"
+        messages_for_ai.append({"role": role, "content": msg["content"]})
+    messages_for_ai.append({"role": "user", "content": message.content})
+    
+    # Call AI (using the same setup as Bonita)
+    ai_response = await call_bonita_ai(messages_for_ai)
+    
+    ai_msg = {
+        "role": "ai",
+        "content": ai_response,
+        "timestamp": datetime.now(timezone.utc).isoformat()
+    }
+    
+    # Update session with both messages
+    await db.ai_stoop_sessions.update_one(
+        {"session_id": session_id},
+        {"$push": {"messages": {"$each": [visitor_msg, ai_msg]}}}
+    )
+    
+    return {
+        "visitor_message": visitor_msg,
+        "ai_response": ai_msg
+    }
+
+async def call_bonita_ai(messages: List[dict]) -> str:
+    """Call the AI for stoop conversations"""
+    # Use the same AI service as Bonita
+    llm_key = os.environ.get('EMERGENT_LLM_KEY') or os.environ.get('OPENAI_API_KEY')
+    if not llm_key:
+        return "I'm having trouble connecting right now. Try again in a bit!"
+    
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            response = await client.post(
+                "https://api.openai.com/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {llm_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "gpt-4o-mini",
+                    "messages": messages,
+                    "max_tokens": 300,
+                    "temperature": 0.7
+                }
+            )
+            
+            if response.status_code == 200:
+                data = response.json()
+                return data["choices"][0]["message"]["content"]
+            else:
+                logger.error(f"AI call failed: {response.status_code} - {response.text}")
+                return "I'm having a moment. Give me a sec and try again!"
+    except Exception as e:
+        logger.error(f"AI call error: {e}")
+        return "Something went wrong on my end. Try again?"
+
+@ai_stoop_router.post("/session/{session_id}/end")
+async def end_stoop_session(
+    session_id: str,
+    user: UserBase = Depends(get_current_user)
+):
+    """End a stoop session"""
+    session = await db.ai_stoop_sessions.find_one({"session_id": session_id})
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    if session["visitor_id"] != user.user_id and session["owner_id"] != user.user_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    # Generate summary
+    messages = session.get("messages", [])
+    summary = None
+    if len(messages) >= 2:
+        summary_prompt = "Summarize this brief stoop conversation in one sentence:"
+        for msg in messages[-6:]:
+            summary_prompt += f"\n{msg['role']}: {msg['content']}"
+        
+        summary_messages = [{"role": "user", "content": summary_prompt}]
+        summary = await call_bonita_ai(summary_messages)
+    
+    # Calculate duration
+    started = datetime.fromisoformat(session["started_at"].replace("Z", "+00:00"))
+    ended = datetime.now(timezone.utc)
+    duration_minutes = int((ended - started).total_seconds() / 60)
+    
+    # Update session
+    await db.ai_stoop_sessions.update_one(
+        {"session_id": session_id},
+        {"$set": {
+            "ended_at": ended.isoformat(),
+            "status": "ended",
+            "summary": summary,
+            "duration_minutes": duration_minutes
+        }}
+    )
+    
+    # Notify owner
+    visitor = await db.users.find_one({"user_id": session["visitor_id"]})
+    visitor_name = visitor.get("name", visitor.get("username", "Someone")) if visitor else "Someone"
+    
+    await send_push_notification(
+        session["owner_id"],
+        "🚪 Stoop Session Ended",
+        f"{visitor_name} visited for {duration_minutes} min. {summary or ''}",
+        {"type": "stoop_end", "session_id": session_id}
+    )
+    
+    # Get sharing config
+    stoop_config = await db.ai_stoops.find_one({"user_id": session["owner_id"]})
+    allow_sharing = stoop_config.get("allow_sharing", True) if stoop_config else True
+    
+    return {
+        "message": "Session ended",
+        "duration_minutes": duration_minutes,
+        "summary": summary,
+        "allow_sharing": allow_sharing
+    }
+
+@ai_stoop_router.post("/session/{session_id}/share")
+async def share_stoop_to_block(
+    session_id: str,
+    user: UserBase = Depends(get_current_user)
+):
+    """Share a stoop session to the owner's block (requires owner approval)"""
+    session = await db.ai_stoop_sessions.find_one({"session_id": session_id})
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    if session["visitor_id"] != user.user_id:
+        raise HTTPException(status_code=403, detail="Only the visitor can request sharing")
+    
+    if session["status"] != "ended":
+        raise HTTPException(status_code=400, detail="Session must be ended first")
+    
+    # Check if sharing is allowed
+    stoop_config = await db.ai_stoops.find_one({"user_id": session["owner_id"]})
+    if stoop_config and not stoop_config.get("allow_sharing", True):
+        raise HTTPException(status_code=403, detail="Owner has disabled session sharing")
+    
+    # Create share request
+    share_request = {
+        "request_id": f"share_{uuid.uuid4().hex[:8]}",
+        "session_id": session_id,
+        "owner_id": session["owner_id"],
+        "visitor_id": session["visitor_id"],
+        "status": "pending",
+        "requested_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.ai_stoop_share_requests.insert_one(share_request)
+    
+    # Notify owner
+    visitor = await db.users.find_one({"user_id": session["visitor_id"]})
+    visitor_name = visitor.get("name", "Someone") if visitor else "Someone"
+    
+    await send_push_notification(
+        session["owner_id"],
+        "📝 Share Request",
+        f"{visitor_name} wants to share your stoop convo to the Block",
+        {"type": "share_request", "request_id": share_request["request_id"], "session_id": session_id}
+    )
+    
+    await create_notification(
+        session["owner_id"],
+        "stoop_share_request",
+        session["visitor_id"],
+        None
+    )
+    
+    return {"message": "Share request sent to owner", "request_id": share_request["request_id"]}
+
+@ai_stoop_router.post("/share-request/{request_id}/approve")
+async def approve_share_request(
+    request_id: str,
+    user: UserBase = Depends(get_current_user)
+):
+    """Approve a share request and post to block"""
+    request = await db.ai_stoop_share_requests.find_one({"request_id": request_id})
+    if not request:
+        raise HTTPException(status_code=404, detail="Request not found")
+    
+    if request["owner_id"] != user.user_id:
+        raise HTTPException(status_code=403, detail="Only the owner can approve")
+    
+    if request["status"] != "pending":
+        raise HTTPException(status_code=400, detail="Request already processed")
+    
+    # Get session
+    session = await db.ai_stoop_sessions.find_one({"session_id": request["session_id"]})
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    # Create post
+    visitor = await db.users.find_one({"user_id": session["visitor_id"]})
+    visitor_name = visitor.get("name", visitor.get("username", "A friend")) if visitor else "A friend"
+    
+    duration = session.get("duration_minutes", 0)
+    summary = session.get("summary", "")
+    
+    post_content = f"🚪 **Stoop Session**\n\n{visitor_name} stopped by for a chat"
+    if duration > 0:
+        post_content += f" ({duration} min)"
+    post_content += "."
+    if summary:
+        post_content += f"\n\n{summary}"
+    
+    # Create the post
+    post_id = f"post_{uuid.uuid4().hex[:12]}"
+    post = {
+        "post_id": post_id,
+        "author_id": user.user_id,
+        "content": post_content,
+        "visibility": "block",
+        "post_type": "stoop_session",
+        "stoop_session_id": session["session_id"],
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "like_count": 0,
+        "reply_count": 0,
+        "repost_count": 0
+    }
+    
+    await db.posts.insert_one(post)
+    
+    # Update request and session
+    await db.ai_stoop_share_requests.update_one(
+        {"request_id": request_id},
+        {"$set": {"status": "approved", "post_id": post_id}}
+    )
+    
+    await db.ai_stoop_sessions.update_one(
+        {"session_id": session["session_id"]},
+        {"$set": {"shared_to_block": True}}
+    )
+    
+    # Notify visitor
+    await send_push_notification(
+        session["visitor_id"],
+        "✅ Shared to Block!",
+        "Your stoop conversation was posted!",
+        {"type": "share_approved", "post_id": post_id}
+    )
+    
+    return {"message": "Posted to block", "post_id": post_id}
+
+@ai_stoop_router.post("/share-request/{request_id}/reject")
+async def reject_share_request(
+    request_id: str,
+    user: UserBase = Depends(get_current_user)
+):
+    """Reject a share request"""
+    request = await db.ai_stoop_share_requests.find_one({"request_id": request_id})
+    if not request:
+        raise HTTPException(status_code=404, detail="Request not found")
+    
+    if request["owner_id"] != user.user_id:
+        raise HTTPException(status_code=403, detail="Only the owner can reject")
+    
+    await db.ai_stoop_share_requests.update_one(
+        {"request_id": request_id},
+        {"$set": {"status": "rejected"}}
+    )
+    
+    return {"message": "Share request rejected"}
+
+@ai_stoop_router.get("/sessions")
+async def get_my_stoop_sessions(
+    role: str = "owner",  # owner or visitor
+    user: UserBase = Depends(get_current_user)
+):
+    """Get your stoop sessions (as owner or visitor)"""
+    if role == "owner":
+        sessions = await db.ai_stoop_sessions.find(
+            {"owner_id": user.user_id}
+        ).sort("started_at", -1).limit(50).to_list(50)
+    else:
+        sessions = await db.ai_stoop_sessions.find(
+            {"visitor_id": user.user_id}
+        ).sort("started_at", -1).limit(50).to_list(50)
+    
+    # Clean up for response
+    for s in sessions:
+        s.pop("_id", None)
+    
+    return sessions
+
+@ai_stoop_router.get("/session/{session_id}")
+async def get_stoop_session(
+    session_id: str,
+    user: UserBase = Depends(get_current_user)
+):
+    """Get a specific stoop session"""
+    session = await db.ai_stoop_sessions.find_one({"session_id": session_id})
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    if session["visitor_id"] != user.user_id and session["owner_id"] != user.user_id:
+        raise HTTPException(status_code=403, detail="Not authorized")
+    
+    session.pop("_id", None)
+    return session
+
+@ai_stoop_router.get("/pending-shares")
+async def get_pending_share_requests(
+    user: UserBase = Depends(get_current_user)
+):
+    """Get pending share requests for your stoop sessions"""
+    requests = await db.ai_stoop_share_requests.find(
+        {"owner_id": user.user_id, "status": "pending"}
+    ).to_list(50)
+    
+    for r in requests:
+        r.pop("_id", None)
+        # Add session summary
+        session = await db.ai_stoop_sessions.find_one({"session_id": r["session_id"]})
+        if session:
+            visitor = await db.users.find_one({"user_id": session["visitor_id"]})
+            r["visitor_name"] = visitor.get("name", "Someone") if visitor else "Someone"
+            r["summary"] = session.get("summary")
+            r["duration_minutes"] = session.get("duration_minutes", 0)
+    
+    return requests
+
+# ========================
 # ADMIN DASHBOARD API
 # ========================
 
@@ -4975,6 +5513,7 @@ api_router.include_router(spark_router)
 api_router.include_router(upload_router)
 api_router.include_router(lookout_router)
 api_router.include_router(push_router)
+api_router.include_router(ai_stoop_router)
 api_router.include_router(admin_router)
 
 # ========================
