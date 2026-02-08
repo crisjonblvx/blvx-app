@@ -4514,7 +4514,7 @@ async def test_push_notification(user: UserBase = Depends(get_current_user)):
 # ========================
 
 # List of admin user IDs (hardcoded for now, could be stored in DB)
-ADMIN_USERS = ["user_d940ef29bbb5", "user_832307c0fe15"]  # CJ Nurse's user IDs
+ADMIN_USERS = ["user_d940ef29bbb5", "user_832307c0fe15", "user_3a642962d522"]  # CJ Nurse's user IDs
 
 async def get_admin_user(user: UserBase = Depends(get_current_user)):
     """Dependency to check if user is admin"""
