@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { ImageCropModal } from '@/components/ImageCropModal';
 import { toast } from 'sonner';
 import axios from 'axios';
 
@@ -29,6 +30,8 @@ export const EditProfileModal = ({ open, onOpenChange, profile, onUpdate }) => {
   });
   const [avatarPreview, setAvatarPreview] = useState(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [cropModalOpen, setCropModalOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
   const fileInputRef = useRef(null);
 
   // Theme-aware classes
@@ -63,15 +66,25 @@ export const EditProfileModal = ({ open, onOpenChange, profile, onUpdate }) => {
       return;
     }
 
+    // Open crop modal instead of uploading directly
+    const imageUrl = URL.createObjectURL(file);
+    setSelectedImage(imageUrl);
+    setCropModalOpen(true);
+    
+    // Reset file input so same file can be selected again
+    e.target.value = '';
+  };
+
+  const handleCropComplete = async (croppedBlob) => {
     // Show preview immediately
-    const previewUrl = URL.createObjectURL(file);
+    const previewUrl = URL.createObjectURL(croppedBlob);
     setAvatarPreview(previewUrl);
 
-    // Upload to server
+    // Upload cropped image to server
     setUploadingAvatar(true);
     try {
       const formDataUpload = new FormData();
-      formDataUpload.append('file', file);
+      formDataUpload.append('file', croppedBlob, 'avatar.jpg');
 
       const response = await axios.post(`${API}/users/avatar`, formDataUpload, {
         headers: { 'Content-Type': 'multipart/form-data' },
@@ -87,6 +100,11 @@ export const EditProfileModal = ({ open, onOpenChange, profile, onUpdate }) => {
       setAvatarPreview(null);
     } finally {
       setUploadingAvatar(false);
+      // Clean up the selected image URL
+      if (selectedImage) {
+        URL.revokeObjectURL(selectedImage);
+        setSelectedImage(null);
+      }
     }
   };
 
@@ -219,6 +237,16 @@ export const EditProfileModal = ({ open, onOpenChange, profile, onUpdate }) => {
           </Button>
         </form>
       </DialogContent>
+
+      {/* Image Crop Modal */}
+      <ImageCropModal
+        open={cropModalOpen}
+        onOpenChange={setCropModalOpen}
+        imageSrc={selectedImage}
+        onCropComplete={handleCropComplete}
+        aspectRatio={1}
+        cropShape="round"
+      />
     </Dialog>
   );
 };
