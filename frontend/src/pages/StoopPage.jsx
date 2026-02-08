@@ -119,6 +119,7 @@ export default function StoopPage() {
     }, 3000); // Every 3 seconds
     
     return () => clearInterval(interval);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeStoopId]);
 
   const fetchStoops = async () => {
