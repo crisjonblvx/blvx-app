@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
-import { Home, UtensilsCrossed, Lock, ChevronRight, ChevronLeft } from 'lucide-react';
+import { Home, UtensilsCrossed, Lock, ChevronRight, ChevronLeft, Radio, Sparkles, HelpCircle } from 'lucide-react';
 import axios from 'axios';
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -31,6 +31,30 @@ const slides = [
     description: "You need a Vouch to get into The Cookout. Earn plates on The Block, build your rep, and get invited.",
     color: "text-amber-400",
     bg: "bg-gradient-to-br from-zinc-800 to-black"
+  },
+  {
+    icon: Radio,
+    title: "The Stoop",
+    subtitle: "Live Audio",
+    description: "Jump into live conversations. Start a Stoop, request the mic, and chop it up with the community. If you weren't there, you missed it.",
+    color: "text-purple-400",
+    bg: "bg-gradient-to-br from-purple-900/30 to-black"
+  },
+  {
+    icon: Sparkles,
+    title: "Bonita",
+    subtitle: "Your AI Companion",
+    description: "Bonita is here to help. Get vibe checks, rewrite your tone, or just chat. She's culturally fluent and always got your back.",
+    color: "text-pink-400",
+    bg: "bg-gradient-to-br from-pink-900/30 to-black"
+  },
+  {
+    icon: HelpCircle,
+    title: "Learn More",
+    subtitle: "We Got You",
+    description: "Questions? Check Settings → Learn BLVX for the full breakdown. Welcome to the culture.",
+    color: "text-cyan-400",
+    bg: "bg-gradient-to-br from-cyan-900/30 to-black"
   }
 ];
 
