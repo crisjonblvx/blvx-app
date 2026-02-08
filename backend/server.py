@@ -670,16 +670,16 @@ async def google_login(request: Request):
     if not GOOGLE_CLIENT_ID:
         raise HTTPException(status_code=501, detail="Google OAuth not configured")
     
-    # Get redirect URI from request origin
-    origin = request.headers.get("origin") or request.headers.get("referer", "").rstrip("/")
-    if not origin:
-        origin = os.environ.get("FRONTEND_URL", "https://blvx.social")
+    # Get frontend URL for final redirect
+    frontend_url = os.environ.get("FRONTEND_URL", "https://blvx.social")
+    # Backend URL for OAuth callback (Railway)
+    backend_url = os.environ.get("BACKEND_URL", "https://blvx-app-production.up.railway.app")
     
-    redirect_uri = f"{origin}/auth/callback"
+    redirect_uri = f"{frontend_url}/auth/callback"
     
     params = {
         "client_id": GOOGLE_CLIENT_ID,
-        "redirect_uri": f"{origin}/api/auth/google/callback",
+        "redirect_uri": f"{backend_url}/api/auth/google/callback",
         "response_type": "code",
         "scope": "openid email profile",
         "access_type": "offline",
@@ -696,8 +696,8 @@ async def google_callback(code: str, state: str, request: Request, response: Res
     if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
         raise HTTPException(status_code=501, detail="Google OAuth not configured")
     
-    # Get the origin for redirect URI
-    origin = request.headers.get("origin") or os.environ.get("FRONTEND_URL", "https://blvx.social")
+    # Backend URL for OAuth callback (must match what was sent to Google)
+    backend_url = os.environ.get("BACKEND_URL", "https://blvx-app-production.up.railway.app")
     
     try:
         # Exchange code for tokens
@@ -709,7 +709,7 @@ async def google_callback(code: str, state: str, request: Request, response: Res
                     "client_secret": GOOGLE_CLIENT_SECRET,
                     "code": code,
                     "grant_type": "authorization_code",
-                    "redirect_uri": f"{origin}/api/auth/google/callback"
+                    "redirect_uri": f"{backend_url}/api/auth/google/callback"
                 }
             )
             
