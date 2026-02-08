@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
-import { MessageCircle, Plus, Send, Users, Sparkles, Wifi, WifiOff, Search, Check, X } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { MessageCircle, Plus, Send, Users, Sparkles, Wifi, WifiOff, Search, Check, X, MessageSquareText, Loader2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useThemeClasses } from '@/hooks/useTheme';
 import { Button } from '@/components/ui/button';
@@ -14,6 +15,11 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
 import { toast } from 'sonner';
 import axios from 'axios';
 import { cn } from '@/lib/utils';
@@ -23,6 +29,7 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const WS_URL = process.env.REACT_APP_BACKEND_URL?.replace('https://', 'wss://').replace('http://', 'ws://');
 
 export default function GCPage() {
+  const navigate = useNavigate();
   const { user, sessionToken } = useAuth();
   const { isDark, textClass, textMutedClass, textVeryMutedClass, borderClass, hoverBgClass, bgActiveClass } = useThemeClasses();
   const [gcs, setGcs] = useState([]);
@@ -42,9 +49,31 @@ export default function GCPage() {
   const [userSearch, setUserSearch] = useState('');
   const [loadingUsers, setLoadingUsers] = useState(false);
   
+  const [startingSidebar, setStartingSidebar] = useState(null); // user_id of person we're starting sidebar with
+  
   const messagesEndRef = useRef(null);
   const wsRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+
+  // Start a sidebar (private chat) with someone from within the GC
+  const startSidebarWith = async (targetUser) => {
+    if (!targetUser || startingSidebar) return;
+    
+    setStartingSidebar(targetUser.user_id);
+    try {
+      const response = await axios.post(
+        `${API}/sidebar/create?other_user_id=${targetUser.user_id}`,
+        {},
+        { withCredentials: true }
+      );
+      toast.success(`Starting sidebar with ${targetUser.name}...`);
+      navigate(`/sidebar/${response.data.sidebar_id}`);
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Failed to start sidebar');
+    } finally {
+      setStartingSidebar(null);
+    }
+  };
 
   useEffect(() => {
     fetchGCs();
@@ -439,12 +468,53 @@ export default function GCPage() {
                         msg.user_id === user?.user_id && "flex-row-reverse"
                       )}
                     >
-                      <Avatar className="h-8 w-8 flex-shrink-0">
-                        <AvatarImage src={msg.user?.picture} />
-                        <AvatarFallback className="bg-white/10 text-[10px]">
-                          {msg.user?.name?.charAt(0) || (msg.user_id === 'bonita' ? 'B' : '?')}
-                        </AvatarFallback>
-                      </Avatar>
+                      {/* Avatar - clickable for other users to start sidebar */}
+                      {msg.user_id !== user?.user_id && msg.user_id !== 'bonita' ? (
+                        <Popover>
+                          <PopoverTrigger asChild>
+                            <button className="flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-white/30 rounded-full">
+                              <Avatar className="h-8 w-8 cursor-pointer hover:ring-2 hover:ring-white/30 transition-all">
+                                <AvatarImage src={msg.user?.picture} />
+                                <AvatarFallback className="bg-white/10 text-[10px]">
+                                  {msg.user?.name?.charAt(0) || '?'}
+                                </AvatarFallback>
+                              </Avatar>
+                            </button>
+                          </PopoverTrigger>
+                          <PopoverContent 
+                            className={cn("w-48 p-2", isDark ? "bg-zinc-900 border-white/10" : "bg-white border-gray-200")}
+                            side="right"
+                            align="start"
+                          >
+                            <div className="space-y-1">
+                              <p className={cn("text-xs font-medium px-2 py-1", textClass)}>
+                                {msg.user?.name}
+                              </p>
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => startSidebarWith(msg.user)}
+                                disabled={startingSidebar === msg.user?.user_id}
+                                className={cn("w-full justify-start text-xs", isDark ? "hover:bg-white/10" : "hover:bg-gray-100")}
+                              >
+                                {startingSidebar === msg.user?.user_id ? (
+                                  <Loader2 className="h-3.5 w-3.5 mr-2 animate-spin" />
+                                ) : (
+                                  <MessageSquareText className="h-3.5 w-3.5 mr-2" />
+                                )}
+                                Start Sidebar
+                              </Button>
+                            </div>
+                          </PopoverContent>
+                        </Popover>
+                      ) : (
+                        <Avatar className="h-8 w-8 flex-shrink-0">
+                          <AvatarImage src={msg.user?.picture} />
+                          <AvatarFallback className="bg-white/10 text-[10px]">
+                            {msg.user?.name?.charAt(0) || (msg.user_id === 'bonita' ? 'B' : '?')}
+                          </AvatarFallback>
+                        </Avatar>
+                      )}
                       <div className={cn(
                         "max-w-[70%]",
                         msg.user_id === user?.user_id && "text-right"
