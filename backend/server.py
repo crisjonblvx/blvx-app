@@ -5068,6 +5068,28 @@ async def get_pending_share_requests(
     
     return requests
 
+@ai_stoop_router.delete("/session/{session_id}")
+async def delete_stoop_session(
+    session_id: str,
+    user: UserBase = Depends(get_current_user)
+):
+    """Delete a stoop session (owner or visitor can delete)"""
+    session = await db.ai_stoop_sessions.find_one({"session_id": session_id})
+    if not session:
+        raise HTTPException(status_code=404, detail="Session not found")
+    
+    # Only owner or visitor can delete
+    if session["visitor_id"] != user.user_id and session["owner_id"] != user.user_id:
+        raise HTTPException(status_code=403, detail="Not authorized to delete this session")
+    
+    # Delete any associated share requests
+    await db.ai_stoop_share_requests.delete_many({"session_id": session_id})
+    
+    # Delete the session
+    await db.ai_stoop_sessions.delete_one({"session_id": session_id})
+    
+    return {"message": "Session deleted", "session_id": session_id}
+
 # ========================
 # ADMIN DASHBOARD API
 # ========================

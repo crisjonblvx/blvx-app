@@ -449,7 +449,7 @@ export default function GCPage() {
                         "max-w-[70%]",
                         msg.user_id === user?.user_id && "text-right"
                       )}>
-                        <p className="text-[10px] text-white/40 mb-1">
+                        <p className={cn("text-[10px] mb-1", isDark ? "text-white/40" : "text-gray-500")}>
                           {msg.user_id === 'bonita' ? 'Bonita' : msg.user?.name}
                           <span className="ml-2 font-mono">{formatTime(msg.created_at)}</span>
                         </p>
@@ -472,7 +472,7 @@ export default function GCPage() {
               
               {/* Typing Indicator */}
               {typingUsers.length > 0 && (
-                <div className="text-[10px] text-white/40 italic mt-2">
+                <div className={cn("text-[10px] italic mt-2", isDark ? "text-white/40" : "text-gray-500")}>
                   {typingUsers.join(', ')} {typingUsers.length === 1 ? 'is' : 'are'} typing...
                 </div>
               )}
@@ -494,7 +494,7 @@ export default function GCPage() {
                   size="icon"
                   onClick={askBonitaInGC}
                   disabled={!newMessage.trim() || sendingMessage}
-                  className="text-white/50 hover:text-white"
+                  className={cn(isDark ? "text-white/50 hover:text-white" : "text-gray-500 hover:text-gray-900")}
                   title="Ask Bonita"
                 >
                   <Sparkles className="h-4 w-4" />
@@ -513,8 +513,8 @@ export default function GCPage() {
         ) : (
           <div className="hidden md:flex flex-1 items-center justify-center">
             <div className="text-center">
-              <MessageCircle className="h-12 w-12 text-white/20 mx-auto mb-4" />
-              <p className="text-white/40 text-sm">Select a chat to start messaging</p>
+              <MessageCircle className={cn("h-12 w-12 mx-auto mb-4", isDark ? "text-white/20" : "text-gray-300")} />
+              <p className={cn("text-sm", isDark ? "text-white/40" : "text-gray-500")}>Select a chat to start messaging</p>
             </div>
           </div>
         )}
@@ -530,7 +530,7 @@ export default function GCPage() {
           <div className="p-4 space-y-4">
             {/* Chat Name */}
             <div>
-              <label className="text-[10px] text-white/40 uppercase tracking-wider mb-2 block">Chat Name</label>
+              <label className={cn("text-[10px] uppercase tracking-wider mb-2 block", isDark ? "text-white/40" : "text-gray-500")}>Chat Name</label>
               <Input
                 value={newGCName}
                 onChange={(e) => setNewGCName(e.target.value)}
@@ -542,11 +542,11 @@ export default function GCPage() {
             
             {/* User Search */}
             <div>
-              <label className="text-[10px] text-white/40 uppercase tracking-wider mb-2 block">
+              <label className={cn("text-[10px] uppercase tracking-wider mb-2 block", isDark ? "text-white/40" : "text-gray-500")}>
                 Add People {selectedUsers.length > 0 && `(${selectedUsers.length} selected)`}
               </label>
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-white/30" />
+                <Search className={cn("absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4", isDark ? "text-white/30" : "text-gray-400")} />
                 <Input
                   value={userSearch}
                   onChange={(e) => setUserSearch(e.target.value)}
@@ -570,7 +570,7 @@ export default function GCPage() {
                       <span>@{u?.username || userId}</span>
                       <button 
                         onClick={() => toggleUserSelection(userId)}
-                        className="text-white/50 hover:text-white"
+                        className={cn(isDark ? "text-white/50 hover:text-white" : "text-gray-500 hover:text-gray-900")}
                       >
                         <X className="h-3 w-3" />
                       </button>
@@ -589,7 +589,7 @@ export default function GCPage() {
                   ))}
                 </div>
               ) : filteredUsers.length === 0 ? (
-                <div className="p-4 text-center text-white/40 text-sm">
+                <div className={cn("p-4 text-center text-sm", isDark ? "text-white/40" : "text-gray-500")}>
                   {userSearch ? 'No users found' : 'No other users yet'}
                 </div>
               ) : (
@@ -621,8 +621,8 @@ export default function GCPage() {
                         </AvatarFallback>
                       </Avatar>
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-white text-sm truncate">{u.name}</p>
-                        <p className="text-xs text-white/40 truncate">@{u.username}</p>
+                        <p className={cn("font-medium text-sm truncate", textClass)}>{u.name}</p>
+                        <p className={cn("text-xs truncate", isDark ? "text-white/40" : "text-gray-500")}>@{u.username}</p>
                       </div>
                     </div>
                   ))}

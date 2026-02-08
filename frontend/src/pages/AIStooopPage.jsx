@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { ArrowLeft, Send, Loader2, DoorOpen, Share2, Clock, X, Settings } from 'lucide-react';
+import { ArrowLeft, Send, Loader2, DoorOpen, Share2, Clock, X, Settings, Trash2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useThemeClasses } from '@/hooks/useTheme';
 import { Button } from '@/components/ui/button';
@@ -32,6 +32,7 @@ export default function AIStooopPage() {
   const [endSummary, setEndSummary] = useState(null);
   const [allowSharing, setAllowSharing] = useState(true);
   const [shareRequested, setShareRequested] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
@@ -175,6 +176,25 @@ export default function AIStooopPage() {
     } catch (error) {
       console.error('Error requesting share:', error);
       toast.error(error.response?.data?.detail || 'Failed to request share');
+    }
+  };
+
+  const deleteSession = async () => {
+    if (!confirm('Delete this session? This cannot be undone.')) return;
+    
+    setDeleting(true);
+    try {
+      await axios.delete(
+        `${API}/ai-stoop/session/${session.session_id}`,
+        { withCredentials: true }
+      );
+      toast.success('Session deleted');
+      navigate(-1);
+    } catch (error) {
+      console.error('Error deleting session:', error);
+      toast.error('Failed to delete session');
+    } finally {
+      setDeleting(false);
     }
   };
 
@@ -357,6 +377,15 @@ export default function AIStooopPage() {
                 ✓ Share Requested
               </Button>
             )}
+            <Button
+              variant="ghost"
+              onClick={deleteSession}
+              disabled={deleting}
+              className="text-red-500 hover:text-red-400 hover:bg-red-500/10"
+              title="Delete session"
+            >
+              {deleting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+            </Button>
           </div>
         </div>
       )}

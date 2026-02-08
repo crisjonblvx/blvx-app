@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, DoorOpen, Save, Loader2, Eye, Clock, Share2, MessageSquare } from 'lucide-react';
+import { ArrowLeft, DoorOpen, Save, Loader2, Eye, Clock, Share2, MessageSquare, Trash2, History } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useThemeClasses } from '@/hooks/useTheme';
 import { Button } from '@/components/ui/button';
@@ -40,6 +40,8 @@ export default function AIStooopSettingsPage() {
   const [topicsInput, setTopicsInput] = useState('');
   const [deflectedInput, setDeflectedInput] = useState('');
   const [pendingShares, setPendingShares] = useState([]);
+  const [sessions, setSessions] = useState([]);
+  const [showSessions, setShowSessions] = useState(false);
 
   useEffect(() => {
     const fetchConfig = async () => {
@@ -80,6 +82,13 @@ export default function AIStooopSettingsPage() {
           { withCredentials: true }
         );
         setPendingShares(sharesRes.data || []);
+
+        // Fetch sessions (as owner)
+        const sessionsRes = await axios.get(
+          `${API}/ai-stoop/sessions?role=owner`,
+          { withCredentials: true }
+        );
+        setSessions(sessionsRes.data || []);
       } catch (error) {
         console.error('Error fetching stoop config:', error);
       } finally {
@@ -89,6 +98,22 @@ export default function AIStooopSettingsPage() {
 
     fetchConfig();
   }, [user]);
+
+  const deleteSession = async (sessionId) => {
+    if (!confirm('Delete this stoop session? This cannot be undone.')) return;
+    
+    try {
+      await axios.delete(
+        `${API}/ai-stoop/session/${sessionId}`,
+        { withCredentials: true }
+      );
+      setSessions(prev => prev.filter(s => s.session_id !== sessionId));
+      toast.success('Session deleted');
+    } catch (error) {
+      console.error('Error deleting session:', error);
+      toast.error('Failed to delete session');
+    }
+  };
 
   const saveConfig = async () => {
     setSaving(true);
@@ -343,6 +368,62 @@ export default function AIStooopSettingsPage() {
             </div>
           </div>
         )}
+
+        {/* Session History */}
+        <div className={cn("p-4 rounded-xl border space-y-3", borderClass, isDark ? "bg-white/5" : "bg-gray-50")}>
+          <div className="flex items-center justify-between">
+            <h3 className={cn("font-semibold flex items-center gap-2", textClass)}>
+              <History className="h-4 w-4" />
+              Session History ({sessions.length})
+            </h3>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setShowSessions(!showSessions)}
+              className={textMutedClass}
+            >
+              {showSessions ? 'Hide' : 'Show'}
+            </Button>
+          </div>
+          
+          {showSessions && sessions.length > 0 && (
+            <div className="space-y-2 mt-3">
+              {sessions.map((session) => (
+                <div
+                  key={session.session_id}
+                  className={cn("p-3 rounded-lg border flex items-start justify-between", borderClass, isDark ? "bg-black/20" : "bg-white")}
+                >
+                  <div className="flex-1 min-w-0">
+                    <p className={cn("font-medium text-sm", textClass)}>
+                      {session.visitor_name || 'Visitor'}
+                    </p>
+                    {session.summary && (
+                      <p className={cn("text-xs mt-1 line-clamp-2", textMutedClass)}>{session.summary}</p>
+                    )}
+                    <p className={cn("text-xs mt-1", textMutedClass)}>
+                      {session.duration_minutes || 0} min • {session.status === 'ended' ? 'Ended' : 'Active'}
+                      {session.shared_to_block && ' • Shared'}
+                    </p>
+                  </div>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => deleteSession(session.session_id)}
+                    className="text-red-500 hover:text-red-400 hover:bg-red-500/10 ml-2"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </Button>
+                </div>
+              ))}
+            </div>
+          )}
+          
+          {showSessions && sessions.length === 0 && (
+            <p className={cn("text-sm text-center py-4", textMutedClass)}>
+              No sessions yet. Share your stoop link to get visitors!
+            </p>
+          )}
+        </div>
 
         {/* Preview Link */}
         <div className={cn("p-4 rounded-xl border text-center space-y-3", borderClass, isDark ? "bg-white/5" : "bg-gray-50")}>
