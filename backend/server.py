@@ -287,6 +287,13 @@ class BonitaResponse(BaseModel):
     response: str
     mode: str
 
+class ReportCreate(BaseModel):
+    """Report a post or user"""
+    target_type: str  # "post" or "user"
+    target_id: str  # post_id or user_id
+    reason: str  # "spam", "harassment", "hate_speech", "misinformation", "other"
+    details: Optional[str] = None  # Additional context
+
 # ========================
 # PASSWORD HELPERS
 # ========================
@@ -1554,6 +1561,9 @@ async def create_post(post: PostCreate, user: UserBase = Depends(get_current_use
 @posts_router.get("/feed")
 async def get_feed(limit: int = 20, before: Optional[str] = None, user: UserBase = Depends(get_current_user)):
     """Get chronological feed (The Block)"""
+    # Get blocked/muted users to filter out
+    hidden_users = await get_hidden_user_ids(user.user_id)
+    
     following = await db.follows.find(
         {"follower_id": user.user_id},
         {"_id": 0, "following_id": 1}
@@ -1563,6 +1573,9 @@ async def get_feed(limit: int = 20, before: Optional[str] = None, user: UserBase
     following_ids.append(user.user_id)
     following_ids.append("bonita")  # Always include Bonita/system spark posts
     
+    # Remove hidden users from following
+    following_ids = [uid for uid in following_ids if uid not in hidden_users]
+    
     query = {
         "$or": [
             {"user_id": {"$in": following_ids}, "visibility": "block"},
@@ -1570,6 +1583,10 @@ async def get_feed(limit: int = 20, before: Optional[str] = None, user: UserBase
             {"is_spark": True, "visibility": "block"}  # Always show spark posts
         ]
     }
+    
+    # Exclude posts from hidden users
+    if hidden_users:
+        query["user_id"] = {"$nin": list(hidden_users)}
     
     if before:
         query["created_at"] = {"$lt": before}
@@ -1828,6 +1845,325 @@ async def search_posts(q: str, limit: int = 20):
         result.append(enriched)
     
     return result
+
+# ========================
+# REPORTS
+# ========================
+
+REPORT_REASONS = ["spam", "harassment", "hate_speech", "misinformation", "impersonation", "other"]
+
+@posts_router.post("/{post_id}/report")
+async def report_post(post_id: str, report: ReportCreate, user: UserBase = Depends(get_current_user)):
+    """Report a post for moderation review"""
+    # Verify post exists
+    post = await db.posts.find_one({"post_id": post_id})
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    
+    # Can't report your own post
+    if post["user_id"] == user.user_id:
+        raise HTTPException(status_code=400, detail="You cannot report your own post")
+    
+    # Check for existing report from this user
+    existing = await db.reports.find_one({
+        "reporter_id": user.user_id,
+        "target_type": "post",
+        "target_id": post_id
+    })
+    if existing:
+        raise HTTPException(status_code=400, detail="You have already reported this post")
+    
+    # Validate reason
+    if report.reason not in REPORT_REASONS:
+        raise HTTPException(status_code=400, detail=f"Invalid reason. Must be one of: {', '.join(REPORT_REASONS)}")
+    
+    # Create report
+    report_doc = {
+        "report_id": f"report_{uuid.uuid4().hex[:12]}",
+        "reporter_id": user.user_id,
+        "target_type": "post",
+        "target_id": post_id,
+        "target_user_id": post["user_id"],
+        "reason": report.reason,
+        "details": report.details,
+        "status": "pending",  # pending, reviewed, actioned, dismissed
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.reports.insert_one(report_doc)
+    
+    logger.info(f"Report created: {report_doc['report_id']} for post {post_id} by user {user.user_id}")
+    
+    return {"message": "Report submitted. Thank you for helping keep the community safe."}
+
+@users_router.post("/{user_id}/report")
+async def report_user(user_id: str, report: ReportCreate, user: UserBase = Depends(get_current_user)):
+    """Report a user for moderation review"""
+    # Verify user exists
+    target_user = await db.users.find_one({"user_id": user_id})
+    if not target_user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Can't report yourself
+    if user_id == user.user_id:
+        raise HTTPException(status_code=400, detail="You cannot report yourself")
+    
+    # Check for existing report from this user
+    existing = await db.reports.find_one({
+        "reporter_id": user.user_id,
+        "target_type": "user",
+        "target_id": user_id
+    })
+    if existing:
+        raise HTTPException(status_code=400, detail="You have already reported this user")
+    
+    # Validate reason
+    if report.reason not in REPORT_REASONS:
+        raise HTTPException(status_code=400, detail=f"Invalid reason. Must be one of: {', '.join(REPORT_REASONS)}")
+    
+    # Create report
+    report_doc = {
+        "report_id": f"report_{uuid.uuid4().hex[:12]}",
+        "reporter_id": user.user_id,
+        "target_type": "user",
+        "target_id": user_id,
+        "target_user_id": user_id,
+        "reason": report.reason,
+        "details": report.details,
+        "status": "pending",
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.reports.insert_one(report_doc)
+    
+    logger.info(f"Report created: {report_doc['report_id']} for user {user_id} by user {user.user_id}")
+    
+    return {"message": "Report submitted. Thank you for helping keep the community safe."}
+
+# ========================
+# BLOCK / MUTE
+# ========================
+
+@users_router.post("/{user_id}/block")
+async def block_user(user_id: str, user: UserBase = Depends(get_current_user)):
+    """Block a user - they won't see your content, you won't see theirs"""
+    if user_id == user.user_id:
+        raise HTTPException(status_code=400, detail="You cannot block yourself")
+    
+    target = await db.users.find_one({"user_id": user_id})
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Check if already blocked
+    existing = await db.blocks.find_one({
+        "blocker_id": user.user_id,
+        "blocked_id": user_id
+    })
+    if existing:
+        raise HTTPException(status_code=400, detail="User already blocked")
+    
+    # Create block
+    await db.blocks.insert_one({
+        "blocker_id": user.user_id,
+        "blocked_id": user_id,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    # Also unfollow in both directions
+    await db.follows.delete_one({"follower_id": user.user_id, "following_id": user_id})
+    await db.follows.delete_one({"follower_id": user_id, "following_id": user.user_id})
+    
+    logger.info(f"User {user.user_id} blocked {user_id}")
+    return {"message": "User blocked"}
+
+@users_router.delete("/{user_id}/block")
+async def unblock_user(user_id: str, user: UserBase = Depends(get_current_user)):
+    """Unblock a user"""
+    result = await db.blocks.delete_one({
+        "blocker_id": user.user_id,
+        "blocked_id": user_id
+    })
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="User not blocked")
+    
+    logger.info(f"User {user.user_id} unblocked {user_id}")
+    return {"message": "User unblocked"}
+
+@users_router.get("/blocked")
+async def get_blocked_users(user: UserBase = Depends(get_current_user)):
+    """Get list of users you've blocked"""
+    blocks = await db.blocks.find(
+        {"blocker_id": user.user_id},
+        {"_id": 0}
+    ).to_list(500)
+    
+    blocked_users = []
+    for block in blocks:
+        blocked_user = await db.users.find_one(
+            {"user_id": block["blocked_id"]},
+            {"_id": 0, "user_id": 1, "name": 1, "username": 1, "picture": 1}
+        )
+        if blocked_user:
+            blocked_user["blocked_at"] = block["created_at"]
+            blocked_users.append(blocked_user)
+    
+    return blocked_users
+
+@users_router.post("/{user_id}/mute")
+async def mute_user(user_id: str, user: UserBase = Depends(get_current_user)):
+    """Mute a user - their content won't appear in your feed, but they can still interact"""
+    if user_id == user.user_id:
+        raise HTTPException(status_code=400, detail="You cannot mute yourself")
+    
+    target = await db.users.find_one({"user_id": user_id})
+    if not target:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Check if already muted
+    existing = await db.mutes.find_one({
+        "muter_id": user.user_id,
+        "muted_id": user_id
+    })
+    if existing:
+        raise HTTPException(status_code=400, detail="User already muted")
+    
+    # Create mute
+    await db.mutes.insert_one({
+        "muter_id": user.user_id,
+        "muted_id": user_id,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    logger.info(f"User {user.user_id} muted {user_id}")
+    return {"message": "User muted"}
+
+@users_router.delete("/{user_id}/mute")
+async def unmute_user(user_id: str, user: UserBase = Depends(get_current_user)):
+    """Unmute a user"""
+    result = await db.mutes.delete_one({
+        "muter_id": user.user_id,
+        "muted_id": user_id
+    })
+    
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="User not muted")
+    
+    logger.info(f"User {user.user_id} unmuted {user_id}")
+    return {"message": "User unmuted"}
+
+@users_router.get("/muted")
+async def get_muted_users(user: UserBase = Depends(get_current_user)):
+    """Get list of users you've muted"""
+    mutes = await db.mutes.find(
+        {"muter_id": user.user_id},
+        {"_id": 0}
+    ).to_list(500)
+    
+    muted_users = []
+    for mute in mutes:
+        muted_user = await db.users.find_one(
+            {"user_id": mute["muted_id"]},
+            {"_id": 0, "user_id": 1, "name": 1, "username": 1, "picture": 1}
+        )
+        if muted_user:
+            muted_user["muted_at"] = mute["created_at"]
+            muted_users.append(muted_user)
+    
+    return muted_users
+
+# Helper function to get blocked/muted user IDs for filtering
+async def get_hidden_user_ids(user_id: str) -> set:
+    """Get set of user IDs that should be hidden from this user's view"""
+    # Users I've blocked
+    my_blocks = await db.blocks.find({"blocker_id": user_id}).to_list(1000)
+    # Users who blocked me
+    blocked_by = await db.blocks.find({"blocked_id": user_id}).to_list(1000)
+    # Users I've muted
+    my_mutes = await db.mutes.find({"muter_id": user_id}).to_list(1000)
+    
+    hidden = set()
+    for b in my_blocks:
+        hidden.add(b["blocked_id"])
+    for b in blocked_by:
+        hidden.add(b["blocker_id"])
+    for m in my_mutes:
+        hidden.add(m["muted_id"])
+    
+    return hidden
+
+# Admin endpoint for reports
+@admin_router.get("/reports")
+async def get_reports(
+    status: str = "pending",
+    limit: int = 50,
+    user: UserBase = Depends(get_current_user)
+):
+    """Get reports for moderation (admin only)"""
+    if not user.is_admin:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    query = {}
+    if status != "all":
+        query["status"] = status
+    
+    reports = await db.reports.find(query, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+    
+    # Enrich with reporter and target info
+    for report in reports:
+        reporter = await db.users.find_one({"user_id": report["reporter_id"]}, {"_id": 0, "name": 1, "username": 1})
+        report["reporter"] = reporter
+        
+        if report["target_type"] == "post":
+            post = await db.posts.find_one({"post_id": report["target_id"]}, {"_id": 0, "content": 1, "user_id": 1})
+            report["target_content"] = post.get("content", "[deleted]") if post else "[deleted]"
+        
+        target_user = await db.users.find_one({"user_id": report["target_user_id"]}, {"_id": 0, "name": 1, "username": 1})
+        report["target_user"] = target_user
+    
+    return reports
+
+@admin_router.post("/reports/{report_id}/action")
+async def action_report(
+    report_id: str,
+    action: str,  # "dismiss", "warn", "remove_content", "ban_user"
+    user: UserBase = Depends(get_current_user)
+):
+    """Take action on a report (admin only)"""
+    if not user.is_admin:
+        raise HTTPException(status_code=403, detail="Admin access required")
+    
+    report = await db.reports.find_one({"report_id": report_id})
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+    
+    valid_actions = ["dismiss", "warn", "remove_content", "ban_user"]
+    if action not in valid_actions:
+        raise HTTPException(status_code=400, detail=f"Invalid action. Must be one of: {', '.join(valid_actions)}")
+    
+    # Update report status
+    new_status = "dismissed" if action == "dismiss" else "actioned"
+    await db.reports.update_one(
+        {"report_id": report_id},
+        {"$set": {
+            "status": new_status,
+            "actioned_by": user.user_id,
+            "action_taken": action,
+            "actioned_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    
+    # Take the action
+    if action == "remove_content" and report["target_type"] == "post":
+        await db.posts.delete_one({"post_id": report["target_id"]})
+        logger.info(f"Post {report['target_id']} removed due to report {report_id}")
+    
+    elif action == "ban_user":
+        await db.users.update_one(
+            {"user_id": report["target_user_id"]},
+            {"$set": {"is_banned": True, "banned_at": datetime.now(timezone.utc).isoformat()}}
+        )
+        logger.info(f"User {report['target_user_id']} banned due to report {report_id}")
+    
+    return {"message": f"Report {action}ed successfully"}
 
 # ========================
 # NOTIFICATION HELPERS

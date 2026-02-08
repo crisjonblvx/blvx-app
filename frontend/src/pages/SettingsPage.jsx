@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ArrowLeft, LogOut, User, Bell, Shield, HelpCircle, Sparkles, Zap, Moon, Sun, Loader2, Settings2, DoorOpen } from 'lucide-react';
+import { ArrowLeft, LogOut, User, Bell, Shield, HelpCircle, Sparkles, Zap, Moon, Sun, Loader2, Settings2, DoorOpen, Ban, VolumeX } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { usePushNotifications } from '@/hooks/usePushNotifications';
@@ -124,6 +124,23 @@ export default function SettingsPage() {
           toggle: true,
           value: !isDark,
           onChange: toggleTheme,
+        },
+      ],
+    },
+    {
+      title: 'Privacy',
+      items: [
+        {
+          icon: Ban,
+          label: 'Blocked Users',
+          description: 'Manage users you\'ve blocked',
+          onClick: () => navigate('/settings/blocked'),
+        },
+        {
+          icon: VolumeX,
+          label: 'Muted Users',
+          description: 'Manage users you\'ve muted',
+          onClick: () => navigate('/settings/muted'),
         },
       ],
     },

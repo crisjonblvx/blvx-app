@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { useThemeClasses } from '@/hooks/useTheme';
 import { useParams, useNavigate } from 'react-router-dom';
 import { formatDistanceToNow, format } from 'date-fns';
-import { Calendar, MapPin, Link as LinkIcon, Edit2, MessageSquare, Loader2, DoorOpen } from 'lucide-react';
+import { Calendar, MapPin, Link as LinkIcon, Edit2, MessageSquare, Loader2, DoorOpen, Flag, MoreHorizontal, Ban, VolumeX, Volume2, UserX } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useUsers } from '@/hooks/useUsers';
 import { usePosts } from '@/hooks/usePosts';
@@ -11,6 +11,13 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { PostCard } from '@/components/PostCard';
 import { EditProfileModal } from '@/components/EditProfileModal';
+import { ReportModal } from '@/components/ReportModal';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import axios from 'axios';
@@ -30,6 +37,11 @@ export default function ProfilePage() {
   const [followLoading, setFollowLoading] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
   const [whisperLoading, setWhisperLoading] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [isBlocked, setIsBlocked] = useState(false);
+  const [isMuted, setIsMuted] = useState(false);
+  const [blockLoading, setBlockLoading] = useState(false);
+  const [muteLoading, setMuteLoading] = useState(false);
 
   const isOwnProfile = currentUser?.username === username;
 
@@ -104,6 +116,49 @@ export default function ProfilePage() {
     setProfile(updatedProfile);
     if (isOwnProfile) {
       updateUser(updatedProfile);
+    }
+  };
+
+  const handleBlock = async () => {
+    if (!profile || blockLoading) return;
+    
+    setBlockLoading(true);
+    try {
+      if (isBlocked) {
+        await axios.delete(`${API}/users/${profile.user_id}/block`, { withCredentials: true });
+        setIsBlocked(false);
+        toast.success(`Unblocked @${profile.username}`);
+      } else {
+        await axios.post(`${API}/users/${profile.user_id}/block`, {}, { withCredentials: true });
+        setIsBlocked(true);
+        setIsFollowing(false); // Blocking also unfollows
+        toast.success(`Blocked @${profile.username}`);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Action failed');
+    } finally {
+      setBlockLoading(false);
+    }
+  };
+
+  const handleMute = async () => {
+    if (!profile || muteLoading) return;
+    
+    setMuteLoading(true);
+    try {
+      if (isMuted) {
+        await axios.delete(`${API}/users/${profile.user_id}/mute`, { withCredentials: true });
+        setIsMuted(false);
+        toast.success(`Unmuted @${profile.username}`);
+      } else {
+        await axios.post(`${API}/users/${profile.user_id}/mute`, {}, { withCredentials: true });
+        setIsMuted(true);
+        toast.success(`Muted @${profile.username}`);
+      }
+    } catch (error) {
+      toast.error(error.response?.data?.detail || 'Action failed');
+    } finally {
+      setMuteLoading(false);
     }
   };
 
@@ -202,6 +257,62 @@ export default function ProfilePage() {
                 >
                   {isFollowing ? 'Following' : 'Follow'}
                 </Button>
+                
+                {/* More options dropdown */}
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={cn("border rounded-sm", isDark ? "border-white/20 text-white/70 hover:bg-white/10 hover:text-white" : "border-gray-300 text-gray-600 hover:bg-gray-100 hover:text-gray-900")}
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="bg-card border-border">
+                    <DropdownMenuItem 
+                      onClick={handleMute}
+                      disabled={muteLoading}
+                      className={cn("cursor-pointer text-xs", isDark ? "text-white/70 hover:text-white focus:text-white" : "text-gray-600 hover:text-gray-900 focus:text-gray-900")}
+                    >
+                      {isMuted ? (
+                        <>
+                          <Volume2 className="h-3.5 w-3.5 mr-2" />
+                          Unmute
+                        </>
+                      ) : (
+                        <>
+                          <VolumeX className="h-3.5 w-3.5 mr-2" />
+                          Mute
+                        </>
+                      )}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={handleBlock}
+                      disabled={blockLoading}
+                      className={cn("cursor-pointer text-xs", isBlocked ? "text-green-500 hover:text-green-400" : "text-red-500 hover:text-red-400")}
+                    >
+                      {isBlocked ? (
+                        <>
+                          <UserX className="h-3.5 w-3.5 mr-2" />
+                          Unblock
+                        </>
+                      ) : (
+                        <>
+                          <Ban className="h-3.5 w-3.5 mr-2" />
+                          Block
+                        </>
+                      )}
+                    </DropdownMenuItem>
+                    <DropdownMenuItem 
+                      onClick={() => setReportOpen(true)}
+                      className={cn("cursor-pointer text-xs", isDark ? "text-white/70 hover:text-white focus:text-white" : "text-gray-600 hover:text-gray-900 focus:text-gray-900")}
+                    >
+                      <Flag className="h-3.5 w-3.5 mr-2" />
+                      Report User
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
               </div>
             )}
           </div>
@@ -284,6 +395,17 @@ export default function ProfilePage() {
           onOpenChange={setEditOpen}
           profile={profile}
           onUpdate={handleProfileUpdate}
+        />
+      )}
+
+      {/* Report Modal */}
+      {!isOwnProfile && (
+        <ReportModal
+          open={reportOpen}
+          onOpenChange={setReportOpen}
+          targetType="user"
+          targetId={profile.user_id}
+          targetName={`@${profile.username}`}
         />
       )}
     </div>

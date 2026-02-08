@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
-import { UtensilsCrossed, MessageCircle, Repeat2, Share, MoreHorizontal, Trash2, Sparkles, Lock, Send, Volume2, VolumeX } from 'lucide-react';
+import { UtensilsCrossed, MessageCircle, Repeat2, Share, MoreHorizontal, Trash2, Sparkles, Lock, Send, Volume2, VolumeX, Flag } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { usePosts } from '@/hooks/usePosts';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -13,6 +13,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { ComposerModal } from '@/components/ComposerModal';
+import { ReportModal } from '@/components/ReportModal';
 import { LinkPreviewCard } from '@/components/TrendingWidget';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
@@ -49,6 +50,7 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
   const [checkingLike, setCheckingLike] = useState(true);
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
   const videoRef = useRef(null);
   const containerRef = useRef(null);
   const isDark = useTheme();
@@ -283,6 +285,18 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
                       Delete
                     </DropdownMenuItem>
                   )}
+                  {!isOwner && user && (
+                    <DropdownMenuItem 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setReportOpen(true);
+                      }}
+                      className={cn("cursor-pointer text-xs", isDark ? "text-white/70 hover:text-white focus:text-white" : "text-gray-600 hover:text-gray-900 focus:text-gray-900")}
+                    >
+                      <Flag className="h-3.5 w-3.5 mr-2" />
+                      Report
+                    </DropdownMenuItem>
+                  )}
                 </DropdownMenuContent>
               </DropdownMenu>
             </div>
@@ -479,6 +493,15 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
         open={quoteOpen} 
         onOpenChange={setQuoteOpen} 
         quotedPost={post}
+      />
+
+      {/* Report Modal */}
+      <ReportModal
+        open={reportOpen}
+        onOpenChange={setReportOpen}
+        targetType="post"
+        targetId={post.post_id}
+        targetName={`@${postUser.username}'s post`}
       />
     </>
   );
