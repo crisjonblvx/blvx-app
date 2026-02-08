@@ -502,6 +502,7 @@ async def email_signup(data: EmailSignup, response: Response):
 @auth_router.post("/login")
 async def email_login(data: EmailLogin, response: Response):
     """Login with email and password"""
+    logger.info(f"Login attempt for {data.email}, remember_me={data.remember_me}")
     user = await db.users.find_one({"email": data.email.lower()})
     
     if not user:
