@@ -2616,6 +2616,45 @@ async def ask_bonita(request: BonitaRequest, user: UserBase = Depends(get_curren
 
 spark_router = APIRouter(prefix="/spark", tags=["The Spark"])
 
+# Approved/preferred news sources for BLVX - culturally relevant media
+APPROVED_SOURCES = [
+    # Black media
+    "theroot.com", "essence.com", "bet.com", "thegrio.com", "blavity.com",
+    "blackenterprise.com", "ebony.com", "afrotech.com", "newsone.com",
+    "atlantablackstar.com", "blackamericaweb.com", "rolling out.com",
+    "hbcugameday.com", "hbcubuzz.com", "watchtheyardstore.com",
+    # Hip-hop/music
+    "hiphopdx.com", "complex.com", "xxlmag.com", "vibe.com", "hotnewhiphop.com",
+    "rap-up.com", "okayplayer.com", "djbooth.net", "revolt.tv",
+    # Latino media
+    "latinorebels.com", "mitú.com", "remezcla.com", "hispanicexecutive.com",
+    "latino.foxnews.com", "latinobusinesstoday.com",
+    # AAPI media
+    "nextshark.com", "angryasianman.com", "asamnews.com",
+    # LGBTQ+ media
+    "advocate.com", "them.us", "out.com", "lgbtqnation.com",
+    # General progressive/diverse
+    "colorlines.com", "theundefeated.com", "andscape.com", "espn.com",
+    "nbcnews.com", "cnn.com", "nytimes.com", "washingtonpost.com",
+    "theguardian.com", "npr.org", "axios.com", "huffpost.com",
+    # Entertainment
+    "variety.com", "hollywoodreporter.com", "deadline.com", "ew.com",
+    "billboard.com", "rollingstone.com", "pitchfork.com",
+    # Sports
+    "espn.com", "theathletic.com", "bleacherreport.com", "si.com",
+    # Business
+    "forbes.com", "bloomberg.com", "inc.com", "fastcompany.com",
+]
+
+# Blocked sources - not relevant to BLVX audience
+BLOCKED_SOURCES = [
+    "thehindu.com", "indiatimes.com", "timesofindia.com", "ndtv.com",
+    "hindustantimes.com", "news18.com", "firstpost.com", "zee",
+    "dnaindia.com", "republicworld.com", "opindia.com",
+    "breitbart.com", "dailywire.com", "foxnews.com", "newsmax.com",
+    "oann.com", "thegatewaypundit.com",
+]
+
 # Culturally diverse topic categories for DuckDuckGo
 # Focused on POC voices, Black/Brown communities, and underrepresented perspectives
 SPARK_TOPIC_CATEGORIES = {
@@ -2682,24 +2721,6 @@ SPARK_TOPIC_CATEGORIES = {
         "comedy Black comedians tour",
         "award shows diversity",
         "Hollywood representation news",
-    ],
-    "breaking": [
-        "breaking news today",
-        "trending news today",
-        "viral news social media",
-        "major news headlines today",
-    ],
-    "mainstream": [
-        "national news headlines today",
-        "college football news",
-        "NFL news today",
-        "NBA news today",
-        "politics news today",
-        "world news headlines",
-        "economy news today",
-        "climate news today",
-        "science news discoveries",
-        "celebrity news entertainment",
     ],
 }
 
@@ -2832,8 +2853,33 @@ def is_content_fresh(text: str) -> bool:
     # Default to accepting if no year mentioned (likely recent)
     return True
 
+def is_source_approved(url: str) -> bool:
+    """Check if URL is from an approved/preferred source"""
+    url_lower = url.lower()
+    
+    # First check if it's blocked
+    for blocked in BLOCKED_SOURCES:
+        if blocked in url_lower:
+            return False
+    
+    # Then check if it's approved (prefer approved sources)
+    for approved in APPROVED_SOURCES:
+        if approved in url_lower:
+            return True
+    
+    # Allow other sources but with lower priority
+    return True
+
+def is_source_blocked(url: str) -> bool:
+    """Check if URL is from a blocked source"""
+    url_lower = url.lower()
+    for blocked in BLOCKED_SOURCES:
+        if blocked in url_lower:
+            return True
+    return False
+
 async def search_real_news(query: str) -> Optional[Dict]:
-    """Search DuckDuckGo for FRESH real news with time filtering"""
+    """Search DuckDuckGo for FRESH real news with time filtering and source filtering"""
     from ddgs import DDGS
     
     # Time-anchor the query
@@ -2843,17 +2889,20 @@ async def search_real_news(query: str) -> Optional[Dict]:
     logger.info(f"Searching DuckDuckGo with time-anchored query: {time_anchored_query}")
     
     try:
+        approved_results = []
+        other_results = []
+        
         with DDGS() as ddgs:
             # Use news search first for more current results
             try:
                 # Try news search with time filter (past week)
-                results = list(ddgs.news(time_anchored_query, max_results=5))
+                results = list(ddgs.news(time_anchored_query, max_results=15))  # Get more results to filter
             except Exception:
                 # Fall back to text search if news search fails
-                results = list(ddgs.text(time_anchored_query, max_results=5))
+                results = list(ddgs.text(time_anchored_query, max_results=15))
             
             if results:
-                # Filter for FRESH content only
+                # Filter and categorize results
                 for result in results:
                     title = result.get('title', '')
                     body = result.get('body', result.get('description', ''))
@@ -2862,29 +2911,58 @@ async def search_real_news(query: str) -> Optional[Dict]:
                     if not url or not title:
                         continue
                     
+                    # Skip blocked sources entirely
+                    if is_source_blocked(url):
+                        logger.info(f"Skipping blocked source: {url[:50]}...")
+                        continue
+                    
                     # Check freshness - reject stale 2023/2024 content
                     combined_text = f"{title} {body}"
                     if not is_content_fresh(combined_text):
                         logger.info(f"Skipping stale content: {title[:50]}...")
                         continue
                     
-                    return {
+                    result_data = {
                         "title": title,
                         "url": url,
                         "body": body
                     }
+                    
+                    # Prioritize approved sources
+                    url_lower = url.lower()
+                    is_approved = any(src in url_lower for src in APPROVED_SOURCES)
+                    
+                    if is_approved:
+                        approved_results.append(result_data)
+                    else:
+                        other_results.append(result_data)
                 
-                # If all results were stale, try a different approach
-                logger.warning("All search results were stale, trying alternative query")
+                # Return approved source first, then fall back to others
+                if approved_results:
+                    logger.info(f"Found approved source: {approved_results[0]['url'][:50]}")
+                    return approved_results[0]
+                elif other_results:
+                    logger.info(f"Using non-approved source: {other_results[0]['url'][:50]}")
+                    return other_results[0]
+                
+                # If all results were filtered out, try a different approach
+                logger.warning("All search results were filtered, trying alternative query")
                 
         # Final fallback - try with "this week" modifier
         fallback_query = f"{query} this week {current_year}"
         with DDGS() as ddgs:
-            results = list(ddgs.text(fallback_query, max_results=3))
+            results = list(ddgs.text(fallback_query, max_results=10))
             for result in results:
                 url = result.get('href', '')
                 title = result.get('title', '')
-                if url and title and is_content_fresh(f"{title} {result.get('body', '')}"):
+                
+                if not url or not title:
+                    continue
+                    
+                if is_source_blocked(url):
+                    continue
+                    
+                if is_content_fresh(f"{title} {result.get('body', '')}"):
                     return {
                         "title": title,
                         "url": url,
