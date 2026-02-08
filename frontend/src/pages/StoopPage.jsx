@@ -245,37 +245,37 @@ export default function StoopPage() {
   return (
     <div className="mb-safe" data-testid="stoop-page">
       {/* Header */}
-      <div className="sticky top-14 md:top-0 z-30 glass border-b border-white/10 p-4">
+      <div className={cn("sticky top-14 md:top-0 z-30 glass border-b p-4", borderClass)}>
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <Radio className="h-5 w-5 text-white" />
-            <h1 className="font-display text-sm tracking-widest uppercase">The Stoop</h1>
+            <Radio className={cn("h-5 w-5", textClass)} />
+            <h1 className={cn("font-display text-sm tracking-widest uppercase", textClass)}>The Stoop</h1>
           </div>
           <Button
             onClick={() => setCreateOpen(true)}
             size="sm"
-            className="bg-white text-black hover:bg-white/90 rounded-none text-xs font-display tracking-wider"
+            className={cn("rounded-none text-xs font-display tracking-wider", isDark ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90")}
             data-testid="create-stoop-btn"
           >
             <Plus className="h-3.5 w-3.5 mr-2" />
             Start
           </Button>
         </div>
-        <p className="text-[10px] text-white/40 mt-2">Live audio rooms powered by LiveKit</p>
+        <p className={cn("text-[10px] mt-2", textVeryMutedClass)}>Live audio rooms powered by LiveKit</p>
       </div>
 
       {/* Active Stoop */}
       {activeStoopData && (
-        <div className="p-4 border-b border-white/10 bg-white/5">
+        <div className={cn("p-4 border-b", borderClass, isDark ? "bg-white/5" : "bg-gray-50")}>
           <div className="flex items-center justify-between mb-4">
             <div>
-              <p className="text-[10px] text-white/40 uppercase tracking-wider mb-1">Live Now</p>
-              <h2 className="font-display text-lg">{activeStoopData.title}</h2>
+              <p className={cn("text-[10px] uppercase tracking-wider mb-1", textVeryMutedClass)}>Live Now</p>
+              <h2 className={cn("font-display text-lg", textClass)}>{activeStoopData.title}</h2>
             </div>
             <div className="flex items-center gap-2">
               {connectionStatus.icon}
               <span className="w-2 h-2 bg-red-500 rounded-full animate-pulse" />
-              <span className="text-xs text-white/50">LIVE</span>
+              <span className={cn("text-xs", textMutedClass)}>LIVE</span>
             </div>
           </div>
           
@@ -458,30 +458,30 @@ export default function StoopPage() {
         </div>
       ) : stoops.length === 0 ? (
         <div className="text-center py-16 px-6">
-          <Radio className="h-12 w-12 text-white/20 mx-auto mb-4" />
-          <p className="text-white/50 text-sm mb-2">No Stoops live right now</p>
-          <p className="text-white/30 text-xs">Start one and gather the people</p>
+          <Radio className={cn("h-12 w-12 mx-auto mb-4", isDark ? "text-white/20" : "text-gray-300")} />
+          <p className={cn("text-sm mb-2", textMutedClass)}>No Stoops live right now</p>
+          <p className={cn("text-xs", isDark ? "text-white/30" : "text-gray-400")}>Start one and gather the people</p>
         </div>
       ) : (
-        <div className="divide-y divide-white/10">
+        <div className={cn("divide-y", borderClass)}>
           {stoops.map((stoop) => (
             <div 
               key={stoop.stoop_id}
-              className="p-4 hover:bg-white/5 cursor-pointer transition-colors"
+              className={cn("p-4 cursor-pointer transition-colors", hoverBgClass)}
               onClick={() => joinStoop(stoop.stoop_id)}
               data-testid={`stoop-${stoop.stoop_id}`}
             >
               <div className="flex items-start justify-between mb-2">
                 <div>
-                  <h3 className="font-medium text-white text-sm">{stoop.title}</h3>
-                  <p className="text-xs text-white/50">Hosted by {stoop.host?.name}</p>
+                  <h3 className={cn("font-medium text-sm", textClass)}>{stoop.title}</h3>
+                  <p className={cn("text-xs", textMutedClass)}>Hosted by {stoop.host?.name}</p>
                 </div>
-                <div className="flex items-center gap-1 text-[10px] text-white/40">
+                <div className={cn("flex items-center gap-1 text-[10px]", textVeryMutedClass)}>
                   <span className="w-1.5 h-1.5 bg-green-500 rounded-full" />
                   LIVE
                 </div>
               </div>
-              <div className="flex items-center gap-4 text-xs text-white/40">
+              <div className={cn("flex items-center gap-4 text-xs", textVeryMutedClass)}>
                 <span className="flex items-center gap-1">
                   <Mic className="h-3 w-3" />
                   {stoop.speaker_count || 1} speaking
