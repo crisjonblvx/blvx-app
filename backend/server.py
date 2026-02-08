@@ -51,7 +51,7 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(level
 logger = logging.getLogger(__name__)
 
 # Bonita AI Avatar URL
-BONITA_AVATAR_URL = "https://customer-assets.emergentagent.com/job_high-context/artifacts/on1dw2e3_Real%20Bonita%202%20avatar.jpg"
+BONITA_AVATAR_URL = "/assets/bonita-profile.jpeg"
 
 # ========================
 # WEBSOCKET CONNECTION MANAGER
@@ -823,13 +823,13 @@ async def google_callback(code: str, state: str, request: Request, response: Res
 
 @auth_router.get("/session")
 async def exchange_session(session_id: str, response: Response):
-    """Exchange Emergent session_id for user data and set cookie (Google OAuth)"""
-    try:
-        async with httpx.AsyncClient(timeout=30.0) as http_client:
-            resp = await http_client.get(
-                "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
-                headers={"X-Session-ID": session_id}
-            )
+    """DEPRECATED: Was used for Emergent OAuth. Use /auth/google/login instead."""
+    raise HTTPException(
+        status_code=410, 
+        detail="This endpoint is deprecated. Please use Google or Apple Sign-In directly."
+    )
+    # Old Emergent code removed - was calling:
+    # https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data
             logger.info(f"Emergent auth response status: {resp.status_code}")
             if resp.status_code != 200:
                 logger.error(f"Emergent auth error: {resp.text}")
