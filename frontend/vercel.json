@@ -5,7 +5,7 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://159.203.105.71/api/:path*"
+      "destination": "https://blvx-app-production.up.railway.app/api/:path*"
     },
     {
       "source": "/(.*)",
