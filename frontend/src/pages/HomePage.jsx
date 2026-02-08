@@ -104,11 +104,19 @@ export default function HomePage() {
     }
   }, [feedType, fetchFeed, fetchExploreFeed, fetchCookout]);
 
-  // Initial load - generate fresh content then load feed
+  // Initial load - load feed FIRST, then generate fresh content in background
   useEffect(() => {
     const initFeed = async () => {
-      await generateFreshContent();
+      // Load existing content immediately
       await loadFeed();
+      
+      // Then generate fresh content in background (don't await)
+      generateFreshContent().then(() => {
+        // Refresh feed after new content is generated
+        loadFeed();
+      }).catch(() => {
+        // Ignore errors - fresh content is nice-to-have
+      });
     };
     initFeed();
     // eslint-disable-next-line react-hooks/exhaustive-deps
