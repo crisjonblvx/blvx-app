@@ -1664,6 +1664,59 @@ async def create_post(post: PostCreate, user: UserBase = Depends(get_current_use
     enriched = await get_post_with_user(new_post)
     return enriched
 
+async def get_bonita_feed_limit() -> int:
+    """
+    Calculate Bonita's max posts per feed based on recent human activity.
+    When the community is quiet, Bonita holds it down.
+    When humans are active, she steps back.
+    """
+    six_hours_ago = datetime.utcnow() - timedelta(hours=6)
+    
+    # Count human posts in last 6 hours (exclude Bonita and spark posts)
+    human_post_count = await db.posts.count_documents({
+        "user_id": {"$ne": "bonita"},
+        "is_spark": {"$ne": True},
+        "created_at": {"$gte": six_hours_ago},
+        "visibility": "block"
+    })
+    
+    # Activity-aware limits:
+    # < 10 human posts  → Bonita max 5 (holding it down)
+    # 10-30 posts       → Bonita max 3 (balanced)
+    # 30+ posts         → Bonita max 2 (community's cooking)
+    if human_post_count < 10:
+        return 5
+    elif human_post_count < 30:
+        return 3
+    else:
+        return 2
+
+
+def interleave_bonita_posts(human_posts: list, bonita_posts: list, bonita_max: int) -> list:
+    """
+    Interleave Bonita posts throughout the feed at regular intervals.
+    Ensures she's present but not clustered at the top.
+    """
+    if not bonita_posts:
+        return human_posts
+    
+    # Cap Bonita posts
+    bonita_posts = bonita_posts[:bonita_max]
+    
+    if not human_posts:
+        return bonita_posts
+    
+    # Calculate interval for even distribution
+    result = human_posts.copy()
+    interval = max(1, len(human_posts) // (len(bonita_posts) + 1))
+    
+    for i, bp in enumerate(bonita_posts):
+        insert_pos = min((i + 1) * interval, len(result))
+        result.insert(insert_pos, bp)
+    
+    return result
+
+
 @posts_router.get("/feed")
 async def get_feed(limit: int = 20, before: Optional[str] = None, user: UserBase = Depends(get_current_user)):
     """Get chronological feed (The Block)"""
@@ -1698,9 +1751,13 @@ async def get_feed(limit: int = 20, before: Optional[str] = None, user: UserBase
     if before:
         query["created_at"] = {"$lt": before}
     
-    posts = await db.posts.find(query, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+    # Fetch extra posts to account for Bonita throttling
+    posts = await db.posts.find(query, {"_id": 0}).sort("created_at", -1).limit(limit + 10).to_list(limit + 10)
     
-    result = []
+    # Process posts
+    human_posts = []
+    bonita_posts = []
+    
     for post in posts:
         if isinstance(post.get("created_at"), str):
             post["created_at"] = datetime.fromisoformat(post["created_at"])
@@ -1714,9 +1771,19 @@ async def get_feed(limit: int = 20, before: Optional[str] = None, user: UserBase
             continue
         
         enriched = await get_post_with_user(post)
-        result.append(enriched)
+        
+        # Separate Bonita posts from human posts (spark posts count as system/Bonita)
+        if post.get("user_id") == "bonita" or post.get("is_spark"):
+            bonita_posts.append(enriched)
+        else:
+            human_posts.append(enriched)
     
-    return result
+    # Get activity-aware Bonita limit and interleave
+    bonita_max = await get_bonita_feed_limit()
+    result = interleave_bonita_posts(human_posts, bonita_posts, bonita_max)
+    
+    # Trim to requested limit
+    return result[:limit]
 
 @posts_router.get("/explore")
 async def get_explore_feed(limit: int = 20, before: Optional[str] = None, user: UserBase = Depends(get_current_user)):
