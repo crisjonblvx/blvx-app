@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { MessageSquare, Send, ArrowLeft, Loader2, Sparkles } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
+import { useThemeClasses } from '@/hooks/useTheme';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -19,6 +20,7 @@ export default function SidebarPage() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { sidebarId } = useParams();
+  const { isDark, textClass, textMutedClass, borderClass, hoverBgClass } = useThemeClasses();
   
   const [sidebars, setSidebars] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -233,7 +235,7 @@ export default function SidebarPage() {
     return (
       <div className="flex flex-col h-[calc(100vh-8rem)] md:h-[calc(100vh-4rem)]" data-testid="sidebar-chat">
         {/* Chat Header */}
-        <div className="sticky top-14 md:top-0 z-30 glass border-b border-white/10 p-4">
+        <div className={cn("sticky top-14 md:top-0 z-30 glass border-b p-4", borderClass)}>
           <div className="flex items-center gap-3">
             <Button
               variant="ghost"
@@ -247,7 +249,7 @@ export default function SidebarPage() {
                 }
                 navigate('/sidebar');
               }}
-              className="text-white/60 hover:text-white"
+              className={cn(isDark ? "text-white/60 hover:text-white" : "text-gray-500 hover:text-gray-900")}
               data-testid="sidebar-back-btn"
             >
               <ArrowLeft className="h-4 w-4" />
@@ -260,16 +262,16 @@ export default function SidebarPage() {
                 </Avatar>
                 <div>
                   <div className="flex items-center gap-1.5">
-                    <p className="font-medium text-sm text-white">{otherUser.name}</p>
+                    <p className={cn("font-medium text-sm", textClass)}>{otherUser.name}</p>
                     {chattingWithBonita && (
                       <Sparkles className="h-3 w-3 text-amber-400" />
                     )}
                   </div>
-                  <p className="text-xs text-white/40">@{otherUser.username}</p>
+                  <p className={cn("text-xs", isDark ? "text-white/40" : "text-gray-500")}>@{otherUser.username}</p>
                 </div>
               </>
             )}
-            <span className="ml-auto text-[10px] text-white/30 uppercase tracking-wider">The Sidebar</span>
+            <span className={cn("ml-auto text-[10px] uppercase tracking-wider", isDark ? "text-white/30" : "text-gray-400")}>The Sidebar</span>
           </div>
         </div>
 
@@ -283,9 +285,9 @@ export default function SidebarPage() {
             </div>
           ) : messages.length === 0 ? (
             <div className="text-center py-12">
-              <MessageSquare className="h-12 w-12 text-white/20 mx-auto mb-4" />
-              <p className="text-white/50 text-sm">No messages yet</p>
-              <p className="text-white/30 text-xs">
+              <MessageSquare className={cn("h-12 w-12 mx-auto mb-4", isDark ? "text-white/20" : "text-gray-300")} />
+              <p className={cn("text-sm", isDark ? "text-white/50" : "text-gray-500")}>No messages yet</p>
+              <p className={cn("text-xs", isDark ? "text-white/30" : "text-gray-400")}>
                 {chattingWithBonita 
                   ? "Say hey to your AI auntie! She's ready to chat." 
                   : "Start the conversation"}
@@ -317,14 +319,14 @@ export default function SidebarPage() {
                       isOwn
                         ? "bg-white text-black rounded-tl-xl rounded-tr-none rounded-b-xl"
                         : msg.user_id === 'bonita_ai'
-                          ? "bg-amber-500/20 text-white rounded-tl-none rounded-tr-xl rounded-b-xl border border-amber-500/30"
-                          : "bg-white/10 text-white rounded-tl-none rounded-tr-xl rounded-b-xl"
+                          ? "bg-amber-500/20 rounded-tl-none rounded-tr-xl rounded-b-xl border border-amber-500/30 " + (isDark ? "text-white" : "text-amber-900")
+                          : (isDark ? "bg-white/10 text-white" : "bg-gray-100 text-gray-900") + " rounded-tl-none rounded-tr-xl rounded-b-xl"
                     )}
                   >
                     <p className="text-sm">{msg.content}</p>
                     <p className={cn(
                       "text-[10px] mt-1",
-                      isOwn ? "text-black/50" : "text-white/40"
+                      isOwn ? "text-black/50" : (isDark ? "text-white/40" : "text-gray-500")
                     )}>
                       {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </p>
@@ -355,13 +357,13 @@ export default function SidebarPage() {
         </div>
 
         {/* Message Input */}
-        <div className="p-4 border-t border-white/10 glass">
+        <div className={cn("p-4 border-t glass", borderClass)}>
           <form onSubmit={sendMessage} className="flex gap-2">
             <Input
               value={newMessage}
               onChange={(e) => setNewMessage(e.target.value)}
               placeholder={chattingWithBonita ? "Ask Bonita anything..." : "Whisper something..."}
-              className="flex-1 bg-white/10 border-white/20 focus:border-white rounded-full px-4"
+              className={cn("flex-1 rounded-full px-4", isDark ? "bg-white/10 border-white/20 focus:border-white text-white placeholder:text-white/40" : "bg-gray-100 border-gray-300 focus:border-gray-500 text-black placeholder:text-gray-400")}
               disabled={sending || waitingForBonita}
               data-testid="sidebar-message-input"
             />
@@ -387,12 +389,12 @@ export default function SidebarPage() {
   return (
     <div className="pb-safe" data-testid="sidebar-page">
       {/* Header */}
-      <div className="sticky top-14 md:top-0 z-30 glass border-b border-white/10 p-4">
+      <div className={cn("sticky top-14 md:top-0 z-30 glass border-b p-4", borderClass)}>
         <div className="flex items-center gap-3">
-          <MessageSquare className="h-5 w-5 text-white" />
-          <h1 className="font-display text-sm tracking-widest uppercase">The Sidebar</h1>
+          <MessageSquare className={cn("h-5 w-5", textClass)} />
+          <h1 className={cn("font-display text-sm tracking-widest uppercase", textClass)}>The Sidebar</h1>
         </div>
-        <p className="text-[10px] text-white/40 mt-2">Private whispers. Just between y'all.</p>
+        <p className={cn("text-[10px] mt-2", isDark ? "text-white/40" : "text-gray-500")}>Private whispers. Just between y'all.</p>
       </div>
 
       {/* Chat with Bonita CTA */}
@@ -408,10 +410,10 @@ export default function SidebarPage() {
           </Avatar>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <p className="font-medium text-white">Chat with Bonita</p>
+              <p className={cn("font-medium", textClass)}>Chat with Bonita</p>
               <Sparkles className="h-4 w-4 text-amber-400" />
             </div>
-            <p className="text-xs text-white/60">Your AI auntie is always here for you</p>
+            <p className={cn("text-xs", textMutedClass)}>Your AI auntie is always here for you</p>
           </div>
           <Send className="h-5 w-5 text-amber-400" />
         </div>
@@ -426,9 +428,9 @@ export default function SidebarPage() {
         </div>
       ) : sidebars.length === 0 ? (
         <div className="text-center py-8 px-6">
-          <MessageSquare className="h-10 w-10 text-white/20 mx-auto mb-3" />
-          <p className="text-white/50 text-sm mb-1">No other whispers yet</p>
-          <p className="text-white/30 text-xs">Start a sidebar from someone's profile or a group chat</p>
+          <MessageSquare className={cn("h-10 w-10 mx-auto mb-3", isDark ? "text-white/20" : "text-gray-300")} />
+          <p className={cn("text-sm mb-1", isDark ? "text-white/50" : "text-gray-500")}>No other whispers yet</p>
+          <p className={cn("text-xs", isDark ? "text-white/30" : "text-gray-400")}>Start a sidebar from someone's profile or a group chat</p>
         </div>
       ) : (
         <div className="divide-y divide-white/10">
@@ -456,12 +458,12 @@ export default function SidebarPage() {
                   </Avatar>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <p className="font-medium text-white text-sm truncate">{otherUser?.name || 'User'}</p>
+                      <p className={cn("font-medium text-sm truncate", textClass)}>{otherUser?.name || 'User'}</p>
                       {isBoniChat && <Sparkles className="h-3 w-3 text-amber-400 flex-shrink-0" />}
                     </div>
-                    <p className="text-xs text-white/40 truncate">@{otherUser?.username || 'user'}</p>
+                    <p className={cn("text-xs truncate", isDark ? "text-white/40" : "text-gray-500")}>@{otherUser?.username || 'user'}</p>
                   </div>
-                  <span className="text-[10px] text-white/30">
+                  <span className={cn("text-[10px]", isDark ? "text-white/30" : "text-gray-400")}>
                     {sidebar.source_gc_id ? 'From GC' : isBoniChat ? 'AI' : 'Direct'}
                   </span>
                 </div>
