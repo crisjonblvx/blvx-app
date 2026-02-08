@@ -1198,12 +1198,26 @@ async def create_plate(user: UserBase = Depends(get_current_user)):
 
 @vouch_router.get("/plate/my-plates")
 async def get_my_plates(user: UserBase = Depends(get_current_user)):
-    """Get all plates created by current user"""
+    """Get all plates created by current user, with redeemer info"""
     plates = await db.plates.find(
         {"created_by": user.user_id},
         {"_id": 0}
     ).to_list(100)
-    return plates
+    
+    # Enrich used plates with redeemer info
+    enriched_plates = []
+    for plate in plates:
+        plate_data = dict(plate)
+        if plate.get("used_by"):
+            redeemer = await db.users.find_one(
+                {"user_id": plate["used_by"]},
+                {"_id": 0, "user_id": 1, "username": 1, "name": 1, "picture": 1}
+            )
+            if redeemer:
+                plate_data["redeemer"] = redeemer
+        enriched_plates.append(plate_data)
+    
+    return enriched_plates
 
 @vouch_router.post("/plate/redeem")
 async def redeem_plate(code: str, user: UserBase = Depends(get_current_user)):

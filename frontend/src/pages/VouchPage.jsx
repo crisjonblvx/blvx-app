@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { useThemeClasses } from '@/hooks/useTheme';
 import { Ticket, Copy, CheckCircle, Users, Gift, AlertCircle, Loader2, Share2, Link, ChevronDown, ChevronUp, Trash2 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
@@ -16,6 +16,7 @@ const VISIBLE_PLATES_DEFAULT = 3;
 
 export default function VouchPage() {
   const { user, checkAuth } = useAuth();
+  const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const [plates, setPlates] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -355,30 +356,47 @@ export default function VouchPage() {
         </div>
       )}
 
-      {/* Used Plates */}
+      {/* People You've Invited */}
       {usedPlates.length > 0 && (
         <div>
-          <h2 className={cn("font-display text-xs tracking-widest uppercase mb-3", textVeryMutedClass)}>
-            Redeemed Plates ({usedPlates.length})
+          <h2 className={cn("font-display text-xs tracking-widest uppercase mb-3", isFounder ? "text-amber-500" : textVeryMutedClass)}>
+            {isFounder ? `People You've Invited (${usedPlates.length})` : `Your Vouched Members (${usedPlates.length})`}
           </h2>
           <div className="space-y-2">
             {usedPlates.map((plate) => (
-              <Card key={plate.code} className={cn("opacity-60", isDark ? "bg-white/5 border-white/10" : "bg-gray-50 border-gray-200")}>
+              <Card 
+                key={plate.code} 
+                className={cn(
+                  "cursor-pointer transition-colors",
+                  isFounder ? "bg-amber-500/5 border-amber-500/20 hover:bg-amber-500/10" : isDark ? "bg-white/5 border-white/10 hover:bg-white/10" : "bg-gray-50 border-gray-200 hover:bg-gray-100"
+                )}
+                onClick={() => plate.redeemer?.username && navigate(`/profile/${plate.redeemer.username}`)}
+              >
                 <CardContent className="flex items-center justify-between p-4">
                   <div className="flex items-center gap-3">
-                    <Avatar className={cn("h-10 w-10 border", isDark ? "border-white/20" : "border-gray-300")}>
-                      <AvatarFallback className={cn("text-xs", isDark ? "bg-white/10" : "bg-gray-200")}>
-                        {plate.redeemed_by?.charAt(0) || '?'}
+                    <Avatar className={cn("h-10 w-10 border", isFounder ? "border-amber-500/30" : isDark ? "border-white/20" : "border-gray-300")}>
+                      <AvatarImage src={plate.redeemer?.picture} alt={plate.redeemer?.name} />
+                      <AvatarFallback className={cn("text-xs", isFounder ? "bg-amber-500/20 text-amber-500" : isDark ? "bg-white/10" : "bg-gray-200")}>
+                        {plate.redeemer?.name?.charAt(0) || '?'}
                       </AvatarFallback>
                     </Avatar>
                     <div>
-                      <p className={cn("text-sm line-through", isDark ? "text-white/60" : "text-gray-500")}>{plate.code}</p>
-                      <p className={cn("text-xs", textVeryMutedClass)}>
-                        Redeemed {plate.redeemed_at ? new Date(plate.redeemed_at).toLocaleDateString() : 'recently'}
+                      <p className={cn("text-sm font-medium", textClass)}>
+                        {plate.redeemer?.name || 'Unknown'}
+                      </p>
+                      <p className={cn("text-xs", textMutedClass)}>
+                        @{plate.redeemer?.username || 'unknown'} · Joined {plate.used_at ? new Date(plate.used_at).toLocaleDateString() : 'recently'}
                       </p>
                     </div>
                   </div>
-                  <CheckCircle className="h-4 w-4 text-green-500/50" />
+                  <div className="flex items-center gap-2">
+                    {isFounder && (
+                      <span className="bg-amber-500/20 text-amber-500 text-[8px] px-1.5 py-0.5 font-display tracking-wider">
+                        DAY ONE
+                      </span>
+                    )}
+                    <CheckCircle className={cn("h-4 w-4", isFounder ? "text-amber-500" : "text-green-500")} />
+                  </div>
                 </CardContent>
               </Card>
             ))}
