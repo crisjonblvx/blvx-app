@@ -1117,7 +1117,17 @@ async def apple_callback(request: Request, response: Response):
 @auth_router.get("/me")
 async def get_me(user: UserBase = Depends(get_current_user)):
     """Get current authenticated user"""
-    return user
+    # Convert to dict to add extra fields
+    user_dict = dict(user)
+    
+    # Add admin status and infinite plates for admins
+    is_admin = user.user_id in ADMIN_USERS
+    user_dict["is_admin"] = is_admin
+    
+    if is_admin:
+        user_dict["plates_remaining"] = 999999  # Effectively infinite
+    
+    return user_dict
 
 @auth_router.post("/logout")
 async def logout(request: Request, response: Response):
@@ -1140,7 +1150,9 @@ def generate_plate_code():
 @vouch_router.post("/plate/create")
 async def create_plate(user: UserBase = Depends(get_current_user)):
     """Create a new invite plate"""
-    if user.plates_remaining <= 0:
+    # Admins have unlimited plates
+    is_admin = user.user_id in ADMIN_USERS
+    if not is_admin and user.plates_remaining <= 0:
         raise HTTPException(status_code=400, detail="No plates remaining")
     
     plate_code = generate_plate_code()
@@ -1157,10 +1169,13 @@ async def create_plate(user: UserBase = Depends(get_current_user)):
     }
     
     await db.plates.insert_one(plate)
-    await db.users.update_one(
-        {"user_id": user.user_id},
-        {"$inc": {"plates_remaining": -1}}
-    )
+    
+    # Don't decrement plates for admins (unlimited)
+    if user.user_id not in ADMIN_USERS:
+        await db.users.update_one(
+            {"user_id": user.user_id},
+            {"$inc": {"plates_remaining": -1}}
+        )
     
     plate.pop("_id", None)
     return plate
@@ -4660,6 +4675,44 @@ async def clear_spark_posts(admin: UserBase = Depends(get_admin_user)):
     return {
         "message": f"Cleared {result.deleted_count} Spark posts",
         "deleted_count": result.deleted_count
+    }
+
+@admin_router.patch("/users/{user_id}/fix")
+async def fix_user_data(
+    user_id: str,
+    plates_remaining: Optional[int] = None,
+    is_day_one: Optional[bool] = None,
+    reset_created_at: Optional[bool] = None,
+    admin: UserBase = Depends(get_admin_user)
+):
+    """Fix user data (admin only)"""
+    user = await db.users.find_one({"user_id": user_id})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    update_fields = {}
+    
+    if plates_remaining is not None:
+        update_fields["plates_remaining"] = plates_remaining
+    
+    if is_day_one is not None:
+        update_fields["is_day_one"] = is_day_one
+    
+    if reset_created_at:
+        update_fields["created_at"] = datetime.now(timezone.utc).isoformat()
+    
+    if update_fields:
+        await db.users.update_one(
+            {"user_id": user_id},
+            {"$set": update_fields}
+        )
+    
+    updated_user = await db.users.find_one({"user_id": user_id}, {"_id": 0, "password_hash": 0})
+    
+    return {
+        "message": f"User {user_id} updated",
+        "updated_fields": list(update_fields.keys()),
+        "user": updated_user
     }
 
 @admin_router.get("/alerts")
