@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useThemeClasses } from '@/hooks/useTheme';
 import { useParams, useNavigate } from 'react-router-dom';
 import { formatDistanceToNow, format } from 'date-fns';
 import { Calendar, MapPin, Link as LinkIcon, Edit2, MessageSquare, Loader2 } from 'lucide-react';
@@ -22,6 +23,7 @@ export default function ProfilePage() {
   const { user: currentUser, updateUser } = useAuth();
   const { fetchProfile, followUser, unfollowUser, checkFollowing, loading: userLoading } = useUsers();
   const { posts, fetchUserPosts, loading: postsLoading } = usePosts();
+  const { isDark, textClass, textMutedClass, textVeryMutedClass, borderClass, hoverBgClass } = useThemeClasses();
   
   const [profile, setProfile] = useState(null);
   const [isFollowing, setIsFollowing] = useState(false);
@@ -135,17 +137,17 @@ export default function ProfilePage() {
   return (
     <div className="mb-safe" data-testid="profile-page">
       {/* Profile Header */}
-      <div className="profile-header border-b border-white/10">
+      <div className={cn("profile-header border-b", borderClass)}>
         {/* Cover area */}
-        <div className="h-24 bg-white/5" />
+        <div className={cn("h-24", isDark ? "bg-white/5" : "bg-gray-100")} />
         
         {/* Profile info */}
         <div className="px-4 pb-4">
           {/* Avatar row */}
           <div className="flex items-end justify-between -mt-12 mb-4">
-            <Avatar className="h-24 w-24 border-4 border-black">
+            <Avatar className={cn("h-24 w-24 border-4", isDark ? "border-black" : "border-white")}>
               <AvatarImage src={profile.picture} alt={profile.name} />
-              <AvatarFallback className="bg-white/10 text-white text-2xl">
+              <AvatarFallback className={cn("text-2xl", isDark ? "bg-white/10 text-white" : "bg-gray-100 text-gray-700")}>
                 {profile.name?.charAt(0)?.toUpperCase()}
               </AvatarFallback>
             </Avatar>
@@ -153,7 +155,7 @@ export default function ProfilePage() {
             {isOwnProfile ? (
               <Button
                 variant="outline"
-                className="border-white/30 text-white hover:bg-white hover:text-black rounded-sm"
+                className={cn("rounded-sm", isDark ? "border-white/30 text-white hover:bg-white hover:text-black" : "border-gray-300 text-gray-900 hover:bg-black hover:text-white")}
                 onClick={() => setEditOpen(true)}
                 data-testid="edit-profile-btn"
               >
@@ -167,7 +169,7 @@ export default function ProfilePage() {
                   size="icon"
                   onClick={startWhisper}
                   disabled={whisperLoading}
-                  className="border border-white/20 text-white/70 hover:bg-white/10 hover:text-white rounded-sm"
+                  className={cn("border rounded-sm", isDark ? "border-white/20 text-white/70 hover:bg-white/10 hover:text-white" : "border-gray-300 text-gray-600 hover:bg-gray-100 hover:text-gray-900")}
                   data-testid="whisper-btn"
                   title="Start a sidebar"
                 >
@@ -183,8 +185,8 @@ export default function ProfilePage() {
                   className={cn(
                     "rounded-sm px-6",
                     isFollowing
-                      ? "bg-transparent border border-white/30 text-white hover:bg-white/10 hover:border-red-500 hover:text-red-500"
-                      : "bg-white text-black hover:bg-white/90"
+                      ? (isDark ? "bg-transparent border border-white/30 text-white hover:bg-white/10 hover:border-red-500 hover:text-red-500" : "bg-transparent border border-gray-300 text-gray-900 hover:bg-gray-100 hover:border-red-500 hover:text-red-500")
+                      : (isDark ? "bg-white text-black hover:bg-white/90" : "bg-black text-white hover:bg-black/90")
                   )}
                   data-testid="follow-btn"
                 >
@@ -196,17 +198,17 @@ export default function ProfilePage() {
 
           {/* Name and username */}
           <div className="mb-3">
-            <h1 className="text-xl font-bold text-white">{profile.name}</h1>
-            <p className="text-white/50">@{profile.username}</p>
+            <h1 className={cn("text-xl font-bold", textClass)}>{profile.name}</h1>
+            <p className={textMutedClass}>@{profile.username}</p>
           </div>
 
           {/* Bio */}
           {profile.bio && (
-            <p className="text-white/80 mb-3">{profile.bio}</p>
+            <p className={cn("mb-3", isDark ? "text-white/80" : "text-gray-700")}>{profile.bio}</p>
           )}
 
           {/* Meta info */}
-          <div className="flex flex-wrap gap-4 text-sm text-white/50 mb-4">
+          <div className={cn("flex flex-wrap gap-4 text-sm mb-4", textMutedClass)}>
             <div className="flex items-center gap-1">
               <Calendar className="h-4 w-4" />
               <span>Joined {formatJoinDate(profile.created_at)}</span>
@@ -216,19 +218,19 @@ export default function ProfilePage() {
           {/* Stats */}
           <div className="flex gap-6">
             <div className="text-sm">
-              <span className="font-semibold text-white">{profile.following_count}</span>
-              <span className="text-white/50 ml-1">Following</span>
+              <span className={cn("font-semibold", textClass)}>{profile.following_count}</span>
+              <span className={cn("ml-1", textMutedClass)}>Following</span>
             </div>
             <div className="text-sm">
-              <span className="font-semibold text-white">{profile.followers_count}</span>
-              <span className="text-white/50 ml-1">Followers</span>
+              <span className={cn("font-semibold", textClass)}>{profile.followers_count}</span>
+              <span className={cn("ml-1", textMutedClass)}>Followers</span>
             </div>
           </div>
         </div>
       </div>
 
       {/* Posts Tab */}
-      <div className="border-b border-white/10">
+      <div className={cn("border-b", borderClass)}>
         <div className="flex">
           <button className="flex-1 py-4 text-sm font-medium text-white relative">
             Posts
