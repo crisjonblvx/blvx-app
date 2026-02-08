@@ -190,7 +190,11 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
   return (
     <>
       <article 
-        className={cn("post-card border-b p-4 cursor-pointer", borderClass)}
+        className={cn(
+          "post-card border-b p-4 cursor-pointer",
+          borderClass,
+          (post.is_spark || post.user_id === 'bonita' || postUser.username === 'bonita') && "border-l-2 border-l-purple-500/50"
+        )}
         onClick={() => navigate(`/post/${post.post_id}`)}
         data-testid={`post-${post.post_id}`}
       >
@@ -217,9 +221,15 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
                 <Link 
                   to={`/profile/${postUser.username}`}
                   onClick={(e) => e.stopPropagation()}
-                  className={cn("font-bold text-[15px] hover:underline truncate", textClass)}
+                  className={cn("font-bold text-[15px] hover:underline truncate flex items-center gap-1.5", textClass)}
                 >
                   {postUser.name}
+                  {(post.is_spark || post.user_id === 'bonita' || postUser.username === 'bonita') && (
+                    <span className="inline-flex items-center gap-0.5 px-1.5 py-0.5 bg-gradient-to-r from-purple-500/20 to-pink-500/20 border border-purple-500/30 text-[10px] font-medium text-purple-400 rounded-sm">
+                      <Sparkles className="h-2.5 w-2.5" />
+                      AI
+                    </span>
+                  )}
                 </Link>
                 <Link 
                   to={`/profile/${postUser.username}`}
