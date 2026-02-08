@@ -326,7 +326,11 @@ export default function SidebarPage() {
                     <p className="text-sm">{msg.content}</p>
                     <p className={cn(
                       "text-[10px] mt-1",
-                      isOwn ? "text-black/50" : (isDark ? "text-white/40" : "text-gray-500")
+                      isOwn 
+                        ? "text-black/50" 
+                        : (msg.user_id === 'bonita_ai' 
+                            ? (isDark ? "text-amber-300/70" : "text-amber-700") 
+                            : (isDark ? "text-white/40" : "text-gray-500"))
                     )}>
                       {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </p>
