@@ -21,6 +21,7 @@ export function useLiveKit({
   const [isMuted, setIsMuted] = useState(true);
   const [connectionError, setConnectionError] = useState(null);
   const [isSpeaker, setIsSpeaker] = useState(false);
+  const [audioBlocked, setAudioBlocked] = useState(false);
   
   const roomRef = useRef(null);
   const audioElementsRef = useRef({});
@@ -79,15 +80,42 @@ export function useLiveKit({
     if (!audioElementsRef.current[participantId]) {
       const audio = document.createElement('audio');
       audio.autoplay = true;
+      audio.playsInline = true;  // Important for mobile
       audio.id = `audio-${participantId}`;
+      // Set volume to max
+      audio.volume = 1.0;
       document.body.appendChild(audio);
       audioElementsRef.current[participantId] = audio;
+      console.log('[LiveKit] Created audio element for:', participantId);
     }
     
     // Attach the track
     const audio = audioElementsRef.current[participantId];
     track.attach(audio);
-    console.log('[LiveKit] Attached audio track for:', participantId);
+    console.log('[LiveKit] Attached audio track for:', participantId, 'track enabled:', track.isEnabled, 'track muted:', track.isMuted);
+    
+    // Explicitly play the audio (browsers may block autoplay)
+    const playPromise = audio.play();
+    if (playPromise !== undefined) {
+      playPromise.then(() => {
+        console.log('[LiveKit] Audio playing successfully for:', participantId);
+        setAudioBlocked(false);
+      }).catch((error) => {
+        console.error('[LiveKit] Audio play failed for:', participantId, error);
+        setAudioBlocked(true);
+        // If autoplay fails, we may need user interaction
+        // Add a click listener to retry
+        const retryPlay = () => {
+          audio.play().then(() => {
+            console.log('[LiveKit] Audio playing after user interaction for:', participantId);
+            setAudioBlocked(false);
+            document.removeEventListener('click', retryPlay);
+          }).catch(e => console.error('[LiveKit] Retry play failed:', e));
+        };
+        document.addEventListener('click', retryPlay, { once: true });
+        console.log('[LiveKit] Added click listener to retry audio for:', participantId);
+      });
+    }
   }, []);
 
   // Detach audio track
@@ -366,6 +394,33 @@ export function useLiveKit({
     };
   }, [cleanupAudioElements]);
 
+  // Manual function to resume audio (call after user interaction)
+  const resumeAudio = useCallback(async () => {
+    console.log('[LiveKit] Attempting to resume audio...');
+    
+    // Resume AudioContext if suspended
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (AudioContext) {
+      const ctx = new AudioContext();
+      if (ctx.state === 'suspended') {
+        await ctx.resume();
+        console.log('[LiveKit] AudioContext resumed');
+      }
+    }
+    
+    // Try to play all audio elements
+    const audioElements = Object.values(audioElementsRef.current);
+    for (const audio of audioElements) {
+      try {
+        await audio.play();
+        console.log('[LiveKit] Resumed audio for element:', audio.id);
+      } catch (e) {
+        console.error('[LiveKit] Failed to resume audio:', audio.id, e);
+      }
+    }
+    setAudioBlocked(false);
+  }, []);
+
   return {
     isConnected,
     connectionState,
@@ -373,9 +428,11 @@ export function useLiveKit({
     isMuted,
     isSpeaker,
     connectionError,
+    audioBlocked,
     connect,
     disconnect,
     toggleMute,
+    resumeAudio,
     debugRoomState
   };
 }

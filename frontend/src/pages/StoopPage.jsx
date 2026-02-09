@@ -67,9 +67,11 @@ export default function StoopPage() {
     isMuted,
     isSpeaker,
     connectionError,
+    audioBlocked,
     connect: connectLiveKit,
     disconnect: disconnectLiveKit,
     toggleMute,
+    resumeAudio,
     debugRoomState
   } = useLiveKit({
     stoopId: activeStoopId,
@@ -397,6 +399,26 @@ export default function StoopPage() {
                 <span className="font-medium">Connection Error</span>
               </div>
               <p className="text-red-400/70 text-[10px]">{connectionError}</p>
+            </div>
+          )}
+          
+          {/* Audio Blocked Warning */}
+          {audioBlocked && (
+            <div className="mb-3 p-3 bg-amber-500/10 border border-amber-500/30 text-xs text-amber-400">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Volume2 className="h-4 w-4 flex-shrink-0" />
+                  <span className="font-medium">Can't hear anyone? Tap to enable audio</span>
+                </div>
+                <Button
+                  size="sm"
+                  variant="ghost"
+                  onClick={resumeAudio}
+                  className="h-7 px-3 bg-amber-500/20 hover:bg-amber-500/30 text-amber-400"
+                >
+                  🔊 Enable Audio
+                </Button>
+              </div>
             </div>
           )}
           
