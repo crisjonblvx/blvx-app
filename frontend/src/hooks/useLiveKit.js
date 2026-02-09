@@ -166,6 +166,23 @@ export function useLiveKit({
       setConnectionError(null);
       setConnectionState('connecting');
       
+      // MOBILE FIX: Resume AudioContext on connect (requires user gesture)
+      // This must happen early, ideally from a user interaction
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (AudioContext) {
+          const ctx = new AudioContext();
+          if (ctx.state === 'suspended') {
+            await ctx.resume();
+            console.log('[LiveKit] AudioContext resumed on connect');
+          }
+          // Close this temporary context - LiveKit will create its own
+          await ctx.close();
+        }
+      } catch (e) {
+        console.log('[LiveKit] AudioContext resume failed:', e);
+      }
+      
       // Get LiveKit token from backend
       console.log('[LiveKit] Fetching token for stoop:', stoopId);
       const response = await axios.get(
@@ -182,10 +199,15 @@ export function useLiveKit({
       const room = new Room({
         adaptiveStream: true,
         dynacast: true,
+        // MOBILE FIX: Use Web Audio API for better mobile compatibility
+        webAudioMix: true,
         audioCaptureDefaults: {
           echoCancellation: true,
           noiseSuppression: true,
           autoGainControl: true
+        },
+        audioOutput: {
+          // Don't specify deviceId - let browser pick default
         }
       });
       
@@ -210,6 +232,17 @@ export function useLiveKit({
         room.remoteParticipants.forEach((p) => {
           console.log('[LiveKit] Existing remote participant:', p.identity, p.name);
         });
+        
+        // MOBILE FIX: Start audio playback - this is the LiveKit recommended way
+        // to handle mobile browsers that block audio autoplay
+        try {
+          await room.startAudio();
+          console.log('[LiveKit] Audio started successfully');
+          setAudioBlocked(false);
+        } catch (e) {
+          console.log('[LiveKit] startAudio failed (may need user gesture):', e);
+          setAudioBlocked(true);
+        }
         
         setIsConnected(true);
         setConnectionState('connected');
@@ -398,17 +431,34 @@ export function useLiveKit({
   const resumeAudio = useCallback(async () => {
     console.log('[LiveKit] Attempting to resume audio...');
     
-    // Resume AudioContext if suspended
-    const AudioContext = window.AudioContext || window.webkitAudioContext;
-    if (AudioContext) {
-      const ctx = new AudioContext();
-      if (ctx.state === 'suspended') {
-        await ctx.resume();
-        console.log('[LiveKit] AudioContext resumed');
+    const room = roomRef.current;
+    
+    // Use LiveKit's startAudio - the recommended approach
+    if (room) {
+      try {
+        await room.startAudio();
+        console.log('[LiveKit] room.startAudio() successful');
+      } catch (e) {
+        console.log('[LiveKit] room.startAudio() failed:', e);
       }
     }
     
-    // Try to play all audio elements
+    // Also resume AudioContext as backup
+    const AudioContext = window.AudioContext || window.webkitAudioContext;
+    if (AudioContext) {
+      try {
+        const ctx = new AudioContext();
+        if (ctx.state === 'suspended') {
+          await ctx.resume();
+          console.log('[LiveKit] AudioContext resumed');
+        }
+        await ctx.close();
+      } catch (e) {
+        console.log('[LiveKit] AudioContext error:', e);
+      }
+    }
+    
+    // Try to play all audio elements as final fallback
     const audioElements = Object.values(audioElementsRef.current);
     for (const audio of audioElements) {
       try {
