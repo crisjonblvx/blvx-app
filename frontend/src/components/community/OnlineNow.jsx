@@ -54,6 +54,7 @@ export const OnlineNow = ({ limit = 8, className }) => {
     // Refresh every 2 minutes
     const interval = setInterval(fetchOnlineUsers, 120000);
     return () => clearInterval(interval);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [limit]);
 
   const fetchOnlineUsers = async () => {

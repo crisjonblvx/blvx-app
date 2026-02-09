@@ -45,6 +45,7 @@ export const PeopleDiscover = ({
 
   useEffect(() => {
     fetchSuggestions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [limit]);
 
   const fetchSuggestions = async (isRefresh = false) => {

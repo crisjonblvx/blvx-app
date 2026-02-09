@@ -160,6 +160,7 @@ export const FriendActivity = ({ limit = 30, className }) => {
 
   useEffect(() => {
     fetchActivity();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [limit]);
 
   const fetchActivity = async (isRefresh = false) => {

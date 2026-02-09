@@ -38,6 +38,7 @@ export const TrendingPeople = ({ limit = 5, className }) => {
 
   useEffect(() => {
     fetchTrending();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [limit]);
 
   const fetchTrending = async () => {
