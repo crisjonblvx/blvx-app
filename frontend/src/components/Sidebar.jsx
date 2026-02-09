@@ -7,6 +7,7 @@ import { useNotificationCount } from '@/hooks/useNotificationCount';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { ComposerModal } from '@/components/ComposerModal';
+import { OnlineNow, TrendingPeople } from '@/components/community';
 import { cn } from '@/lib/utils';
 
 const navItems = [
@@ -133,7 +134,7 @@ export const Sidebar = () => {
           </button>
           
           {/* New Post Button - below Settings, pushes down with margin */}
-          <div className="mt-5 mb-auto px-1">
+          <div className="mt-5 px-1">
             <Button
               onClick={() => setComposerOpen(true)}
               className={`w-full h-12 ${isDark ? 'bg-white text-black hover:bg-white/90' : 'bg-black text-white hover:bg-black/90'} font-display tracking-wider text-sm`}
@@ -142,6 +143,12 @@ export const Sidebar = () => {
               <Plus className="h-5 w-5 mr-2" />
               New Post
             </Button>
+          </div>
+
+          {/* Community Widgets */}
+          <div className={`mt-4 pt-4 border-t ${borderClass} space-y-6 overflow-y-auto flex-1 px-1`}>
+            <OnlineNow limit={5} />
+            <TrendingPeople limit={5} />
           </div>
         </nav>
 

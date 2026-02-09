@@ -12,6 +12,7 @@ import { Skeleton } from '@/components/ui/skeleton';
 import { PostCard } from '@/components/PostCard';
 import { EditProfileModal } from '@/components/EditProfileModal';
 import { ReportModal } from '@/components/ReportModal';
+import { ProfileConnections } from '@/components/community';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -347,6 +348,11 @@ export default function ProfilePage() {
               <span className={cn("ml-1", textMutedClass)}>Followers</span>
             </div>
           </div>
+
+          {/* Connection Info - mutuals, voucher, status */}
+          {!isOwnProfile && profile.user_id && (
+            <ProfileConnections userId={profile.user_id} className="mt-4" />
+          )}
         </div>
       </div>
 

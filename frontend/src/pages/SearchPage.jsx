@@ -11,8 +11,10 @@ import { usePosts } from '@/hooks/usePosts';
 import { PostCard } from '@/components/PostCard';
 import { TrendingWidget } from '@/components/TrendingWidget';
 import { FounderModal } from '@/components/FounderModal';
+import { PeopleDiscover, TrendingPeople } from '@/components/community';
 import { Link } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
+import { cn } from '@/lib/utils';
 
 export default function SearchPage() {
   const [searchParams] = useSearchParams();
@@ -112,34 +114,52 @@ export default function SearchPage() {
         <TabsList className={cn("w-full bg-transparent border-b rounded-none h-auto p-0", borderClass)}>
           <TabsTrigger 
             value="trending" 
-            className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-white data-[state=active]:bg-transparent py-3"
+            className={cn("flex-1 rounded-none border-b-2 border-transparent py-3", isDark ? "data-[state=active]:border-white" : "data-[state=active]:border-black", "data-[state=active]:bg-transparent")}
             data-testid="search-trending-tab"
           >
             The Word
           </TabsTrigger>
           <TabsTrigger 
+            value="discover" 
+            className={cn("flex-1 rounded-none border-b-2 border-transparent py-3", isDark ? "data-[state=active]:border-white" : "data-[state=active]:border-black", "data-[state=active]:bg-transparent")}
+            data-testid="search-discover-tab"
+          >
+            Discover
+          </TabsTrigger>
+          <TabsTrigger 
             value="users" 
-            className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-white data-[state=active]:bg-transparent py-3"
+            className={cn("flex-1 rounded-none border-b-2 border-transparent py-3", isDark ? "data-[state=active]:border-white" : "data-[state=active]:border-black", "data-[state=active]:bg-transparent")}
             data-testid="search-users-tab"
           >
             People
           </TabsTrigger>
           <TabsTrigger 
             value="posts" 
-            className="flex-1 rounded-none border-b-2 border-transparent data-[state=active]:border-white data-[state=active]:bg-transparent py-3"
+            className={cn("flex-1 rounded-none border-b-2 border-transparent py-3", isDark ? "data-[state=active]:border-white" : "data-[state=active]:border-black", "data-[state=active]:bg-transparent")}
             data-testid="search-posts-tab"
           >
             Posts
           </TabsTrigger>
         </TabsList>
 
-        {/* The Word (Trending) - Mobile View */}
+        {/* The Word (Trending) */}
         <TabsContent value="trending" className="mt-0">
           <div className="p-4">
             <TrendingWidget />
           </div>
         </TabsContent>
 
+        {/* Discover - People suggestions and rising voices */}
+        <TabsContent value="discover" className="mt-0">
+          <div className="p-4 space-y-8">
+            <PeopleDiscover limit={9} fullWidth />
+            <div className={cn("pt-6 border-t", borderClass)}>
+              <TrendingPeople limit={10} />
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* People Search */}
         <TabsContent value="users" className="mt-0">
           {loading ? (
             <div className="p-4 space-y-4">
@@ -153,32 +173,44 @@ export default function SearchPage() {
                 </div>
               ))}
             </div>
+          ) : !query.trim() ? (
+            // Show suggestions when no search query
+            <div className="p-4">
+              <PeopleDiscover limit={12} fullWidth />
+            </div>
           ) : users.length === 0 ? (
             <div className="text-center py-16 px-6">
-              <p className="text-white/50">
-                {query ? 'No users found' : 'Search for people'}
-              </p>
+              <p className={textMutedClass}>No users found</p>
             </div>
           ) : (
-            <div className="divide-y divide-white/10">
+            <div className={cn("divide-y", borderClass)}>
               {users.map((user) => (
                 <Link
                   key={user.user_id}
                   to={`/profile/${user.username}`}
-                  className="flex items-center gap-3 p-4 hover:bg-white/5 transition-colors"
+                  className={cn("flex items-center gap-3 p-4 transition-colors", hoverBgClass)}
                   data-testid={`search-user-${user.username}`}
                 >
-                  <Avatar className="h-12 w-12 border border-white/20">
-                    <AvatarImage src={user.picture} alt={user.name} />
-                    <AvatarFallback className="bg-white/10 text-white">
-                      {user.name?.charAt(0)?.toUpperCase()}
-                    </AvatarFallback>
-                  </Avatar>
-                  <div>
-                    <p className="font-medium text-white">{user.name}</p>
-                    <p className="text-sm text-white/50">@{user.username}</p>
+                  <div className="relative">
+                    <Avatar className={cn("h-12 w-12 border", borderClass)}>
+                      <AvatarImage src={user.picture} alt={user.name} />
+                      <AvatarFallback className={isDark ? "bg-white/10 text-white" : "bg-gray-100 text-gray-900"}>
+                        {user.name?.charAt(0)?.toUpperCase()}
+                      </AvatarFallback>
+                    </Avatar>
+                    {/* Activity status dot */}
+                    {user.activity_status === 'online' && (
+                      <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-black rounded-full" />
+                    )}
+                    {user.activity_status === 'recently' && (
+                      <span className="absolute bottom-0 right-0 w-3 h-3 bg-amber-500 border-2 border-black rounded-full" />
+                    )}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={cn("font-medium", textClass)}>{user.name}</p>
+                    <p className={cn("text-sm", textMutedClass)}>@{user.username}</p>
                     {user.bio && (
-                      <p className="text-sm text-white/40 line-clamp-1 mt-1">{user.bio}</p>
+                      <p className={cn("text-sm line-clamp-1 mt-1", textVeryMutedClass)}>{user.bio}</p>
                     )}
                   </div>
                 </Link>

@@ -8,6 +8,8 @@ import { useNotificationCount } from '@/hooks/useNotificationCount';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { FriendActivity } from '@/components/community';
 import { cn } from '@/lib/utils';
 
 export default function NotificationsPage() {
@@ -89,6 +91,7 @@ export default function NotificationsPage() {
   };
 
   const hasUnread = notifications.some(n => !n.read);
+  const [activeTab, setActiveTab] = useState('mentions');
 
   return (
     <div className="mb-safe" data-testid="notifications-page">
@@ -96,7 +99,7 @@ export default function NotificationsPage() {
       <div className={cn("sticky top-14 md:top-0 z-30 glass border-b p-4", borderClass)}>
         <div className="flex items-center justify-between">
           <h1 className={cn("font-display text-xl font-semibold tracking-wide uppercase", textClass)}>Notifications</h1>
-          {hasUnread && (
+          {hasUnread && activeTab === 'mentions' && (
             <Button
               variant="ghost"
               size="sm"
@@ -112,77 +115,109 @@ export default function NotificationsPage() {
         </div>
       </div>
 
-      {/* Notifications List */}
-      {loading ? (
-        <div className="p-4 space-y-4">
-          {[...Array(8)].map((_, i) => (
-            <div key={i} className="flex items-start gap-3">
-              <Skeleton className="h-10 w-10 rounded-full" />
-              <div className="flex-1 space-y-2">
-                <Skeleton className="h-4 w-48" />
-                <Skeleton className="h-3 w-32" />
-              </div>
+      {/* Tabs */}
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className={cn("w-full bg-transparent border-b rounded-none h-auto p-0", borderClass)}>
+          <TabsTrigger 
+            value="mentions" 
+            className={cn("flex-1 rounded-none border-b-2 border-transparent py-3", isDark ? "data-[state=active]:border-white" : "data-[state=active]:border-black", "data-[state=active]:bg-transparent")}
+          >
+            Mentions
+            {hasUnread && (
+              <span className={cn("ml-2 px-1.5 py-0.5 text-[10px] rounded-full", isDark ? "bg-white text-black" : "bg-black text-white")}>
+                {notifications.filter(n => !n.read).length}
+              </span>
+            )}
+          </TabsTrigger>
+          <TabsTrigger 
+            value="activity" 
+            className={cn("flex-1 rounded-none border-b-2 border-transparent py-3", isDark ? "data-[state=active]:border-white" : "data-[state=active]:border-black", "data-[state=active]:bg-transparent")}
+          >
+            Activity
+          </TabsTrigger>
+        </TabsList>
+
+        {/* Mentions Tab - Original Notifications */}
+        <TabsContent value="mentions" className="mt-0">
+          {loading ? (
+            <div className="p-4 space-y-4">
+              {[...Array(8)].map((_, i) => (
+                <div key={i} className="flex items-start gap-3">
+                  <Skeleton className="h-10 w-10 rounded-full" />
+                  <div className="flex-1 space-y-2">
+                    <Skeleton className="h-4 w-48" />
+                    <Skeleton className="h-3 w-32" />
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      ) : notifications.length === 0 ? (
-        <div className="text-center py-16 px-6">
-          <p className={cn("text-lg mb-2", textMutedClass)}>No notifications yet</p>
-          <p className={cn("text-sm", isDark ? "text-white/30" : "text-gray-400")}>When people interact with your posts, you'll see it here</p>
-        </div>
-      ) : (
-        <div className={cn("divide-y", borderClass)}>
-          {notifications.map((notif, index) => (
-            <Link
-              key={notif.notification_id}
-              to={getNotificationLink(notif)}
-              className={cn(
-                "flex items-start gap-3 p-4 transition-colors animate-fade-in",
-                hoverBgClass,
-                !notif.read && (isDark ? "bg-white/5" : "bg-gray-50")
-              )}
-              style={{ animationDelay: `${index * 50}ms` }}
-              data-testid={`notification-${notif.notification_id}`}
-            >
-              {/* Icon */}
-              <div className="mt-1">
-                {getNotificationIcon(notif.type)}
-              </div>
+          ) : notifications.length === 0 ? (
+            <div className="text-center py-16 px-6">
+              <p className={cn("text-lg mb-2", textMutedClass)}>No notifications yet</p>
+              <p className={cn("text-sm", isDark ? "text-white/30" : "text-gray-400")}>When people interact with your posts, you'll see it here</p>
+            </div>
+          ) : (
+            <div className={cn("divide-y", borderClass)}>
+              {notifications.map((notif, index) => (
+                <Link
+                  key={notif.notification_id}
+                  to={getNotificationLink(notif)}
+                  className={cn(
+                    "flex items-start gap-3 p-4 transition-colors animate-fade-in",
+                    hoverBgClass,
+                    !notif.read && (isDark ? "bg-white/5" : "bg-gray-50")
+                  )}
+                  style={{ animationDelay: `${index * 50}ms` }}
+                  data-testid={`notification-${notif.notification_id}`}
+                >
+                  {/* Icon */}
+                  <div className="mt-1">
+                    {getNotificationIcon(notif.type)}
+                  </div>
 
-              {/* Avatar */}
-              <Avatar className="h-10 w-10 border border-white/20">
-                <AvatarImage src={notif.from_user?.picture} alt={notif.from_user?.name} />
-                <AvatarFallback className="bg-white/10 text-white">
-                  {notif.from_user?.name?.charAt(0)?.toUpperCase()}
-                </AvatarFallback>
-              </Avatar>
+                  {/* Avatar */}
+                  <Avatar className={cn("h-10 w-10 border", borderClass)}>
+                    <AvatarImage src={notif.from_user?.picture} alt={notif.from_user?.name} />
+                    <AvatarFallback className={isDark ? "bg-white/10 text-white" : "bg-gray-100 text-gray-900"}>
+                      {notif.from_user?.name?.charAt(0)?.toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
 
-              {/* Content */}
-              <div className="flex-1 min-w-0">
-                <p className="text-sm">
-                  <span className="font-semibold text-white">{notif.from_user?.name}</span>
-                  <span className="text-white/60"> {getNotificationText(notif)}</span>
-                </p>
-                
-                {notif.post && (
-                  <p className="text-sm text-white/40 line-clamp-1 mt-1">
-                    {notif.post.content}
-                  </p>
-                )}
-                
-                <p className="text-xs text-white/30 font-mono mt-1">
-                  {formatTime(notif.created_at)}
-                </p>
-              </div>
+                  {/* Content */}
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm">
+                      <span className={cn("font-semibold", textClass)}>{notif.from_user?.name}</span>
+                      <span className={textMutedClass}> {getNotificationText(notif)}</span>
+                    </p>
+                    
+                    {notif.post && (
+                      <p className={cn("text-sm line-clamp-1 mt-1", textVeryMutedClass)}>
+                        {notif.post.content}
+                      </p>
+                    )}
+                    
+                    <p className={cn("text-xs font-mono mt-1", textVeryMutedClass)}>
+                      {formatTime(notif.created_at)}
+                    </p>
+                  </div>
 
-              {/* Unread indicator */}
-              {!notif.read && (
-                <span className="w-2 h-2 bg-white rounded-full flex-shrink-0 mt-2" />
-              )}
-            </Link>
-          ))}
-        </div>
-      )}
+                  {/* Unread indicator */}
+                  {!notif.read && (
+                    <span className={cn("w-2 h-2 rounded-full flex-shrink-0 mt-2", isDark ? "bg-white" : "bg-black")} />
+                  )}
+                </Link>
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Activity Tab - Friend Activity Feed */}
+        <TabsContent value="activity" className="mt-0">
+          <div className="p-4">
+            <FriendActivity limit={30} />
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
