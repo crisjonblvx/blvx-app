@@ -137,9 +137,16 @@ const AuthCallbackHandler = ({ children }) => {
           }
         } catch (error) {
           console.error('Auth callback error:', error);
-          localStorage.removeItem('blvx-session-token');
+          // DON'T remove localStorage token - it might be valid even if URL token failed
+          // Just clear the URL params and let normal auth flow handle it
           window.history.replaceState(null, '', window.location.pathname);
-          navigate('/', { replace: true });
+          // Only redirect to landing if we have NO token at all
+          if (!localStorage.getItem('blvx-session-token')) {
+            navigate('/', { replace: true });
+          } else {
+            // We have a token, try to continue to home
+            navigate('/home', { replace: true });
+          }
         } finally {
           setProcessing(false);
         }
