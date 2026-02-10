@@ -3,9 +3,8 @@ import { TrendingUp, Hash, ExternalLink } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import axios from 'axios';
+import api from '@/lib/api';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 // Theme hook for components
 const useTheme = () => {
@@ -42,7 +41,7 @@ export const TrendingWidget = ({ className }) => {
 
   const fetchTrending = async () => {
     try {
-      const response = await axios.get(`${API}/trending`, { withCredentials: true });
+      const response = await api.get(`/trending`, { withCredentials: true });
       setTrending(response.data.trends || []);
     } catch (error) {
       console.error('Error fetching trends:', error);
@@ -166,7 +165,7 @@ export const LinkPreviewCard = ({ url, className }) => {
 
   const fetchPreview = async () => {
     try {
-      const response = await axios.get(`${API}/link-preview`, {
+      const response = await api.get(`/link-preview`, {
         params: { url },
         withCredentials: true
       });

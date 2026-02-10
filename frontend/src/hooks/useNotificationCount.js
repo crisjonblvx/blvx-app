@@ -1,16 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
-import axios from 'axios';
-
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import api from '@/lib/api';
 
 export const useNotificationCount = () => {
   const [count, setCount] = useState(0);
 
   const fetchCount = useCallback(async () => {
     try {
-      const response = await axios.get(`${API}/notifications/unread-count`, {
-        withCredentials: true
-      });
+      const response = await api.get('/notifications/unread-count');
       setCount(response.data.count);
     } catch (err) {
       // Silently fail

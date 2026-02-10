@@ -9,9 +9,8 @@ import { RefreshCw, Lock, Globe, UtensilsCrossed } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
-import axios from 'axios';
+import api from '@/lib/api';
 
-const API = process.env.REACT_APP_BACKEND_URL;
 
 export default function HomePage() {
   const { user } = useAuth();
@@ -55,7 +54,7 @@ export default function HomePage() {
     if (!user?.is_vouched) return;
     setCookoutLoading(true);
     try {
-      const response = await axios.get(`${API}/api/posts/cookout`, { withCredentials: true });
+      const response = await api.get(`/api/posts/cookout`, { withCredentials: true });
       setCookoutPosts(response.data);
     } catch (error) {
       console.error('Failed to fetch cookout:', error);
@@ -74,8 +73,8 @@ export default function HomePage() {
       console.log('[Feed] Generating fresh Bonita content...');
       // Generate 2-3 fresh sparks in parallel
       const promises = [
-        axios.post(`${API}/api/spark/drop`, {}, { withCredentials: true }).catch(() => null),
-        axios.post(`${API}/api/spark/drop`, {}, { withCredentials: true }).catch(() => null),
+        api.post(`/api/spark/drop`, {}, { withCredentials: true }).catch(() => null),
+        api.post(`/api/spark/drop`, {}, { withCredentials: true }).catch(() => null),
       ];
       await Promise.all(promises);
       console.log('[Feed] Fresh content generated!');

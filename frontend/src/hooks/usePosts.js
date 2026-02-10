@@ -1,7 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import axios from 'axios';
-
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+import api from '@/lib/api';
 
 export const usePosts = () => {
   const [posts, setPosts] = useState([]);
@@ -13,7 +11,7 @@ export const usePosts = () => {
     setError(null);
     try {
       const params = before ? { before } : {};
-      const response = await axios.get(`${API}/posts/feed`, {
+      const response = await api.get(`/posts/feed`, {
         params,
         withCredentials: true
       });
@@ -36,7 +34,7 @@ export const usePosts = () => {
     setError(null);
     try {
       const params = before ? { before } : {};
-      const response = await axios.get(`${API}/posts/explore`, {
+      const response = await api.get(`/posts/explore`, {
         params,
         withCredentials: true
       });
@@ -59,7 +57,7 @@ export const usePosts = () => {
     setError(null);
     try {
       const params = before ? { before } : {};
-      const response = await axios.get(`${API}/posts/user/${username}`, {
+      const response = await api.get(`/posts/user/${username}`, {
         params,
         withCredentials: true
       });
@@ -81,7 +79,7 @@ export const usePosts = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get(`${API}/posts/${postId}`, {
+      const response = await api.get(`/posts/${postId}`, {
         withCredentials: true
       });
       return response.data;
@@ -97,7 +95,7 @@ export const usePosts = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get(`${API}/posts/${postId}/thread`, {
+      const response = await api.get(`/posts/${postId}/thread`, {
         withCredentials: true
       });
       return response.data;
@@ -113,7 +111,7 @@ export const usePosts = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.post(`${API}/posts`, postData, {
+      const response = await api.post(`/posts`, postData, {
         withCredentials: true
       });
       setPosts(prev => [response.data, ...prev]);
@@ -130,7 +128,7 @@ export const usePosts = () => {
     setLoading(true);
     setError(null);
     try {
-      await axios.delete(`${API}/posts/${postId}`, {
+      await api.delete(`/posts/${postId}`, {
         withCredentials: true
       });
       setPosts(prev => prev.filter(p => p.post_id !== postId));
@@ -144,7 +142,7 @@ export const usePosts = () => {
 
   const likePost = useCallback(async (postId) => {
     try {
-      await axios.post(`${API}/posts/${postId}/like`, {}, {
+      await api.post(`/posts/${postId}/like`, {}, {
         withCredentials: true
       });
     } catch (err) {
@@ -154,7 +152,7 @@ export const usePosts = () => {
 
   const unlikePost = useCallback(async (postId) => {
     try {
-      await axios.delete(`${API}/posts/${postId}/like`, {
+      await api.delete(`/posts/${postId}/like`, {
         withCredentials: true
       });
     } catch (err) {
@@ -164,7 +162,7 @@ export const usePosts = () => {
 
   const checkLiked = useCallback(async (postId) => {
     try {
-      const response = await axios.get(`${API}/posts/${postId}/liked`, {
+      const response = await api.get(`/posts/${postId}/liked`, {
         withCredentials: true
       });
       return response.data.is_liked;
@@ -177,7 +175,7 @@ export const usePosts = () => {
     setLoading(true);
     setError(null);
     try {
-      const response = await axios.get(`${API}/posts/search/content`, {
+      const response = await api.get(`/posts/search/content`, {
         params: { q: query },
         withCredentials: true
       });

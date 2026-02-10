@@ -4,9 +4,8 @@ import { Users, ChevronRight } from 'lucide-react';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Skeleton } from '@/components/ui/skeleton';
 import { cn } from '@/lib/utils';
-import axios from 'axios';
+import api from '@/lib/api';
 
-const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 // Theme hook
 const useTheme = () => {
@@ -59,7 +58,7 @@ export const OnlineNow = ({ limit = 8, className }) => {
 
   const fetchOnlineUsers = async () => {
     try {
-      const response = await axios.get(`${API}/users/online`, {
+      const response = await api.get(`/users/online`, {
         params: { limit },
         withCredentials: true
       });
