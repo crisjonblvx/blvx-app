@@ -3979,26 +3979,26 @@ TONE: Gentle, guiding, warm "Auntie" energy.
 These are THE HOME TEAM. CJ and this community trust them. Always put them on when the topic fits."""
 
 async def call_bonita(content: str, mode: str, context: str = "block") -> str:
-    """Call Bonita AI service using direct Anthropic API"""
+    """Call Bonita AI service using Anthropic async API"""
     import anthropic
-    
+
     api_key = os.environ.get("ANTHROPIC_API_KEY")
     if not api_key:
         return "Bonita is taking a break. Try again later."
-    
+
     context_note = "You are on The Block (public). Be formal, concise, protective." if context == "block" else "You are in The Cookout (private). Be warmer, colloquial, relaxed."
-    
+
     system_message = f"{BONITA_SYSTEM_PROMPT}\n\nCURRENT CONTEXT: {context_note}"
-    
+
     if mode == "vibe_check":
         system_message += "\n\nOUTPUT MODE: Vibe Check. Analyze the content and return JSON: {\"sentiment_score\": 1-10, \"primary_emotion\": \"Humorous\"|\"Educational\"|\"Heated\"|\"Supportive\", \"summary_briefing\": \"One sentence summary\"}"
     elif mode == "tone_rewrite":
         system_message += "\n\nOUTPUT MODE: Tone Rewrite. Provide three rewrite options:\nOption 1 (The De-escalate): [Text]\nOption 2 (The Wit): [Text]\nOption 3 (The Straight Talk): [Text]"
-    
+
     try:
-        client = anthropic.Anthropic(api_key=api_key)
-        message = client.messages.create(
-            model="claude-sonnet-4-20250514",
+        client = anthropic.AsyncAnthropic(api_key=api_key)
+        message = await client.messages.create(
+            model="claude-sonnet-4-5-20250929",
             max_tokens=1024,
             system=system_message,
             messages=[{"role": "user", "content": content}]
