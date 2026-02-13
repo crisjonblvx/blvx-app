@@ -4026,7 +4026,11 @@ async def bonita_speak(request: BonitaRequest, user: UserBase = Depends(get_curr
     import httpx
 
     elevenlabs_key = os.environ.get("ELEVENLABS_API_KEY")
+    logger.info(f"[Bonita Speak] ELEVENLABS_API_KEY present: {bool(elevenlabs_key)}")
     if not elevenlabs_key:
+        # Log all env var names that contain 'ELEVEN' to catch naming mismatches
+        eleven_vars = [k for k in os.environ.keys() if 'ELEVEN' in k.upper()]
+        logger.error(f"[Bonita Speak] No ELEVENLABS_API_KEY found. Env vars containing 'ELEVEN': {eleven_vars}")
         raise HTTPException(status_code=503, detail="Voice not available")
 
     # Get Bonita's text response first
