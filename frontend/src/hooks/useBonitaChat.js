@@ -99,13 +99,25 @@ export const useBonitaChat = () => {
 
       return bonitaResponse;
     } catch (err) {
+      // If voice endpoint fails (503 = ElevenLabs unavailable), fall back to text-only
+      if (err.response?.status === 503 || err.response?.status === 500) {
+        console.warn('[Bonita] Voice unavailable, falling back to text-only');
+        // Remove the user message we already added (askBonita will re-add it)
+        setMessages(prev => prev.slice(0, -1));
+        try {
+          return await askBonita(content, mode, context);
+        } catch (fallbackErr) {
+          // askBonita already handles its own error messages
+          throw fallbackErr;
+        }
+      }
       const errorMsg = "I'm having trouble connecting right now. Try again in a moment.";
       setMessages(prev => [...prev, { role: 'assistant', content: errorMsg }]);
       throw err;
     } finally {
       setLoading(false);
     }
-  }, [playAudio]);
+  }, [playAudio, askBonita]);
 
   const startRecording = useCallback(async () => {
     try {
