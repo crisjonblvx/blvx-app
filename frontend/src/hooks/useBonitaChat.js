@@ -78,7 +78,7 @@ export const useBonitaChat = () => {
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [playAudio]);
 
   const playAudio = useCallback((audioBase64, format = 'mp3') => {
     // Stop any currently playing audio
