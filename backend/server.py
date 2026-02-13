@@ -252,7 +252,7 @@ class PostBase(BaseModel):
     created_at: datetime
 
 class PostCreate(BaseModel):
-    content: str
+    content: str = ""
     media_url: Optional[str] = None
     media_type: Optional[str] = None  # "image", "video", "gif"
     gif_metadata: Optional[Dict] = None
@@ -261,6 +261,8 @@ class PostCreate(BaseModel):
     parent_post_id: Optional[str] = None
     quote_post_id: Optional[str] = None
     visibility: str = "block"
+    energy: Optional[str] = None  # "hot_take", "real_talk", "confession", "question", "w", "l", "event", "the_plug", "psa"
+    poll_options: Optional[List[str]] = None  # 2-4 option strings for poll posts
 
 class NotificationBase(BaseModel):
     notification_id: str
@@ -2145,6 +2147,23 @@ async def create_post(post: PostCreate, user: UserBase = Depends(get_current_use
     
     post_id = f"post_{uuid.uuid4().hex[:12]}"
     
+    # Validate energy if provided
+    valid_energies = {"hot_take", "real_talk", "confession", "question", "w", "l", "event", "the_plug", "psa"}
+    if post.energy and post.energy not in valid_energies:
+        raise HTTPException(status_code=400, detail="Invalid energy type")
+
+    # Build poll object if poll options provided
+    poll_data = None
+    if post.poll_options:
+        cleaned_options = [opt.strip() for opt in post.poll_options if opt.strip()]
+        if len(cleaned_options) < 2 or len(cleaned_options) > 4:
+            raise HTTPException(status_code=400, detail="Polls need 2-4 options")
+        poll_data = {
+            "options": [{"text": opt, "votes": 0} for opt in cleaned_options],
+            "voters": [],
+            "total_votes": 0
+        }
+
     new_post = {
         "post_id": post_id,
         "user_id": user.user_id,
@@ -2156,13 +2175,15 @@ async def create_post(post: PostCreate, user: UserBase = Depends(get_current_use
         "parent_post_id": post.parent_post_id,
         "quote_post_id": post.quote_post_id,
         "visibility": post.visibility,
+        "energy": post.energy,
+        "poll": poll_data,
         "is_spark": False,
         "reply_count": 0,
         "repost_count": 0,
         "like_count": 0,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
-    
+
     await db.posts.insert_one(new_post)
     await db.users.update_one({"user_id": user.user_id}, {"$inc": {"posts_count": 1}})
     
@@ -2239,12 +2260,12 @@ def interleave_bonita_posts(human_posts: list, bonita_posts: list, bonita_max: i
 
 
 @posts_router.get("/feed")
-async def get_feed(limit: int = 20, before: Optional[str] = None, user: UserBase = Depends(get_current_user)):
+async def get_feed(limit: int = 20, before: Optional[str] = None, energy: Optional[str] = None, user: UserBase = Depends(get_current_user)):
     """Get chronological feed (The Block)"""
     # Get blocked/muted users to filter out
     hidden_users = await get_hidden_user_ids(user.user_id)
     muted_words = await get_muted_words(user.user_id)
-    
+
     following = await db.follows.find(
         {"follower_id": user.user_id},
         {"_id": 0, "following_id": 1}
@@ -2271,7 +2292,10 @@ async def get_feed(limit: int = 20, before: Optional[str] = None, user: UserBase
     
     if before:
         query["created_at"] = {"$lt": before}
-    
+
+    if energy:
+        query["energy"] = energy
+
     # Fetch extra posts to account for Bonita throttling
     posts = await db.posts.find(query, {"_id": 0}).sort("created_at", -1).limit(limit + 10).to_list(limit + 10)
     
@@ -2307,12 +2331,14 @@ async def get_feed(limit: int = 20, before: Optional[str] = None, user: UserBase
     return result[:limit]
 
 @posts_router.get("/explore")
-async def get_explore_feed(limit: int = 20, before: Optional[str] = None, user: UserBase = Depends(get_current_user)):
+async def get_explore_feed(limit: int = 20, before: Optional[str] = None, energy: Optional[str] = None, user: UserBase = Depends(get_current_user)):
     """Get public explore feed - varied topics and users (different from Block)"""
     # Get a diverse mix of posts
     query = {"visibility": "block"}
     if before:
         query["created_at"] = {"$lt": before}
+    if energy:
+        query["energy"] = energy
     
     # Get more posts than needed, then diversify
     posts = await db.posts.find(query, {"_id": 0}).sort("created_at", -1).limit(limit * 3).to_list(limit * 3)
@@ -2350,32 +2376,34 @@ async def get_explore_feed(limit: int = 20, before: Optional[str] = None, user: 
     return result
 
 @posts_router.get("/cookout")
-async def get_cookout_feed(limit: int = 20, before: Optional[str] = None, user: UserBase = Depends(get_current_user)):
+async def get_cookout_feed(limit: int = 20, before: Optional[str] = None, energy: Optional[str] = None, user: UserBase = Depends(get_current_user)):
     """Get The Cookout feed - private posts from mutual follows"""
     # Check if user is vouched
     if not user.is_vouched:
         raise HTTPException(
-            status_code=403, 
+            status_code=403,
             detail="The Cookout is invite only. Earn plates on The Block to get a Vouch."
         )
-    
+
     # Get mutuals (users who follow each other)
     following = await db.follows.find({"follower_id": user.user_id}, {"_id": 0, "following_id": 1}).to_list(1000)
     following_ids = set([f["following_id"] for f in following])
-    
+
     followers = await db.follows.find({"following_id": user.user_id}, {"_id": 0, "follower_id": 1}).to_list(1000)
     follower_ids = set([f["follower_id"] for f in followers])
-    
+
     mutuals = following_ids.intersection(follower_ids)
     mutuals.add(user.user_id)  # Include own cookout posts
-    
+
     query = {
         "visibility": "cookout",
         "user_id": {"$in": list(mutuals)}
     }
-    
+
     if before:
         query["created_at"] = {"$lt": before}
+    if energy:
+        query["energy"] = energy
     
     posts = await db.posts.find(query, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
     
@@ -2511,6 +2539,38 @@ async def check_liked(post_id: str, user: UserBase = Depends(get_current_user)):
     """Check if current user has liked a post"""
     like = await db.likes.find_one({"user_id": user.user_id, "post_id": post_id})
     return {"is_liked": like is not None}
+
+@posts_router.post("/{post_id}/vote")
+async def vote_poll(post_id: str, request: Request, user: UserBase = Depends(get_current_user)):
+    """Vote on a poll"""
+    body = await request.json()
+    option_index = body.get("option_index")
+    if option_index is None:
+        raise HTTPException(status_code=400, detail="option_index is required")
+
+    post = await db.posts.find_one({"post_id": post_id}, {"_id": 0})
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+    if not post.get("poll"):
+        raise HTTPException(status_code=400, detail="This post is not a poll")
+    if user.user_id in post["poll"]["voters"]:
+        raise HTTPException(status_code=400, detail="Already voted")
+    if option_index < 0 or option_index >= len(post["poll"]["options"]):
+        raise HTTPException(status_code=400, detail="Invalid option")
+
+    await db.posts.update_one(
+        {"post_id": post_id},
+        {
+            "$inc": {
+                f"poll.options.{option_index}.votes": 1,
+                "poll.total_votes": 1
+            },
+            "$push": {"poll.voters": user.user_id}
+        }
+    )
+
+    updated = await db.posts.find_one({"post_id": post_id}, {"_id": 0, "poll": 1})
+    return {"poll": updated["poll"], "voted": option_index}
 
 @posts_router.delete("/{post_id}")
 async def delete_post(post_id: str, user: UserBase = Depends(get_current_user)):

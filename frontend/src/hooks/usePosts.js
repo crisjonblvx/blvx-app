@@ -6,11 +6,13 @@ export const usePosts = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
-  const fetchFeed = useCallback(async (before = null) => {
+  const fetchFeed = useCallback(async (before = null, energy = null) => {
     setLoading(true);
     setError(null);
     try {
-      const params = before ? { before } : {};
+      const params = {};
+      if (before) params.before = before;
+      if (energy) params.energy = energy;
       const response = await api.get(`/posts/feed`, {
         params,
         withCredentials: true
@@ -29,11 +31,13 @@ export const usePosts = () => {
     }
   }, []);
 
-  const fetchExploreFeed = useCallback(async (before = null) => {
+  const fetchExploreFeed = useCallback(async (before = null, energy = null) => {
     setLoading(true);
     setError(null);
     try {
-      const params = before ? { before } : {};
+      const params = {};
+      if (before) params.before = before;
+      if (energy) params.energy = energy;
       const response = await api.get(`/posts/explore`, {
         params,
         withCredentials: true
@@ -171,6 +175,17 @@ export const usePosts = () => {
     }
   }, []);
 
+  const votePoll = useCallback(async (postId, optionIndex) => {
+    try {
+      const response = await api.post(`/posts/${postId}/vote`, { option_index: optionIndex }, {
+        withCredentials: true
+      });
+      return response.data;
+    } catch (err) {
+      throw err;
+    }
+  }, []);
+
   const searchPosts = useCallback(async (query) => {
     setLoading(true);
     setError(null);
@@ -203,6 +218,7 @@ export const usePosts = () => {
     likePost,
     unlikePost,
     checkLiked,
+    votePoll,
     searchPosts
   };
 };
