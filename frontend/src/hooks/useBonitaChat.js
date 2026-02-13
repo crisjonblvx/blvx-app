@@ -10,6 +10,33 @@ export const useBonitaChat = () => {
   const chunksRef = useRef([]);
   const currentAudioRef = useRef(null);
 
+  const playAudio = useCallback((audioBase64, format = 'mp3') => {
+    // Stop any currently playing audio
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+    }
+
+    const audioBlob = Uint8Array.from(atob(audioBase64), c => c.charCodeAt(0));
+    const blob = new Blob([audioBlob], { type: `audio/${format}` });
+    const url = URL.createObjectURL(blob);
+    const audio = new Audio(url);
+    currentAudioRef.current = audio;
+
+    audio.play().catch(e => console.warn('Audio playback failed:', e));
+    audio.onended = () => {
+      URL.revokeObjectURL(url);
+      currentAudioRef.current = null;
+    };
+  }, []);
+
+  const stopAudio = useCallback(() => {
+    if (currentAudioRef.current) {
+      currentAudioRef.current.pause();
+      currentAudioRef.current = null;
+    }
+  }, []);
+
   const askBonita = useCallback(async (content, mode = 'conversation', context = 'block') => {
     setLoading(true);
 
@@ -79,33 +106,6 @@ export const useBonitaChat = () => {
       setLoading(false);
     }
   }, [playAudio]);
-
-  const playAudio = useCallback((audioBase64, format = 'mp3') => {
-    // Stop any currently playing audio
-    if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
-      currentAudioRef.current = null;
-    }
-
-    const audioBlob = Uint8Array.from(atob(audioBase64), c => c.charCodeAt(0));
-    const blob = new Blob([audioBlob], { type: `audio/${format}` });
-    const url = URL.createObjectURL(blob);
-    const audio = new Audio(url);
-    currentAudioRef.current = audio;
-
-    audio.play().catch(e => console.warn('Audio playback failed:', e));
-    audio.onended = () => {
-      URL.revokeObjectURL(url);
-      currentAudioRef.current = null;
-    };
-  }, []);
-
-  const stopAudio = useCallback(() => {
-    if (currentAudioRef.current) {
-      currentAudioRef.current.pause();
-      currentAudioRef.current = null;
-    }
-  }, []);
 
   const startRecording = useCallback(async () => {
     try {
