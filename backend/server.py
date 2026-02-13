@@ -53,6 +53,11 @@ logger = logging.getLogger(__name__)
 # Bonita AI Avatar URL
 BONITA_AVATAR_URL = "/assets/bonita-profile.jpeg"
 
+# Log configured API keys at startup
+logger.info(f"[Startup] ELEVENLABS_API_KEY configured: {bool(os.environ.get('ELEVENLABS_API_KEY'))}")
+logger.info(f"[Startup] ANTHROPIC_API_KEY configured: {bool(os.environ.get('ANTHROPIC_API_KEY'))}")
+logger.info(f"[Startup] OPENAI_API_KEY configured: {bool(os.environ.get('OPENAI_API_KEY'))}")
+
 # ========================
 # WEBSOCKET CONNECTION MANAGER
 # ========================
