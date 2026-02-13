@@ -57,7 +57,7 @@ export default function HomePage() {
     if (!user?.is_vouched) return;
     setCookoutLoading(true);
     try {
-      const response = await api.get(`/api/posts/cookout`, { withCredentials: true });
+      const response = await api.get(`/posts/cookout`, { withCredentials: true });
       setCookoutPosts(response.data);
     } catch (error) {
       console.error('Failed to fetch cookout:', error);
@@ -75,13 +75,13 @@ export default function HomePage() {
     try {
       console.log('[Feed] Generating fresh Bonita content...');
       // Try first spark drop
-      const result1 = await api.post(`/api/spark/drop`, {}, { withCredentials: true }).catch((err) => {
+      const result1 = await api.post(`/spark/drop`, {}, { withCredentials: true }).catch((err) => {
         console.warn('[Feed] Spark drop 1 failed:', err?.response?.status || err.message);
         return null;
       });
       // If first wasn't skipped (Bonita hasn't posted recently), try a second
       if (result1?.data && !result1.data.skipped) {
-        await api.post(`/api/spark/drop`, {}, { withCredentials: true }).catch((err) => {
+        await api.post(`/spark/drop`, {}, { withCredentials: true }).catch((err) => {
           console.warn('[Feed] Spark drop 2 failed:', err?.response?.status || err.message);
           return null;
         });

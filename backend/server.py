@@ -4017,30 +4017,38 @@ async def ask_bonita(request: BonitaRequest, user: UserBase = Depends(get_curren
 
 @bonita_router.post("/speak")
 async def bonita_speak(request: BonitaRequest, user: UserBase = Depends(get_current_user)):
-    """Ask Bonita with voice — returns AI text response + audio"""
+    """Ask Bonita with voice — returns AI text response + audio via ElevenLabs"""
     import httpx
 
-    openai_key = os.environ.get("OPENAI_API_KEY")
-    if not openai_key:
+    elevenlabs_key = os.environ.get("ELEVENLABS_API_KEY")
+    if not elevenlabs_key:
         raise HTTPException(status_code=503, detail="Voice not available")
 
     # Get Bonita's text response first
     text_response = await call_bonita(request.content, request.mode, request.context or "block")
 
-    # Convert response to speech using OpenAI TTS
+    # Convert response to speech using ElevenLabs
+    # Voice ID: "EXAVITQu4vr4xnSDxMaL" = Bella (warm, expressive female)
+    # Can be overridden with ELEVENLABS_VOICE_ID env var
+    voice_id = os.environ.get("ELEVENLABS_VOICE_ID", "EXAVITQu4vr4xnSDxMaL")
     try:
         async with httpx.AsyncClient(timeout=30.0) as client:
             tts_response = await client.post(
-                "https://api.openai.com/v1/audio/speech",
+                f"https://api.elevenlabs.io/v1/text-to-speech/{voice_id}",
                 headers={
-                    "Authorization": f"Bearer {openai_key}",
-                    "Content-Type": "application/json"
+                    "xi-api-key": elevenlabs_key,
+                    "Content-Type": "application/json",
+                    "Accept": "audio/mpeg"
                 },
                 json={
-                    "model": "tts-1",
-                    "input": text_response[:4096],  # TTS has a 4096 char limit
-                    "voice": "nova",  # Warm female voice for Bonita
-                    "response_format": "mp3"
+                    "text": text_response[:5000],
+                    "model_id": "eleven_turbo_v2_5",
+                    "voice_settings": {
+                        "stability": 0.5,
+                        "similarity_boost": 0.75,
+                        "style": 0.4,
+                        "use_speaker_boost": True
+                    }
                 }
             )
 
@@ -4054,7 +4062,7 @@ async def bonita_speak(request: BonitaRequest, user: UserBase = Depends(get_curr
                     "audio_format": "mp3"
                 }
             else:
-                logger.error(f"OpenAI TTS failed: {tts_response.status_code}")
+                logger.error(f"ElevenLabs TTS failed: {tts_response.status_code} - {tts_response.text}")
                 return BonitaResponse(response=text_response, mode=request.mode)
     except Exception as e:
         logger.error(f"TTS error: {e}")
