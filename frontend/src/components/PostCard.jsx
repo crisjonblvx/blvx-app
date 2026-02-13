@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
-import { UtensilsCrossed, MessageCircle, Repeat2, Share, MoreHorizontal, Trash2, Sparkles, Lock, Send, Volume2, VolumeX, Flag } from 'lucide-react';
+import { UtensilsCrossed, MessageCircle, Repeat2, Share, MoreHorizontal, Trash2, Sparkles, Lock, Send, Volume2, VolumeX, Flag, BarChart3 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { usePosts } from '@/hooks/usePosts';
+import { ENERGIES } from '@/components/ComposerModal';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Button } from '@/components/ui/button';
 import {
@@ -42,7 +43,7 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
   
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { likePost, unlikePost, deletePost, checkLiked } = usePosts();
+  const { likePost, unlikePost, deletePost, checkLiked, votePoll } = usePosts();
   const [isPlated, setIsPlated] = useState(false);
   const [plateCount, setPlateCount] = useState(isValidPost ? (post.like_count || 0) : 0);
   const [replyOpen, setReplyOpen] = useState(false);
@@ -51,6 +52,9 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
   const [isMuted, setIsMuted] = useState(true);
   const [isPlaying, setIsPlaying] = useState(false);
   const [reportOpen, setReportOpen] = useState(false);
+  const [pollData, setPollData] = useState(isValidPost ? post.poll : null);
+  const [votedIndex, setVotedIndex] = useState(null);
+  const [voting, setVoting] = useState(false);
   const videoRef = useRef(null);
   const containerRef = useRef(null);
   const isDark = useTheme();
@@ -168,6 +172,34 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
       toast.success('Dropped to The GC!');
     }
   };
+
+  // Check if user already voted on this poll
+  useEffect(() => {
+    if (!isValidPost || !post.poll) return;
+    if (user && post.poll.voters?.includes(user.user_id)) {
+      // Find which option they voted for (we don't store this, so just mark as voted)
+      setVotedIndex(-1); // -1 = voted but we don't know which (show results)
+    }
+  }, [isValidPost, post?.poll, user]);
+
+  const handleVote = async (optionIndex) => {
+    if (!isValidPost || voting || votedIndex !== null) return;
+    setVoting(true);
+    try {
+      const result = await votePoll(post.post_id, optionIndex);
+      setPollData(result.poll);
+      setVotedIndex(result.voted);
+    } catch (error) {
+      const msg = error?.response?.data?.detail || 'Vote failed';
+      toast.error(msg);
+    } finally {
+      setVoting(false);
+    }
+  };
+
+  const energyInfo = isValidPost && post.energy
+    ? ENERGIES.find(e => e.key === post.energy)
+    : null;
 
   const formatTime = (dateStr) => {
     try {
@@ -318,6 +350,19 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
               </p>
             )}
 
+            {/* Energy badge */}
+            {energyInfo && (
+              <span className={cn(
+                "inline-flex items-center gap-1 px-2 py-0.5 text-[11px] border mb-2",
+                isDark
+                  ? "border-white/15 text-white/60 bg-white/5"
+                  : "border-gray-200 text-gray-500 bg-gray-50"
+              )}>
+                <span>{energyInfo.icon}</span>
+                <span className="font-display tracking-wider uppercase">{energyInfo.label}</span>
+              </span>
+            )}
+
             {/* Post content */}
             <p className={cn("whitespace-pre-wrap break-words mb-3 text-[15px] leading-[1.5]", textClass)}>
               {post.content}
@@ -376,6 +421,72 @@ export const PostCard = ({ post, showThread = false, onBonitaContext, onLiveDrop
             {post.reference_url && (
               <div className="mb-3" onClick={(e) => e.stopPropagation()}>
                 <LinkPreviewCard url={post.reference_url} />
+              </div>
+            )}
+
+            {/* Poll */}
+            {pollData && (
+              <div className="mb-3 space-y-1.5" onClick={(e) => e.stopPropagation()}>
+                {pollData.options.map((option, index) => {
+                  const hasVoted = votedIndex !== null;
+                  const totalVotes = pollData.total_votes || 0;
+                  const pct = totalVotes > 0 ? Math.round((option.votes / totalVotes) * 100) : 0;
+                  const isMyVote = votedIndex === index;
+
+                  return hasVoted ? (
+                    // Results view
+                    <div
+                      key={index}
+                      className={cn(
+                        "relative border px-3 py-2 overflow-hidden",
+                        isMyVote
+                          ? isDark ? "border-amber-500/40" : "border-amber-500/50"
+                          : isDark ? "border-white/10" : "border-gray-200"
+                      )}
+                    >
+                      <div
+                        className={cn(
+                          "absolute inset-y-0 left-0 transition-all duration-500",
+                          isMyVote
+                            ? isDark ? "bg-amber-500/15" : "bg-amber-500/10"
+                            : isDark ? "bg-white/5" : "bg-gray-100"
+                        )}
+                        style={{ width: `${pct}%` }}
+                      />
+                      <div className="relative flex items-center justify-between">
+                        <span className={cn("text-sm", isMyVote ? (isDark ? "text-amber-400 font-medium" : "text-amber-600 font-medium") : textClass)}>
+                          {option.text}
+                        </span>
+                        <span className={cn("text-xs font-mono ml-2", textMutedClass)}>
+                          {pct}%
+                        </span>
+                      </div>
+                    </div>
+                  ) : (
+                    // Voting view
+                    <button
+                      key={index}
+                      onClick={() => handleVote(index)}
+                      disabled={voting}
+                      className={cn(
+                        "w-full text-left border px-3 py-2 text-sm transition-colors",
+                        isDark
+                          ? "border-white/10 hover:border-white/25 hover:bg-white/5"
+                          : "border-gray-200 hover:border-gray-400 hover:bg-gray-50",
+                        textClass,
+                        voting && "opacity-50 cursor-wait"
+                      )}
+                    >
+                      {option.text}
+                    </button>
+                  );
+                })}
+                <div className={cn("flex items-center gap-2 pt-1", textVeryMutedClass)}>
+                  <BarChart3 className="h-3 w-3" />
+                  <span className="text-[11px]">
+                    {pollData.total_votes} {pollData.total_votes === 1 ? 'vote' : 'votes'}
+                  </span>
+                </div>
               </div>
             )}
 

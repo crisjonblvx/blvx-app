@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import api from '@/lib/api';
+import { ENERGIES } from '@/components/ComposerModal';
 
 
 export default function HomePage() {
@@ -40,6 +41,7 @@ export default function HomePage() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [cookoutPosts, setCookoutPosts] = useState([]);
   const [cookoutLoading, setCookoutLoading] = useState(false);
+  const [energyFilter, setEnergyFilter] = useState(null);
   const hasGeneratedFreshContent = useRef(false);
 
   // Show welcome modal for first-time users
@@ -87,11 +89,11 @@ export default function HomePage() {
   const loadFeed = useCallback(async (showToast = false) => {
     try {
       if (feedType === 'block') {
-        await fetchFeed();
+        await fetchFeed(null, energyFilter);
       } else if (feedType === 'cookout') {
         await fetchCookout();
       } else {
-        await fetchExploreFeed();
+        await fetchExploreFeed(null, energyFilter);
       }
       setLastFetch(new Date());
       if (showToast) {
@@ -102,7 +104,7 @@ export default function HomePage() {
         toast.error('Failed to refresh feed');
       }
     }
-  }, [feedType, fetchFeed, fetchExploreFeed, fetchCookout]);
+  }, [feedType, fetchFeed, fetchExploreFeed, fetchCookout, energyFilter]);
 
   // Initial load - load feed FIRST, then generate fresh content in background
   useEffect(() => {
@@ -122,13 +124,13 @@ export default function HomePage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // Run once on mount
 
-  // Reload feed when feed type changes
+  // Reload feed when feed type or energy filter changes
   useEffect(() => {
     if (lastFetch) { // Only if we've already done initial load
       loadFeed();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [feedType]);
+  }, [feedType, energyFilter]);
 
   // Auto-refresh when page becomes visible
   useEffect(() => {
@@ -229,6 +231,46 @@ export default function HomePage() {
               <span className="absolute bottom-0 left-1/2 -translate-x-1/2 w-12 h-0.5 bg-amber-500" />
             )}
           </button>
+        </div>
+      </div>
+
+      {/* Energy Filter */}
+      <div className={cn("border-b px-3 py-2", borderClass)}>
+        <div className="flex gap-1.5 overflow-x-auto scrollbar-hide">
+          <button
+            onClick={() => setEnergyFilter(null)}
+            className={cn(
+              "px-2.5 py-1 text-[11px] whitespace-nowrap border transition-colors flex-shrink-0 font-display tracking-wider uppercase",
+              energyFilter === null
+                ? isDark
+                  ? "bg-white/15 border-white/30 text-white"
+                  : "bg-gray-900/10 border-gray-900/30 text-gray-900"
+                : isDark
+                  ? "bg-transparent border-white/10 text-white/40 hover:text-white/60 hover:border-white/20"
+                  : "bg-transparent border-gray-200 text-gray-400 hover:text-gray-600 hover:border-gray-300"
+            )}
+          >
+            All
+          </button>
+          {ENERGIES.map((e) => (
+            <button
+              key={e.key}
+              onClick={() => setEnergyFilter(energyFilter === e.key ? null : e.key)}
+              className={cn(
+                "flex items-center gap-1 px-2.5 py-1 text-[11px] whitespace-nowrap border transition-colors flex-shrink-0",
+                energyFilter === e.key
+                  ? isDark
+                    ? "bg-white/15 border-white/30 text-white"
+                    : "bg-gray-900/10 border-gray-900/30 text-gray-900"
+                  : isDark
+                    ? "bg-transparent border-white/10 text-white/40 hover:text-white/60 hover:border-white/20"
+                    : "bg-transparent border-gray-200 text-gray-400 hover:text-gray-600 hover:border-gray-300"
+              )}
+            >
+              <span>{e.icon}</span>
+              <span>{e.label}</span>
+            </button>
+          ))}
         </div>
       </div>
 
