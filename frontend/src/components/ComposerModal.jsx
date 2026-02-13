@@ -204,13 +204,13 @@ export const ComposerModal = ({
               <p className={cn("text-[10px] font-display tracking-widest uppercase mb-2", textVeryMutedClass)}>
                 What's the energy?
               </p>
-              <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
+              <div className="flex flex-wrap gap-1.5">
                 {ENERGIES.map((e) => (
                   <button
                     key={e.key}
                     onClick={() => setEnergy(energy === e.key ? null : e.key)}
                     className={cn(
-                      "flex items-center gap-1 px-2.5 py-1 text-[11px] whitespace-nowrap border transition-colors flex-shrink-0",
+                      "flex items-center gap-1 px-2.5 py-1 text-[11px] border transition-colors",
                       energy === e.key
                         ? isDark
                           ? "bg-white/15 border-white/30 text-white"
