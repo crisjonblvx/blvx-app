@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import api from '@/lib/api';
 import { ENERGIES } from '@/components/ComposerModal';
+import { PeopleDiscover } from '@/components/community';
 
 
 export default function HomePage() {
@@ -70,18 +71,24 @@ export default function HomePage() {
   const generateFreshContent = useCallback(async () => {
     if (hasGeneratedFreshContent.current) return;
     hasGeneratedFreshContent.current = true;
-    
+
     try {
       console.log('[Feed] Generating fresh Bonita content...');
-      // Generate 2-3 fresh sparks in parallel
-      const promises = [
-        api.post(`/api/spark/drop`, {}, { withCredentials: true }).catch(() => null),
-        api.post(`/api/spark/drop`, {}, { withCredentials: true }).catch(() => null),
-      ];
-      await Promise.all(promises);
-      console.log('[Feed] Fresh content generated!');
+      // Try first spark drop
+      const result1 = await api.post(`/api/spark/drop`, {}, { withCredentials: true }).catch((err) => {
+        console.warn('[Feed] Spark drop 1 failed:', err?.response?.status || err.message);
+        return null;
+      });
+      // If first wasn't skipped (Bonita hasn't posted recently), try a second
+      if (result1?.data && !result1.data.skipped) {
+        await api.post(`/api/spark/drop`, {}, { withCredentials: true }).catch((err) => {
+          console.warn('[Feed] Spark drop 2 failed:', err?.response?.status || err.message);
+          return null;
+        });
+      }
+      console.log('[Feed] Fresh content generation complete');
     } catch (error) {
-      console.log('[Feed] Could not generate fresh content:', error);
+      console.warn('[Feed] Could not generate fresh content:', error.message);
     }
   }, []);
 
@@ -316,21 +323,28 @@ export default function HomePage() {
           </p>
         </div>
       ) : (feedType === 'cookout' ? cookoutPosts : posts).length === 0 ? (
-        <div className="text-center py-16 px-6">
-          <p className={cn(textMutedClass, "text-base mb-2 font-display tracking-wide")}>
-            {feedType === 'block' 
-              ? "The Block is quiet" 
-              : feedType === 'cookout'
-              ? "The Cookout is empty"
-              : "Nothing to explore yet"}
-          </p>
-          <p className={cn(isDark ? "text-white/30" : "text-gray-400", "text-sm")}>
-            {feedType === 'block'
-              ? "Follow some people or post something"
-              : feedType === 'cookout'
-              ? "Post something for your inner circle"
-              : "Be the first to start the conversation"}
-          </p>
+        <div className="py-10 px-6">
+          <div className="text-center mb-8">
+            <p className={cn(textMutedClass, "text-base mb-2 font-display tracking-wide")}>
+              {feedType === 'block'
+                ? "The Block is quiet"
+                : feedType === 'cookout'
+                ? "The Cookout is empty"
+                : "Nothing to explore yet"}
+            </p>
+            <p className={cn(isDark ? "text-white/30" : "text-gray-400", "text-sm")}>
+              {feedType === 'block'
+                ? "Follow some people to fill your feed"
+                : feedType === 'cookout'
+                ? "Post something for your inner circle"
+                : "Be the first to start the conversation"}
+            </p>
+          </div>
+          {feedType !== 'cookout' && (
+            <div className="px-2">
+              <PeopleDiscover limit={6} fullWidth />
+            </div>
+          )}
         </div>
       ) : (
         <div>

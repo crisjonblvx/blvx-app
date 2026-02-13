@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { Home, Radio, Search, MessageCircle, User, Settings, LogOut, Sparkles, Ticket, Plus, Calendar, Sun, Moon } from 'lucide-react';
+import { Home, Radio, Search, MessageCircle, User, Settings, LogOut, Sparkles, Ticket, Plus, Calendar, Sun, Moon, MoreHorizontal } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useNotificationCount } from '@/hooks/useNotificationCount';
@@ -12,12 +12,15 @@ import { cn } from '@/lib/utils';
 
 const navItems = [
   { path: '/home', icon: Home, label: 'The Block' },
-  { path: '/stoop', icon: Radio, label: 'The Stoop' },
   { path: '/search', icon: Search, label: 'Search' },
-  { path: '/gc', icon: MessageCircle, label: 'The GC' },
-  { path: '/vouch', icon: Ticket, label: 'The Vouch' },
   { path: '/bonita', icon: Sparkles, label: 'Bonita' },
   { path: '/calendar', icon: Calendar, label: 'Culture Calendar' },
+];
+
+const moreItems = [
+  { path: '/stoop', icon: Radio, label: 'The Stoop' },
+  { path: '/gc', icon: MessageCircle, label: 'The GC' },
+  { path: '/vouch', icon: Ticket, label: 'The Vouch' },
 ];
 
 export const Sidebar = () => {
@@ -27,6 +30,7 @@ export const Sidebar = () => {
   const { assets, isDark, toggleTheme } = useTheme();
   const { count: unreadCount } = useNotificationCount();
   const [composerOpen, setComposerOpen] = useState(false);
+  const [showMore, setShowMore] = useState(false);
 
   const handleLogout = async () => {
     await logout();
@@ -58,7 +62,7 @@ export const Sidebar = () => {
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-3 pt-2 flex flex-col">
+        <nav className="flex-1 px-3 pt-2 flex flex-col overflow-y-auto">
           {navItems.map(({ path, icon: Icon, label }) => {
             const isActive = location.pathname === path;
             const showBadge = path === '/gc' && unreadCount > 0;
@@ -88,6 +92,44 @@ export const Sidebar = () => {
             );
           })}
           
+          {/* More */}
+          <button
+            onClick={() => setShowMore(!showMore)}
+            className={cn(
+              "flex items-center gap-4 px-4 py-3 mb-1 transition-colors duration-200 w-full text-left",
+              `${textMutedClass} ${hoverBgClass} hover:${textClass}`
+            )}
+          >
+            <MoreHorizontal className="h-5 w-5" strokeWidth={1.5} />
+            <span className="font-medium text-sm">More</span>
+          </button>
+          {showMore && moreItems.map(({ path, icon: Icon, label }) => {
+            const isActive = location.pathname === path;
+            const showBadge = path === '/gc' && unreadCount > 0;
+            return (
+              <Link
+                key={path}
+                to={path}
+                className={cn(
+                  "flex items-center gap-4 pl-8 pr-4 py-2.5 mb-0.5 transition-colors duration-200 text-sm",
+                  isActive
+                    ? activeBgClass
+                    : `${textVeryMutedClass} ${hoverBgClass} hover:${textClass}`
+                )}
+              >
+                <div className="relative">
+                  <Icon className="h-4 w-4" strokeWidth={1.5} />
+                  {showBadge && (
+                    <span className={`absolute -top-1 -right-1 ${badgeClass} text-[8px] font-bold min-w-[12px] h-[12px] rounded-full flex items-center justify-center`}>
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </div>
+                <span className="font-medium">{label}</span>
+              </Link>
+            );
+          })}
+
           {/* Profile Link */}
           {user && (
             <Link
@@ -146,7 +188,7 @@ export const Sidebar = () => {
           </div>
 
           {/* Community Widgets */}
-          <div className={`mt-4 pt-4 border-t ${borderClass} space-y-6 overflow-y-auto flex-1 px-1`}>
+          <div className={`mt-4 pt-4 border-t ${borderClass} space-y-6 px-1 pb-2`}>
             <OnlineNow limit={5} />
             <TrendingPeople limit={5} />
           </div>
