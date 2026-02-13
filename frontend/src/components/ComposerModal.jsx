@@ -177,7 +177,7 @@ export const ComposerModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={cn("border border-border sm:max-w-[500px] p-0", isDark ? "bg-[#111]" : "bg-white")}>
+      <DialogContent className={cn("border border-border sm:max-w-[500px] p-0 gap-0 max-h-[90vh] overflow-y-auto", isDark ? "bg-[#111]" : "bg-white")}>
         <DialogHeader className="p-4 border-b border-border">
           <div className="flex items-center justify-between">
             <DialogTitle className="font-display text-sm tracking-widest uppercase">
