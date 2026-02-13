@@ -6,6 +6,7 @@ import { useBonitaChat } from '@/hooks/useBonitaChat';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
@@ -176,13 +177,16 @@ export const ComposerModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="bg-card border border-border sm:max-w-[500px] p-0">
+      <DialogContent className={cn("border border-border sm:max-w-[500px] p-0", isDark ? "bg-[#111]" : "bg-white")}>
         <DialogHeader className="p-4 border-b border-border">
           <div className="flex items-center justify-between">
             <DialogTitle className="font-display text-sm tracking-widest uppercase">
               {replyTo ? 'Reply' : quotedPost ? 'Quote' : 'New Post'}
             </DialogTitle>
           </div>
+          <DialogDescription className="sr-only">
+            Create a new post on BLVX
+          </DialogDescription>
         </DialogHeader>
 
         <div className="p-4">
