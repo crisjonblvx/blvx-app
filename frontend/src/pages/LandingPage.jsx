@@ -311,7 +311,7 @@ export default function LandingPage() {
 
         <footer className={`border-t ${borderClass} py-3 px-6`}>
           <div className="max-w-4xl mx-auto flex items-center justify-between">
-            <p className={`text-[9px] ${textSuperMutedClass}`}>© 2025 BLVX</p>
+            <p className={`text-[9px] ${textSuperMutedClass}`}>© 2026 BLVX</p>
             <div className={`flex items-center gap-1.5 text-[9px] ${textSuperMutedClass}`}>
               <span className="w-1.5 h-1.5 bg-green-500 rounded-full animate-pulse" />
               Bonita Online
@@ -401,7 +401,7 @@ export default function LandingPage() {
                 data-testid="marketing-consent-checkbox"
               />
               <label htmlFor="marketing-consent" className={`${textVeryMutedClass} text-xs cursor-pointer leading-snug`}>
-                Keep me updated on new features and ContentCreators.life projects
+                Keep me updated on new features and BLVX projects
               </label>
             </div>
             

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Menu, Settings, LogOut, User, Ticket, Bell, Sun, Moon } from 'lucide-react';
+import { Menu, Settings, LogOut, User, Ticket, Bell, Sun, Moon, Radio, MessageCircle } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useNotificationCount } from '@/hooks/useNotificationCount';
@@ -67,7 +67,7 @@ export const Header = () => {
               variant="ghost" 
               size="icon" 
               className={`${textMutedClass} relative`}
-              onClick={() => navigate('/gc')}
+              onClick={() => navigate('/notifications')}
             >
               <Bell className="h-5 w-5" />
               {unreadCount > 0 && (
@@ -111,8 +111,8 @@ export const Header = () => {
                     <Separator className={isDark ? 'bg-white/10' : 'bg-black/10'} />
                     
                     <nav className="space-y-1 mt-4">
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         className={`w-full justify-start ${textClass} ${hoverBgClass}`}
                         onClick={() => {
                           setOpen(false);
@@ -123,8 +123,8 @@ export const Header = () => {
                         <User className="mr-3 h-5 w-5" />
                         Profile
                       </Button>
-                      <Button 
-                        variant="ghost" 
+                      <Button
+                        variant="ghost"
                         className={`w-full justify-start ${textClass} ${hoverBgClass}`}
                         onClick={() => {
                           setOpen(false);
@@ -135,11 +135,48 @@ export const Header = () => {
                         <Settings className="mr-3 h-5 w-5" />
                         Settings
                       </Button>
-                      
+
                       <Separator className={`my-4 ${isDark ? 'bg-white/10' : 'bg-black/10'}`} />
-                      
-                      <Button 
-                        variant="ghost" 
+
+                      <p className={`px-4 text-[10px] font-display tracking-widest uppercase mb-2 ${textVeryMutedClass}`}>More</p>
+                      <Button
+                        variant="ghost"
+                        className={`w-full justify-start ${textMutedClass} ${hoverBgClass}`}
+                        onClick={() => {
+                          setOpen(false);
+                          navigate('/stoop');
+                        }}
+                      >
+                        <Radio className="mr-3 h-5 w-5" />
+                        The Stoop
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className={`w-full justify-start ${textMutedClass} ${hoverBgClass}`}
+                        onClick={() => {
+                          setOpen(false);
+                          navigate('/gc');
+                        }}
+                      >
+                        <MessageCircle className="mr-3 h-5 w-5" />
+                        The GC
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        className={`w-full justify-start ${textMutedClass} ${hoverBgClass}`}
+                        onClick={() => {
+                          setOpen(false);
+                          navigate('/vouch');
+                        }}
+                      >
+                        <Ticket className="mr-3 h-5 w-5" />
+                        The Vouch
+                      </Button>
+
+                      <Separator className={`my-4 ${isDark ? 'bg-white/10' : 'bg-black/10'}`} />
+
+                      <Button
+                        variant="ghost"
                         className={`w-full justify-start ${textVeryMutedClass} hover:${textClass} ${hoverBgClass}`}
                         onClick={handleLogout}
                         data-testid="menu-logout-btn"

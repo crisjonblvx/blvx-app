@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, Radio, Search, MessageCircle, User, MessageSquare } from 'lucide-react';
+import { Home, Search, User, Sparkles, Calendar } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/context/ThemeContext';
 import { useNotificationCount } from '@/hooks/useNotificationCount';
@@ -7,9 +7,9 @@ import { cn } from '@/lib/utils';
 
 const navItems = [
   { path: '/home', icon: Home, label: 'Home' },
-  { path: '/stoop', icon: Radio, label: 'Stoop' },
-  { path: '/sidebar', icon: MessageSquare, label: 'DMs' },
   { path: '/search', icon: Search, label: 'Search' },
+  { path: '/bonita', icon: Sparkles, label: 'Bonita' },
+  { path: '/calendar', icon: Calendar, label: 'Calendar' },
 ];
 
 export const BottomNav = () => {

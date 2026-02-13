@@ -25,6 +25,7 @@ import AIStooopSettingsPage from "@/pages/AIStooopSettingsPage";
 import BlockedUsersPage from "@/pages/BlockedUsersPage";
 import LearnPage from "@/pages/LearnPage";
 import MutedWordsPage from "@/pages/MutedWordsPage";
+import NotificationsPage from "@/pages/NotificationsPage";
 
 // Components
 import { NoiseOverlay } from "@/components/NoiseOverlay";
@@ -190,9 +191,10 @@ function AppRouter() {
         <Route path="/post/:postId" element={<AppShell><ThreadPage /></AppShell>} />
         <Route path="/settings" element={<AppShell><SettingsPage /></AppShell>} />
         <Route path="/settings/blocked" element={<AppShell><BlockedUsersPage /></AppShell>} />
-        <Route path="/settings/muted" element={<AppShell><BlockedUsersPage /></AppShell>} />
+        <Route path="/settings/muted" element={<AppShell><MutedWordsPage /></AppShell>} />
         <Route path="/learn" element={<AppShell><LearnPage /></AppShell>} />
         <Route path="/settings/muted-words" element={<AppShell><MutedWordsPage /></AppShell>} />
+        <Route path="/notifications" element={<AppShell><NotificationsPage /></AppShell>} />
         <Route path="/calendar" element={<AppShell><CalendarPage /></AppShell>} />
         <Route path="/admin" element={<AppShell><AdminPage /></AppShell>} />
         <Route path="/ai-stoop/:username" element={<AppShell><AIStooopPage /></AppShell>} />

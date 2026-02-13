@@ -4012,8 +4012,104 @@ async def call_bonita(content: str, mode: str, context: str = "block") -> str:
 async def ask_bonita(request: BonitaRequest, user: UserBase = Depends(get_current_user)):
     """Ask Bonita AI for assistance"""
     response = await call_bonita(request.content, request.mode, request.context or "block")
-    
+
     return BonitaResponse(response=response, mode=request.mode)
+
+@bonita_router.post("/speak")
+async def bonita_speak(request: BonitaRequest, user: UserBase = Depends(get_current_user)):
+    """Ask Bonita with voice — returns AI text response + audio"""
+    import httpx
+
+    openai_key = os.environ.get("OPENAI_API_KEY")
+    if not openai_key:
+        raise HTTPException(status_code=503, detail="Voice not available")
+
+    # Get Bonita's text response first
+    text_response = await call_bonita(request.content, request.mode, request.context or "block")
+
+    # Convert response to speech using OpenAI TTS
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            tts_response = await client.post(
+                "https://api.openai.com/v1/audio/speech",
+                headers={
+                    "Authorization": f"Bearer {openai_key}",
+                    "Content-Type": "application/json"
+                },
+                json={
+                    "model": "tts-1",
+                    "input": text_response[:4096],  # TTS has a 4096 char limit
+                    "voice": "nova",  # Warm female voice for Bonita
+                    "response_format": "mp3"
+                }
+            )
+
+            if tts_response.status_code == 200:
+                import base64
+                audio_b64 = base64.b64encode(tts_response.content).decode("utf-8")
+                return {
+                    "response": text_response,
+                    "mode": request.mode,
+                    "audio": audio_b64,
+                    "audio_format": "mp3"
+                }
+            else:
+                logger.error(f"OpenAI TTS failed: {tts_response.status_code}")
+                return BonitaResponse(response=text_response, mode=request.mode)
+    except Exception as e:
+        logger.error(f"TTS error: {e}")
+        return BonitaResponse(response=text_response, mode=request.mode)
+
+@bonita_router.post("/transcribe")
+async def bonita_transcribe(audio: UploadFile = File(...), user: UserBase = Depends(get_current_user)):
+    """Transcribe voice input to text using OpenAI Whisper"""
+    import httpx
+
+    openai_key = os.environ.get("OPENAI_API_KEY")
+    if not openai_key:
+        raise HTTPException(status_code=503, detail="Voice not available")
+
+    audio_bytes = await audio.read()
+    if len(audio_bytes) > 25 * 1024 * 1024:  # 25MB limit
+        raise HTTPException(status_code=400, detail="Audio file too large")
+
+    try:
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            # Determine filename extension from content type
+            ext = "webm"
+            if audio.content_type:
+                if "mp4" in audio.content_type:
+                    ext = "mp4"
+                elif "wav" in audio.content_type:
+                    ext = "wav"
+                elif "mp3" in audio.content_type or "mpeg" in audio.content_type:
+                    ext = "mp3"
+
+            response = await client.post(
+                "https://api.openai.com/v1/audio/transcriptions",
+                headers={
+                    "Authorization": f"Bearer {openai_key}"
+                },
+                files={
+                    "file": (f"audio.{ext}", audio_bytes, audio.content_type or "audio/webm")
+                },
+                data={
+                    "model": "whisper-1",
+                    "language": "en"
+                }
+            )
+
+            if response.status_code == 200:
+                result = response.json()
+                return {"text": result.get("text", "")}
+            else:
+                logger.error(f"Whisper transcription failed: {response.status_code} - {response.text}")
+                raise HTTPException(status_code=500, detail="Transcription failed")
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Transcription error: {e}")
+        raise HTTPException(status_code=500, detail="Transcription failed")
 
 # ========================
 # THE SPARK (CONTENT SEEDER)
@@ -4557,9 +4653,13 @@ async def generate_spark_post(topic_category: str = None) -> dict:
     # Select random base query from category
     base_query = random.choice(SPARK_TOPIC_CATEGORIES[topic_category])
     
-    # Search for FRESH real news
-    search_result = await search_real_news(base_query)
-    
+    # Search for FRESH real news (wrapped in try-catch for resilience)
+    search_result = None
+    try:
+        search_result = await search_real_news(base_query)
+    except Exception as e:
+        logger.error(f"search_real_news failed for '{base_query}': {e}")
+
     # Get headline and URL from real search result
     if search_result:
         headline = search_result["title"]
@@ -4657,19 +4757,29 @@ Write ONE natural post. Output ONLY the post text."""
         "media_type": visual_data.get("media_type") if visual_data else None
     }
 
+BONITA_FALLBACK_POSTS = [
+    "What's one thing you wish more people in your community talked about openly?",
+    "Drop a song that changed your life. No explanation needed.",
+    "Hot take: the best food in America comes from hood spots, not Michelin restaurants",
+    "Name someone doing incredible work in your city that nobody's talking about yet",
+    "What's a lesson your grandma taught you that turned out to be 100% right?",
+    "If you could have dinner with any Black creative, living or dead, who you picking?",
+    "Unpopular opinion time... what's yours? Keep it respectful tho",
+    "What's the most underrated HBCU and why?",
+    "Real talk: what's something you learned the hard way this year?",
+    "Who's your favorite independent Black-owned brand right now? Put them on",
+    "What's a skill you picked up during the pandemic that you're glad you learned?",
+    "If you could start any business tomorrow with no limits, what would it be?",
+]
+
 @spark_router.post("/drop")
 async def drop_spark(
     category: Optional[str] = None,
     user: UserBase = Depends(get_current_user)
 ):
-    """Drop a Spark post to The Block (Admin only for MVP)"""
-    # For MVP, any authenticated user can drop sparks (later: admin only)
-    
-    # Generate the content with reference URL
-    spark_data = await generate_spark_post(category)
-    content = spark_data["content"]
-    reference_url = spark_data["reference_url"]
-    
+    """Drop a Spark post to The Block"""
+    import random
+
     # Create Bonita system user if not exists
     bonita_user = await db.users.find_one({"user_id": "bonita"})
     if not bonita_user:
@@ -4691,37 +4801,83 @@ async def drop_spark(
             "vouched_by": None,
             "created_at": datetime.now(timezone.utc).isoformat()
         })
-    
-    # Create the post as Bonita with reference URL and visual
+
+    # Check if Bonita posted recently (prevent flooding - max 1 per 2 hours)
+    recent_bonita = await db.posts.find_one(
+        {"user_id": "bonita", "is_spark": True},
+        sort=[("created_at", -1)]
+    )
+    if recent_bonita:
+        last_post_time = recent_bonita.get("created_at")
+        if isinstance(last_post_time, str):
+            last_post_time = datetime.fromisoformat(last_post_time)
+        if last_post_time:
+            # Handle both timezone-aware and naive datetimes
+            now_utc = datetime.now(timezone.utc)
+            if last_post_time.tzinfo is None:
+                last_post_time = last_post_time.replace(tzinfo=timezone.utc)
+            if (now_utc - last_post_time).total_seconds() < 7200:
+                return {"message": "Bonita posted recently", "post": None, "category": category, "skipped": True}
+
+    # Generate content - with full fallback chain
+    content = None
+    reference_url = None
+    media_url = None
+    media_type = None
+
+    try:
+        spark_data = await generate_spark_post(category)
+        content = spark_data.get("content")
+        reference_url = spark_data.get("reference_url")
+        media_url = spark_data.get("media_url")
+        media_type = spark_data.get("media_type")
+    except Exception as e:
+        logger.error(f"Full spark generation failed: {e}")
+
+    # If generation failed completely, use hardcoded fallback
+    if not content:
+        logger.warning("Using hardcoded Bonita fallback post")
+        # Pick a fallback that hasn't been posted recently
+        recent_posts = await db.posts.find(
+            {"user_id": "bonita", "is_spark": True},
+            {"content": 1, "_id": 0}
+        ).sort("created_at", -1).limit(20).to_list(20)
+        recent_contents = {p.get("content", "") for p in recent_posts}
+        available = [p for p in BONITA_FALLBACK_POSTS if p not in recent_contents]
+        if not available:
+            available = BONITA_FALLBACK_POSTS
+        content = random.choice(available)
+
+    # Create the post as Bonita
     post_id = f"post_{uuid.uuid4().hex[:12]}"
     spark_post = {
         "post_id": post_id,
         "user_id": "bonita",
         "content": content,
-        "media_url": spark_data.get("media_url"),
-        "media_type": spark_data.get("media_type"),
+        "media_url": media_url,
+        "media_type": media_type,
         "gif_metadata": None,
-        "reference_url": reference_url,  # Reference URL for rich link preview
+        "reference_url": reference_url,
         "post_type": "original",
         "parent_post_id": None,
         "quote_post_id": None,
         "visibility": "block",
-        "is_spark": True,  # Mark as generated spark
+        "is_spark": True,
         "reply_count": 0,
         "repost_count": 0,
         "like_count": 0,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
-    
+
     await db.posts.insert_one(spark_post)
     await db.users.update_one({"user_id": "bonita"}, {"$inc": {"posts_count": 1}})
-    
+
     spark_post.pop("_id", None)
     if isinstance(spark_post.get("created_at"), str):
         spark_post["created_at"] = datetime.fromisoformat(spark_post["created_at"])
-    
+
     enriched = await get_post_with_user(spark_post)
-    
+
     return {
         "message": "Spark dropped!",
         "post": enriched,
